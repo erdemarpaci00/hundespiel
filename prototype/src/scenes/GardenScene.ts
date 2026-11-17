@@ -60,7 +60,7 @@ export class GardenScene extends Phaser.Scene {
     }
 
     this.session = this.registry.get('session') as Session
-    this.hud = createHud({ householdId: this.session.householdId, getActivity: () => this.activityLines() })
+    this.hud = createHud({ householdId: this.session.householdId, getActivity: () => this.activityLines(), travel: (k) => this.scene.start(k), current: 'garden' })
     // Ins Leere tippen schliesst die Sprechblase.
     this.input.on('pointerdown', (_p: unknown, over: unknown[]) => { if (over.length === 0) this.closeBubble() })
     void this.reload()
