@@ -1,0 +1,43 @@
+import type { Personality } from './behavior'
+
+export interface Needs {
+  hunger: number
+  energy: number
+  happiness: number
+}
+
+export type Mood = 'happy' | 'ok' | 'hungry' | 'tired' | 'sad'
+
+export const MIN_NEED = 10
+export const MAX_NEED = 100
+export const MAX_ELAPSED_MS = 7 * 24 * 3600 * 1000
+
+const HOUR_MS = 3600 * 1000
+const clamp = (v: number): number => Math.min(MAX_NEED, Math.max(MIN_NEED, v))
+
+// Verfall pro Stunde. Hunger haengt vom Appetit ab, die anderen sind fest.
+export function applyElapsed(n: Needs, elapsedMs: number, p: Personality): Needs {
+  if (!Number.isFinite(elapsedMs) || elapsedMs <= 0) return { ...n }
+  const hours = Math.min(elapsedMs, MAX_ELAPSED_MS) / HOUR_MS
+  return {
+    hunger: clamp(n.hunger - hours * 12.5 * (0.7 + 0.6 * p.appetite)),
+    energy: clamp(n.energy - hours * 6),
+    happiness: clamp(n.happiness - hours * 2),
+  }
+}
+
+export function feed(n: Needs): Needs {
+  return { ...n, hunger: clamp(n.hunger + 40), happiness: clamp(n.happiness + 5) }
+}
+
+export function pet(n: Needs, p: Personality): Needs {
+  return { ...n, happiness: clamp(n.happiness + 5 + 10 * p.affection) }
+}
+
+export function mood(n: Needs): Mood {
+  if (n.happiness < 30) return 'sad'
+  if (n.hunger < 30) return 'hungry'
+  if (n.energy < 30) return 'tired'
+  if (n.hunger >= 70 && n.energy >= 70 && n.happiness >= 70) return 'happy'
+  return 'ok'
+}
