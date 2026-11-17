@@ -44,7 +44,7 @@ export class LivingDog {
     this.target = { ...start }
     this.sprite = new DogSprite(scene, look, start.x, start.y)
     this.label = scene.add
-      .text(start.x, start.y, '', { fontSize: '11px', color: '#ffffff', stroke: '#2b2b2b', strokeThickness: 3 })
+      .text(start.x, start.y, '', { fontSize: '11px', color: '#ffffff', stroke: '#2b2b2b', strokeThickness: 3, resolution: 3, fontFamily: 'Arial, Helvetica, sans-serif' })
       .setOrigin(0.5, 1)
     this.next()
   }

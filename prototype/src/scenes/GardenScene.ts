@@ -4,6 +4,7 @@ import { DogSprite, type Pose } from '../dog/dogSprite'
 import { LivingDog } from '../dog/livingDog'
 import { randomLook } from '../dog/look'
 import { GARDEN_BOUNDS } from '../garden'
+import { drawScenery } from './scenery'
 import { mulberry32 } from '../util/rng'
 
 export class GardenScene extends Phaser.Scene {
@@ -15,12 +16,9 @@ export class GardenScene extends Phaser.Scene {
   }
 
   create() {
-    const g = this.add.graphics()
-    g.fillStyle(0x9fd8f5).fillRect(0, 0, 640, 150)
-    g.fillStyle(0x6bbf59).fillRect(0, 150, 640, 210)
-    g.fillStyle(0x8b5a2b)
-    for (let x = 0; x < 640; x += 30) g.fillRect(x + 4, 112, 18, 44)
-    g.fillRect(0, 126, 640, 8).fillRect(0, 146, 640, 8)
+    // Welt ist 640x360, gerendert wird 3-fach scharf auf 1920x1080
+    this.cameras.main.setZoom(3).centerOn(320, 180)
+    drawScenery(this)
 
     const params = new URLSearchParams(location.search)
     if (params.get('demo') === 'poses') {
@@ -38,7 +36,7 @@ export class GardenScene extends Phaser.Scene {
 
     const button = this.add
       .text(320, 352, 'Neue Welpen', {
-        fontSize: '16px', color: '#ffffff', backgroundColor: '#2b6cb0', padding: { x: 14, y: 8 },
+        fontSize: '16px', color: '#ffffff', backgroundColor: '#2b6cb0', padding: { x: 14, y: 8 }, resolution: 3, fontFamily: 'Arial, Helvetica, sans-serif',
       })
       .setOrigin(0.5, 1)
       .setDepth(2000)

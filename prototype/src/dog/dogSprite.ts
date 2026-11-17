@@ -92,7 +92,7 @@ export class DogSprite {
     }
     this.container.add(this.head)
 
-    this.zzz = scene.add.text(40, -78, 'Z', { fontSize: '18px', color: '#ffffff', fontStyle: 'bold' })
+    this.zzz = scene.add.text(40, -78, 'Z', { fontSize: '18px', color: '#ffffff', fontStyle: 'bold', resolution: 3, fontFamily: 'Arial, Helvetica, sans-serif' })
     this.container.add(this.zzz)
 
     this.container.setScale(look.size)

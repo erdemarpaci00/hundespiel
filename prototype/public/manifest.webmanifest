@@ -1,0 +1,9 @@
+{
+  "name": "Hundespiel",
+  "short_name": "Hundespiel",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#6fc45a",
+  "theme_color": "#6fc45a"
+}
