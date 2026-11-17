@@ -86,7 +86,7 @@ export class DogSprite {
       ear.setRotation(0.25)
       this.head.add(ear)
     } else if (look.ear === 'pointy') {
-      this.head.add(scene.add.triangle(-5, -18, -9, 8, 0, -10, 9, 8, dark))
+      this.head.add(scene.add.triangle(-5, -13, -9, 8, 0, -10, 9, 8, dark))
     } else {
       this.head.add(scene.add.circle(-6, -12, 8, dark))
     }
