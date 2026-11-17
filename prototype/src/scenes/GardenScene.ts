@@ -209,8 +209,8 @@ export class GardenScene extends Phaser.Scene {
       const a = (-150 + (n === 1 ? 60 : (i * 120) / (n - 1))) * (Math.PI / 180)
       const b = this.iconButton(kind, fn)
       const tx = Math.cos(a) * 40
-      const ty = Math.sin(a) * 34 - 30
-      b.setPosition(0, -20).setScale(0.3).setAlpha(0)
+      const ty = Math.sin(a) * 30
+      b.setPosition(0, 0).setScale(0.3).setAlpha(0)
       this.tweens.add({ targets: b, x: tx, y: ty, scale: 1, alpha: 1, duration: 160, ease: 'Back.easeOut', delay: i * 30 })
       box.add(b)
     })
@@ -260,7 +260,7 @@ export class GardenScene extends Phaser.Scene {
     const e = this.entries.get(this.bubble.dogId)
     if (!e) return
     const x = Math.min(580, Math.max(60, e.dog.x))
-    const y = Math.min(300, Math.max(90, e.dog.y - 60))
+    const y = Math.min(300, Math.max(70, e.dog.y - 30))
     this.bubble.box.setPosition(x, y)
   }
 
