@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Erdem und seine Frau melden sich an, wählen gemeinsam einen von drei Welpen, sehen denselben Hund auf beiden Handys, füttern und streicheln ihn, und die Bedürfnisse laufen in Echtzeit weiter.
+**Goal:** Erdem und seine Frau melden sich an, jeder wählt einen eigenen von drei Welpen, beide Hunde sind auf beiden Handys zu sehen, beide pflegen beide Hunde (füttern, streicheln), und die Bedürfnisse laufen in Echtzeit weiter.
 
 **Architecture:** Statische Vite-Seite (aus dem Prototyp), Garten als Phaser-Szene, Menüs als HTML-Overlay.
 Supabase (kostenlos) liefert Login, Datenbank und Live-Aktualisierung.
@@ -21,6 +21,7 @@ Vorgänger: `docs/plans/2026-11-17-prototyp-garten.md` (fertig).
 - Persönlichkeit: Energie, Mut, Anhänglichkeit, Lernwille, Verfressenheit, jeweils 0 bis 1.
 - Querformat, Welt 640x360, gerendert 1920x1080, Vollbild als Home-Bildschirm-App auf iPhone und Android.
 - Genau zwei Konten pro Haushalt, nichts Öffentliches.
+- Jeder der zwei wählt am Anfang genau einen Starter-Welpen, der Haushalt startet mit zwei Hunden. Beide Hunde gehören dem Haushalt, beide dürfen beide pflegen. Die zwei sehen verschiedene Welpen zur Auswahl.
 - Login mit E-Mail und Passwort (Abweichung vom Entwurf "E-Mail-Link", Grund: auf dem iPhone öffnet der Link Safari statt der Home-Bildschirm-App, der Login ginge verloren).
 - Nur der öffentliche `anon`-Schlüssel kommt in den Code, nie der `service_role`-Schlüssel.
 - Keine Gedankenstriche in Texten, nur einfache Bindestriche. Sichtbare Texte auf Deutsch.
@@ -151,7 +152,7 @@ git add app/src/activity.ts app/src/inviteCode.ts app/tests && git commit -m "fe
 - Produces: Tabellen und Funktionen, die spätere Tasks benutzen:
   - `households(id uuid pk default gen_random_uuid(), invite_code text unique not null, created_at timestamptz default now())`
   - `members(household_id uuid references households, user_id uuid references auth.users, display_name text not null, primary key (household_id, user_id))`, höchstens 2 Mitglieder pro Haushalt (Trigger)
-  - `dogs(id uuid pk default gen_random_uuid(), household_id uuid references households, name text not null, look jsonb not null, personality jsonb not null, needs jsonb not null, needs_updated_at timestamptz not null default now(), created_at timestamptz default now())`
+  - `dogs(id uuid pk default gen_random_uuid(), household_id uuid references households, picked_by uuid references auth.users not null, is_starter boolean not null default false, name text not null, look jsonb not null, personality jsonb not null, needs jsonb not null, needs_updated_at timestamptz not null default now(), created_at timestamptz default now())` mit einem Unique-Index auf `(household_id, picked_by) where is_starter`, damit jeder höchstens einen Starter-Hund wählt
   - `activity(id uuid pk default gen_random_uuid(), household_id uuid references households, dog_id uuid references dogs, user_id uuid references auth.users, kind text not null check (kind in ('adopt','feed','pet')), created_at timestamptz default now())`
   - Funktion `create_household(p_display_name text, p_code text) returns uuid` und `join_household(p_display_name text, p_code text) returns uuid` (beide `security definer`, legen das Mitglied für `auth.uid()` an; `join` wirft bei unbekanntem Code oder vollem Haushalt)
   - Funktion `update_needs(p_dog_id uuid, p_expected timestamptz, p_needs jsonb) returns boolean` (setzt `needs` und `needs_updated_at = now()` nur wenn `needs_updated_at = p_expected`, gibt sonst `false` zurück)
@@ -217,13 +218,15 @@ git add -A && git commit -m "feat: sign in and household creation/join"
 - Produces in `dogRepo.ts`:
   - `interface DogRecord { id: string; name: string; look: DogLook; personality: Personality; needs: Needs; needsUpdatedAt: string }`
   - `rollPuppies(seed: number): { look: DogLook; personality: Personality }[]` (genau 3, gleicher Seed gleiche Welpen)
-  - `adoptPuppy(session: Session, pick: { look: DogLook; personality: Personality }, name: string): Promise<DogRecord>` (legt den Hund mit Bedürfnissen 100/100/100 an und schreibt einen `adopt`-Eintrag; wirft, wenn der Haushalt schon einen Hund hat)
+  - `puppySeedFor(userId: string): number` (deterministisch aus der Nutzer-ID, die zwei Mitglieder bekommen verschiedene Welpen zur Auswahl)
+  - `adoptPuppy(session: Session, pick: { look: DogLook; personality: Personality }, name: string): Promise<DogRecord>` (legt den Hund als Starter mit `picked_by = session.userId` und Bedürfnissen 100/100/100 an und schreibt einen `adopt`-Eintrag; wirft, wenn dieser Nutzer schon einen Starter gewählt hat)
 
 - [ ] **Step 1: Failing test für `rollPuppies` schreiben**
 
 ```ts
 test('rollPuppies liefert genau 3 Welpen und ist mit gleichem Seed reproduzierbar', ...)
 test('die drei Welpen unterscheiden sich im Look oder in der Persönlichkeit', ...)
+test('puppySeedFor ist stabil pro Nutzer und liefert für zwei verschiedene Nutzer-IDs verschiedene Welpen', ...)
 ```
 
 - [ ] **Step 2: Test laufen lassen, muss fehlschlagen, dann `rollPuppies` implementieren, Test grün**
@@ -236,7 +239,7 @@ Drei Welpen als kleine Phaser-Vorschau, jeder mit Eindruck ("wirkt schüchtern")
 
 - [ ] **Step 4: Manuelle Prüfung**
 
-Haushalt ohne Hund zeigt die Auswahl, nach dem Aufnehmen verschwindet sie auf beiden Geräten. Ein zweiter Versuch während der erste läuft, Expected: Fehlermeldung statt zweitem Hund.
+Jedes Mitglied ohne Starter-Hund sieht seine eigene Auswahl, nach dem Aufnehmen verschwindet sie nur für dieses Mitglied, und der Hund erscheint auf beiden Geräten. Ein zweiter Versuch desselben Mitglieds, Expected: Fehlermeldung statt zweitem Starter-Hund. Das andere Mitglied kann weiterhin seinen Welpen wählen.
 
 - [ ] **Step 5: Typecheck, Commit**
 
@@ -255,14 +258,14 @@ git add -A && git commit -m "feat: puppy picker and adoption"
 **Interfaces:**
 - Consumes: `DogRecord`, `applyElapsed`, `feed`, `pet`, `mood`, `describeActivity`, `relativeTime`, `update_needs`.
 - Produces in `dogRepo.ts`:
-  - `loadDog(session: Session): Promise<DogRecord | null>`
+  - `loadDogs(session: Session): Promise<DogRecord[]>` (alle Hunde des Haushalts, am Anfang zwei)
   - `careForDog(session: Session, dog: DogRecord, action: 'feed' | 'pet'): Promise<DogRecord>` (rechnet Bedürfnisse bis jetzt hoch, wendet die Aktion an, ruft `update_needs` mit `dog.needsUpdatedAt` auf; bei `false` lädt es den Hund neu und wiederholt genau einmal; schreibt einen `activity`-Eintrag)
   - `subscribeToHousehold(session: Session, onChange: () => void): () => void` (Realtime auf `dogs` und `activity`, gibt die Abmeldefunktion zurück)
   - `loadActivity(session: Session, limit: number): Promise<ActivityEntry[]>`
 
 - [ ] **Step 1: `GardenScene` lädt den gespeicherten Hund**
 
-Szene zeigt genau diesen Hund mit seinem `look` und seiner `personality`, Bedürfnisse aus `applyElapsed` (verstrichene Zeit seit `needsUpdatedAt`).
+Szene zeigt alle Hunde des Haushalts, jeden mit seinem `look` und seiner `personality`, Bedürfnisse aus `applyElapsed` (verstrichene Zeit seit `needsUpdatedAt`). Tippen auf einen Hund wählt ihn für HUD und Knöpfe aus.
 Das Verhalten hängt von `mood` ab: hungrig oder müde schlafen und sitzen mehr, glücklich wandert mehr.
 
 - [ ] **Step 2: Anzeige und Knöpfe**

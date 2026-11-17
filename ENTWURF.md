@@ -60,7 +60,8 @@ Godot bleibt als Ausweichoption, falls die Spielphysik später nicht reicht.
 
 ### Hunde
 - Start mit einer Welpenauswahl: drei zufällige Welpen verschiedener Rassen, grober Eindruck sichtbar, genaue Werte erst im Zusammenleben.
-- Mehrere Hunde möglich: neue Welpen für Preisgeld, Platz begrenzt durch die Wohnung (zum Beispiel 1 am Anfang, 4 am Ende).
+- Jeder der zwei wählt am Anfang seinen eigenen Welpen aus einer eigenen Auswahl, der Haushalt startet also mit zwei Hunden. Beide Hunde gehören dem Haushalt, beide pflegen beide.
+- Mehr Hunde möglich: neue Welpen für Preisgeld, Platz begrenzt durch die Wohnung (zum Beispiel 2 am Anfang, 5 am Ende).
 - Rassen und Aussehen als Baukasten aus Körpergröße, Ohren, Schwanz und Fellmuster.
 - Persönlichkeit zufällig, etwa fünf Eigenschaften (zum Beispiel Anhänglichkeit, Mut, Energie, Lernwille, Verfressenheit).
 - Persönlichkeit beeinflusst das Verhalten im Garten, die Lerngeschwindigkeit und das Verhalten im Wettkampf.
