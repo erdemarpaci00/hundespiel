@@ -3,9 +3,8 @@ import { randomPersonality } from '../dog/behavior'
 import { DogSprite, type Pose } from '../dog/dogSprite'
 import { LivingDog } from '../dog/livingDog'
 import { randomLook } from '../dog/look'
+import { GARDEN_BOUNDS } from '../garden'
 import { mulberry32 } from '../util/rng'
-
-export const GARDEN_BOUNDS = { x: 40, y: 200, w: 560, h: 140 }
 
 export class GardenScene extends Phaser.Scene {
   private poseDogs: DogSprite[] = []
@@ -52,7 +51,7 @@ export class GardenScene extends Phaser.Scene {
     for (const d of this.dogs) d.destroy()
     this.dogs = []
     const rng = mulberry32(seed)
-    const starts = [{ x: 130, y: 260 }, { x: 320, y: 310 }, { x: 510, y: 250 }]
+    const starts = [{ x: 140, y: 260 }, { x: 320, y: 310 }, { x: 500, y: 250 }]
     for (const start of starts) {
       this.dogs.push(new LivingDog(this, randomLook(rng), randomPersonality(rng), GARDEN_BOUNDS, start, rng))
     }

@@ -13,6 +13,9 @@ export interface DogLook {
   patternColor: number
 }
 
+export const SIZE_MIN = 0.7
+export const SIZE_MAX = 1.3
+
 const EARS: EarType[] = ['floppy', 'pointy', 'round']
 const TAILS: TailType[] = ['short', 'long', 'curly']
 const PATTERNS: Pattern[] = ['plain', 'spots', 'patch']
@@ -24,7 +27,7 @@ function pick<T>(list: T[], rng: Rng): T {
 }
 
 export function randomLook(rng: Rng): DogLook {
-  const size = 0.7 + 0.6 * rng()
+  const size = SIZE_MIN + (SIZE_MAX - SIZE_MIN) * rng()
   const ear = pick(EARS, rng)
   const tail = pick(TAILS, rng)
   const coat = pick(PALETTE, rng)
