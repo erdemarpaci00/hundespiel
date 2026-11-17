@@ -15,15 +15,17 @@ import { isRestless, resistsWaking } from '../nightlife'
 import { createAtmosphere, type Atmosphere } from './atmosphere'
 import { drawScenery } from './scenery'
 
+type Action = 'feed' | 'pet' | 'details' | 'wake' | 'walk'
+
+// Ring aus runden Symbol-Knoepfen um den Hund, ohne Textkasten.
 interface Bubble {
   box: Phaser.GameObjects.Container
-  title: Phaser.GameObjects.Text
-  buttons: Phaser.GameObjects.Text[]
-  wake: Phaser.GameObjects.Text
-  walk: Phaser.GameObjects.Text
   dogId: string
   timer: Phaser.Time.TimerEvent
+  state: string
 }
+
+const ACTION_COLOR: Record<Action, number> = { feed: 0x2b6cb0, pet: 0xe0527a, details: 0x5a6b7d, wake: 0x8a5cc2, walk: 0xd9822b }
 
 const MOOD_PHRASE: Record<Mood, string> = { happy: 'glücklich', ok: 'zufrieden', hungry: 'hungrig', tired: 'müde', sad: 'traurig' }
 const FONT = 'Arial, Helvetica, sans-serif'
@@ -150,34 +152,68 @@ export class GardenScene extends Phaser.Scene {
     this.updateBubbleText()
   }
 
-  private pill(label: string, color: string, onTap: () => void): Phaser.GameObjects.Text {
-    const t = this.add
-      .text(0, 0, label, { fontSize: '12px', color: '#ffffff', backgroundColor: color, padding: { x: 9, y: 6 }, resolution: 3, fontFamily: FONT, fontStyle: 'bold' })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true })
-    t.on('pointerdown', onTap)
-    return t
+  // Rundes Symbol (Napf, Herz, Info, Zzz, Pfote) als Knopf.
+  private iconButton(kind: Action, onTap: () => void): Phaser.GameObjects.Container {
+    const g = this.add.graphics()
+    g.fillStyle(0x000000, 0.25).fillCircle(0, 1.5, 15)
+    g.fillStyle(0xffffff, 1).fillCircle(0, 0, 15)
+    g.fillStyle(ACTION_COLOR[kind], 1).fillCircle(0, 0, 12.5)
+    g.fillStyle(0xffffff, 1)
+    const parts: Phaser.GameObjects.GameObject[] = [g]
+    if (kind === 'feed') {
+      g.fillEllipse(0, 2, 15, 7).fillStyle(ACTION_COLOR.feed, 1).fillEllipse(0, 0, 11, 4).fillStyle(0xffffff, 1).fillCircle(-3, -4, 1.6).fillCircle(0, -5, 1.6).fillCircle(3, -4, 1.6)
+    } else if (kind === 'pet') {
+      g.fillCircle(-3.2, -2, 4).fillCircle(3.2, -2, 4).fillTriangle(-7, 0, 7, 0, 0, 8)
+    } else if (kind === 'walk') {
+      g.fillEllipse(0, 3, 9, 7).fillCircle(-5, -2, 2.3).fillCircle(-1.8, -5, 2.3).fillCircle(1.8, -5, 2.3).fillCircle(5, -2, 2.3)
+    } else {
+      const t = this.add.text(0, 0, kind === 'details' ? 'i' : 'Zzz', { fontSize: kind === 'details' ? '17px' : '11px', color: '#ffffff', fontStyle: 'bold', resolution: 3, fontFamily: FONT }).setOrigin(0.5)
+      parts.push(t)
+    }
+    const c = this.add.container(0, 0, parts)
+    c.setSize(30, 30).setInteractive(new Phaser.Geom.Circle(0, 0, 18), Phaser.Geom.Circle.Contains)
+    c.on('pointerdown', onTap)
+    return c
   }
 
-  // Der Gemuetszustand zeigt sich nur auf Antippen, als Sprechblase am Hund.
+  // Welche Knoepfe der Hund gerade anbietet, je nach Zustand.
+  private bubbleState(e: Entry): string {
+    if (e.dog.sleeping) return 'asleep'
+    if (this.atmosphere.isNight() && isRestless(e.record.id, e.record.personality, new Date())) return 'restless'
+    return 'normal'
+  }
+
+  // Antippen zeigt Symbole rund um den Hund. Die Stimmung steht kurz im Namen.
   private openBubble(dogId: string): void {
     this.closeBubble()
     const e = this.entries.get(dogId)
     if (!e) return
     this.selectedId = dogId
-    const bg = this.add.graphics()
-    bg.fillStyle(0xffffff, 1).fillRoundedRect(-92, -10, 184, 104, 12)
-    const title = this.add.text(0, 6, '', { fontSize: '12px', color: '#2b2b2b', fontStyle: 'bold', resolution: 3, fontFamily: FONT }).setOrigin(0.5)
-    const feed = this.pill('Füttern', '#2b6cb0', () => void this.care('feed')).setPosition(-44, 42)
-    const pet = this.pill('Streicheln', '#4a9b3a', () => void this.care('pet')).setPosition(46, 42)
-    const wake = this.pill('Wecken', '#8a5cc2', () => this.tryWake(dogId)).setPosition(0, 42)
-    const walk = this.pill('Gassi gehen', '#d9822b', () => this.scene.start('walk')).setPosition(0, 42)
-    const details = this.pill('Details', '#5a6b7d', () => openDogDetail(e.record, this.currentNeeds(e))).setPosition(0, 76)
-    const box = this.add.container(0, 0, [bg, title, feed, pet, wake, walk, details]).setDepth(2000)
+    const box = this.add.container(0, 0).setDepth(2000)
     const timer = this.time.delayedCall(8000, () => this.closeBubble())
-    this.bubble = { box, title, buttons: [feed, pet], wake, walk, dogId, timer }
+    this.bubble = { box, dogId, timer, state: '' }
     this.updateBubbleText()
     this.placeBubble()
+  }
+
+  private buildRing(e: Entry, state: string): void {
+    if (!this.bubble) return
+    const box = this.bubble.box
+    box.removeAll(true)
+    const actions: [Action, () => void][] =
+      state === 'asleep' ? [['wake', () => this.tryWake(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e))]]
+      : state === 'restless' ? [['walk', () => this.scene.start('walk')], ['details', () => openDogDetail(e.record, this.currentNeeds(e))]]
+      : [['feed', () => void this.care('feed')], ['pet', () => void this.care('pet')], ['details', () => openDogDetail(e.record, this.currentNeeds(e))]]
+    const n = actions.length
+    actions.forEach(([kind, fn], i) => {
+      const a = (-150 + (n === 1 ? 60 : (i * 120) / (n - 1))) * (Math.PI / 180)
+      const b = this.iconButton(kind, fn)
+      const tx = Math.cos(a) * 40
+      const ty = Math.sin(a) * 34 - 30
+      b.setPosition(0, -20).setScale(0.3).setAlpha(0)
+      this.tweens.add({ targets: b, x: tx, y: ty, scale: 1, alpha: 1, duration: 160, ease: 'Back.easeOut', delay: i * 30 })
+      box.add(b)
+    })
   }
 
   // Ein Hund, der aus dem Schlaf geholt wird, wehrt sich manchmal.
@@ -199,6 +235,8 @@ export class GardenScene extends Phaser.Scene {
   private closeBubble(): void {
     if (!this.bubble) return
     this.bubble.timer.remove(false)
+    const e = this.entries.get(this.bubble.dogId)
+    if (e) e.dog.setCaption(e.record.name)
     this.bubble.box.destroy()
     this.bubble = null
   }
@@ -207,22 +245,22 @@ export class GardenScene extends Phaser.Scene {
     if (!this.bubble) return
     const e = this.entries.get(this.bubble.dogId)
     if (!e) return
-    const asleep = e.dog.sleeping
-    const restless = this.atmosphere.isNight() && !asleep && isRestless(e.record.id, e.record.personality, new Date())
-    const phrase = asleep ? `${e.record.name} schläft` : restless ? `${e.record.name} ist unruhig und will raus` : `${e.record.name} ist ${MOOD_PHRASE[mood(this.currentNeeds(e))]}`
-    this.bubble.title.setText(phrase)
-    this.bubble.wake.setVisible(asleep)
-    this.bubble.walk.setVisible(restless)
-    for (const b of this.bubble.buttons) b.setVisible(!asleep && !restless)
-    for (const b of this.bubble.buttons) b.setAlpha(this.busy ? 0.5 : 1)
+    const state = this.bubbleState(e)
+    const phrase = state === 'asleep' ? 'schläft' : state === 'restless' ? 'unruhig' : MOOD_PHRASE[mood(this.currentNeeds(e))]
+    e.dog.setCaption(`${e.record.name} · ${phrase}`)
+    if (this.bubble.state !== state) {
+      this.bubble.state = state
+      this.buildRing(e, state)
+    }
+    this.bubble.box.setAlpha(this.busy ? 0.5 : 1)
   }
 
   private placeBubble(): void {
     if (!this.bubble) return
     const e = this.entries.get(this.bubble.dogId)
     if (!e) return
-    const x = Math.min(544, Math.max(96, e.dog.x))
-    const y = Math.min(280, Math.max(6, e.dog.y - 112))
+    const x = Math.min(580, Math.max(60, e.dog.x))
+    const y = Math.min(300, Math.max(90, e.dog.y - 60))
     this.bubble.box.setPosition(x, y)
   }
 
