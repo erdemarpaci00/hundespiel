@@ -101,11 +101,9 @@ export async function careForDog(session: Session, dog: DogRecord, action: 'feed
     const elapsed = Date.now() - parseTimestamp(current.needsUpdatedAt)
     const decayed = applyElapsed(current.needs, elapsed, current.personality)
     const next = action === 'feed' ? feed(decayed) : pet(decayed, current.personality)
-    const { data, error } = await supabase.rpc('update_needs', {
-      p_dog_id: current.id,
-      p_expected: current.needsUpdatedAt,
-      p_needs: next,
-    })
+    const args = { p_dog_id: current.id, p_expected: current.needsUpdatedAt, p_needs: next }
+    const { data, error } =
+      action === 'feed' ? await supabase.rpc('feed_dog', { ...args, p_item: 'futter' }) : await supabase.rpc('update_needs', args)
     fail(error)
     if (data === true) {
       await logActivity(session, current.id, action)

@@ -5,6 +5,9 @@ const RULES: [RegExp, string][] = [
   [/code unbekannt/i, 'Dieser Code ist unbekannt'],
   [/haushalt ist voll/i, 'Dieser Haushalt ist schon voll'],
   [/gehörst schon zu einem haushalt/i, 'Du gehörst schon zu einem Haushalt'],
+  [/kein futter mehr/i, 'Kein Futter mehr, kauft neues in den Einstellungen'],
+  [/zu wenig münzen/i, 'Zu wenig Münzen'],
+  [/das habt ihr schon/i, 'Das habt ihr schon'],
   [/failed to fetch|load failed|networkerror|network request failed/i, 'Keine Verbindung, bitte Netz prüfen'],
 ]
 

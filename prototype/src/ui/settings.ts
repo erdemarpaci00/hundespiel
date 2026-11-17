@@ -1,3 +1,4 @@
+import { buyItem, loadEconomy, SHOP, type Economy } from '../economy'
 import { loadInviteCode, signOut } from '../session'
 
 export interface SettingsOptions {
@@ -23,6 +24,33 @@ export function openSettings(opts: SettingsOptions): void {
     try { codeBtn.textContent = `Code: ${await loadInviteCode(opts.householdId)}` } catch { codeBtn.textContent = 'Keine Verbindung, bitte nochmal' }
   })
   card.appendChild(codeBtn)
+
+  const shop = document.createElement('div')
+  shop.className = 'verlauf'
+  shop.textContent = 'Laden …'
+  const render = (e: Economy): void => {
+    shop.replaceChildren()
+    const head = document.createElement('div')
+    head.textContent = `Münzen: ${e.coins}`
+    shop.appendChild(head)
+    for (const it of SHOP) {
+      const have = e.items[it.item] ?? 0
+      const btn = document.createElement('button')
+      btn.className = 'alt'
+      btn.textContent = `${it.label} (${have}) kaufen, ${it.price} Münzen`
+      btn.disabled = e.coins < it.price || (it.single && have >= 1)
+      btn.addEventListener('click', async () => {
+        btn.disabled = true
+        try { render(await buyItem(it.item)) } catch (err) { head.textContent = err instanceof Error ? err.message : 'Fehler' }
+      })
+      shop.appendChild(btn)
+    }
+  }
+  loadEconomy().then(render, () => { shop.textContent = 'Keine Verbindung, bitte Netz prüfen' })
+  const shopTitle = document.createElement('div')
+  shopTitle.className = 'sub'
+  shopTitle.textContent = 'Laden'
+  card.append(shopTitle, shop)
 
   const lines = opts.getActivity?.() ?? []
   if (opts.getActivity) {
