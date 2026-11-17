@@ -17,10 +17,23 @@
       #rotate { display: none; position: fixed; inset: 0; z-index: 10; align-items: center; justify-content: center; text-align: center; padding: 24px;
         background: #2b6cb0; color: #fff; font: 600 20px Arial, Helvetica, sans-serif; }
       @media (orientation: portrait) { #rotate { display: flex; } }
+      #ui { display: none; position: fixed; inset: 0; z-index: 5; align-items: center; justify-content: center; background: #6fc45a;
+        font-family: Arial, Helvetica, sans-serif; touch-action: manipulation; overflow: auto; }
+      #ui .card { background: #fff; border-radius: 16px; padding: 20px 24px; width: min(360px, 86vw); display: flex; flex-direction: column; gap: 10px;
+        box-shadow: 0 6px 24px rgba(0,0,0,.25); text-align: center; color: #2b2b2b; -webkit-user-select: auto; user-select: auto; }
+      #ui h1 { margin: 0 0 4px; font-size: 22px; }
+      #ui input { font-size: 16px; padding: 10px 12px; border: 2px solid #cbd5e0; border-radius: 10px; }
+      #ui button { font-size: 16px; font-weight: 600; padding: 10px 12px; border: 0; border-radius: 10px; background: #2b6cb0; color: #fff; }
+      #ui button.alt { background: #4a9b3a; }
+      #ui button:disabled { opacity: .6; }
+      #ui .row { display: flex; gap: 8px; } #ui .row button { flex: 1; }
+      #ui .msg { margin: 0; min-height: 18px; color: #c53030; font-size: 14px; }
+      #ui .code { font: 700 36px monospace; letter-spacing: 6px; background: #edf2f7; border-radius: 10px; padding: 8px; }
     </style>
   </head>
   <body>
     <div id="game"></div>
+    <div id="ui"></div>
     <div id="rotate">Bitte das Handy quer halten</div>
     <script type="module" src="/src/main.ts"></script>
   </body>
