@@ -33,7 +33,7 @@ export function createAtmosphere(scene: Phaser.Scene, outdoor: boolean, backdrop
     if (phase === 'night') {
       sky.fillStyle(0xffffff, 0.9)
       for (let i = 0; i < 40; i++) sky.fillCircle((i * 83) % 640, 8 + ((i * 37) % 110), i % 7 === 0 ? 1.4 : 0.8)
-      sky.fillStyle(0xf4f1d0, 1).fillCircle(540, 44, 16).fillStyle(0x0b1233, 1).fillCircle(547, 40, 14)
+      sky.fillStyle(0xf4f1d0, 0.25).fillCircle(540, 44, 24).fillStyle(0xf4f1d0, 1).fillCircle(540, 44, 16)
     }
     if (weather !== 'sun') {
       const a = weather === 'rain' ? 0.9 : 0.75

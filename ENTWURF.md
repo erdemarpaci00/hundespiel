@@ -136,3 +136,11 @@ Das Datenmodell ist von Schritt 1 an für mehrere Hunde und Persönlichkeiten au
 - Name des Spiels und der Rassen.
 - Konkrete Eigenschaften und Disziplinen im Detail.
 - Wie die erste Grafik entsteht (selbst gezeichnet in Code, später gegen gekaufte oder gezeichnete Sprites tauschbar).
+
+## Orte und Tageszeit (umgesetzt)
+
+- Karte (Knopf neben dem Zahnrad) mit den Orten Garten, Spaziergang, Laden, Hundeheim, Training.
+- Spaziergang: Park mit fremden Hunden verschiedener Rassen. Laden: Münzen und Einkauf. Hundeheim: Hunde in Boxen, später adoptierbar. Training: Platz mit Hindernissen, die Übungen selbst kommen in Schritt 2.
+- Tageszeit nach Ortszeit des Handys: nachts (22 bis 6 Uhr) dunkel mit Mond und Sternen, die Hunde schlafen. Morgens und abends getönt.
+- Wetter (Sonne, Wolken, Regen) hängt nur von der Weltzeit in 3-Stunden-Blöcken ab, beide Handys sehen dasselbe.
+- Zum Testen: Adresse mit `?debug&hour=23&weather=rain`.
