@@ -31,6 +31,7 @@ export class LivingDog {
   private behavior: Behavior = 'sit'
   private remainingMs = 0
   private caption: string
+  private resting = false
 
   constructor(
     scene: Phaser.Scene,
@@ -51,7 +52,7 @@ export class LivingDog {
   }
 
   private next(): void {
-    this.behavior = pickBehavior(this.personality, this.rng)
+    this.behavior = this.resting ? 'sleep' : pickBehavior(this.personality, this.rng)
     this.remainingMs = behaviorDuration(this.behavior, this.personality, this.rng)
     this.sprite.setPose(POSE[this.behavior])
     if (this.behavior === 'wander') this.target = nextTarget(this.bounds, this.pos, 140, this.rng)
@@ -83,6 +84,13 @@ export class LivingDog {
   onTap(cb: () => void): void {
     this.sprite.container.setInteractive(new Phaser.Geom.Rectangle(-55, -80, 110, 100), Phaser.Geom.Rectangle.Contains)
     this.sprite.container.on('pointerdown', cb)
+  }
+
+  // Nachts schlaeft der Hund und bleibt liegen.
+  setResting(on: boolean): void {
+    if (on === this.resting) return
+    this.resting = on
+    this.next()
   }
 
   setPersonality(p: Personality): void {

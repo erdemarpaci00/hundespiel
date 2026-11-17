@@ -3,6 +3,7 @@ import { BREEDS, breedById, rollBreedPuppy } from '../dog/breeds'
 import { LivingDog } from '../dog/livingDog'
 import { loadDogs } from '../dogRepo'
 import type { Session } from '../session'
+import { createAtmosphere, type Atmosphere } from './atmosphere'
 import { createHud } from '../ui/hud'
 import { buildShop } from '../ui/shop'
 import { mulberry32 } from '../util/rng'
@@ -15,6 +16,7 @@ const TITLES: Record<Kind, string> = { walk: 'Spaziergang im Park', shop: 'Laden
 export class PlaceScene extends Phaser.Scene {
   private hud!: ReturnType<typeof createHud>
   private dogs: LivingDog[] = []
+  private atmosphere!: Atmosphere
 
   constructor(private readonly kind: Kind) {
     super(kind)
@@ -25,6 +27,7 @@ export class PlaceScene extends Phaser.Scene {
     this.cameras.main.setZoom(3).centerOn(320, 180)
     this.dogs = []
     this.draw()
+    this.atmosphere = createAtmosphere(this, this.kind === 'walk' || this.kind === 'training')
     this.add.text(320, 14, TITLES[this.kind], { fontSize: '14px', color: '#ffffff', stroke: '#2b2b2b', strokeThickness: 4, resolution: 3, fontFamily: 'Arial, Helvetica, sans-serif', fontStyle: 'bold' }).setOrigin(0.5, 0).setDepth(5)
     this.hud = createHud({ householdId: session.householdId, getActivity: () => [], travel: (k) => this.scene.start(k), current: this.kind })
     if (this.kind === 'shop') this.openShopPanel()
@@ -66,7 +69,8 @@ export class PlaceScene extends Phaser.Scene {
     for (let i = 0; i < strangers; i++) {
       const breed = BREEDS[Math.floor(rng() * BREEDS.length)]
       const pup = rollBreedPuppy(breed, rng)
-      const d = new LivingDog(this, pup.look, pup.personality, area, { x: 120 + i * 90, y: 230 + (i % 2) * 50 }, Math.random)
+      const pen = this.kind === 'kennel' ? { x: 40 + i * 100, y: 290, w: 40, h: 20 } : area
+      const d = new LivingDog(this, pup.look, pup.personality, pen, this.kind === 'kennel' ? { x: pen.x + 20, y: pen.y + 10 } : { x: 120 + i * 90, y: 230 + (i % 2) * 50 }, Math.random)
       d.setCaption(breed.name)
       d.onTap(() => this.hud.toast(this.kind === 'kennel' ? `${breed.name} sucht ein Zuhause (bald adoptierbar)` : `Ein fremder ${breed.name}`))
       this.dogs.push(d)
@@ -75,7 +79,11 @@ export class PlaceScene extends Phaser.Scene {
   }
 
   update(_t: number, delta: number): void {
-    for (const d of this.dogs) d.update(delta)
+    this.atmosphere.update(delta)
+    for (const d of this.dogs) {
+      d.setResting(this.atmosphere.isNight())
+      d.update(delta)
+    }
   }
 
   private draw(): void {

@@ -10,6 +10,7 @@ import { GARDEN_BOUNDS } from '../garden'
 import type { Session } from '../session'
 import { createHud } from '../ui/hud'
 import { mulberry32 } from '../util/rng'
+import { createAtmosphere, type Atmosphere } from './atmosphere'
 import { drawScenery } from './scenery'
 
 interface Bubble {
@@ -38,6 +39,7 @@ export class GardenScene extends Phaser.Scene {
   private seenActivity: Set<string> | null = null
   private bubble: Bubble | null = null
   private busy = false
+  private atmosphere!: Atmosphere
   private unsubscribe: (() => void) | null = null
 
   constructor() {
@@ -48,6 +50,7 @@ export class GardenScene extends Phaser.Scene {
     // Welt ist 640x360, gerendert wird 3-fach scharf auf 1920x1080
     this.cameras.main.setZoom(3).centerOn(320, 180)
     drawScenery(this)
+    this.atmosphere = createAtmosphere(this, true)
 
     if (new URLSearchParams(location.search).get('demo') === 'poses') {
       const poses: Pose[] = ['walk', 'sit', 'sleep', 'sniff']
@@ -134,6 +137,7 @@ export class GardenScene extends Phaser.Scene {
   private refreshNeeds(): void {
     for (const e of this.entries.values()) {
       e.dog.setPersonality(moodPersonality(e.record.personality, mood(this.currentNeeds(e))))
+      e.dog.setResting(this.atmosphere.isNight())
     }
     this.updateBubbleText()
   }
@@ -209,6 +213,7 @@ export class GardenScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     for (const d of this.poseDogs) d.update(delta)
     for (const e of this.entries.values()) e.dog.update(delta)
+    this.atmosphere.update(delta)
     this.placeBubble()
   }
 }
