@@ -52,6 +52,12 @@ export async function joinHousehold(displayName: string, code: string): Promise<
 }
 
 // null: nicht angemeldet oder noch kein Haushalt.
+export async function loadInviteCode(householdId: string): Promise<string> {
+  const { data, error } = await supabase.from('households').select('invite_code').eq('id', householdId).single()
+  if (error) throw new Error(friendlyError(error.message))
+  return data.invite_code as string
+}
+
 export async function loadSession(): Promise<Session | null> {
   const { data: auth } = await supabase.auth.getSession()
   const user = auth.session?.user

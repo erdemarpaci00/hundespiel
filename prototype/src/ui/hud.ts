@@ -13,6 +13,7 @@ export interface HudState {
 export interface HudActions {
   onSelect(id: string): void
   onCare(action: 'feed' | 'pet'): void
+  loadInviteCode(): Promise<string>
 }
 
 const MOOD_TEXT: Record<Mood, string> = { happy: 'glücklich', ok: 'zufrieden', hungry: 'hungrig', tired: 'müde', sad: 'traurig' }
@@ -30,7 +31,7 @@ export function createHud(actions: HudActions): { render(s: HudState): void } {
       <div class="tabs"></div>
       <div class="mood"></div>
       <div class="bars"></div>
-      <div class="row"><button id="feed">Füttern</button><button id="pet" class="alt">Streicheln</button></div>
+      <div class="row"><button id="feed">Füttern</button><button id="pet" class="alt">Streicheln</button><button id="code" class="tab">Code</button></div>
       <p class="hud-msg"></p>
     </div>
     <div class="hud-log"></div>`
@@ -41,6 +42,11 @@ export function createHud(actions: HudActions): { render(s: HudState): void } {
   const log = root.querySelector('.hud-log') as HTMLElement
   const feed = root.querySelector('#feed') as HTMLButtonElement
   const pet = root.querySelector('#pet') as HTMLButtonElement
+  const codeBtn = root.querySelector('#code') as HTMLButtonElement
+  codeBtn.addEventListener('click', async () => {
+    if (codeBtn.textContent !== 'Code') { codeBtn.textContent = 'Code'; return }
+    try { codeBtn.textContent = await actions.loadInviteCode() } catch { codeBtn.textContent = 'Code' }
+  })
   feed.addEventListener('click', () => actions.onCare('feed'))
   pet.addEventListener('click', () => actions.onCare('pet'))
 

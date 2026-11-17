@@ -1,3 +1,4 @@
+import { parseTimestamp } from '../time'
 import Phaser from 'phaser'
 import { describeActivity, relativeTime, type ActivityEntry } from '../activity'
 import { DogSprite, type Pose } from '../dog/dogSprite'
@@ -6,7 +7,7 @@ import { randomLook } from '../dog/look'
 import { applyElapsed, mood, moodPersonality, type Mood, type Needs } from '../dog/needs'
 import { careForDog, loadActivity, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
 import { GARDEN_BOUNDS } from '../garden'
-import type { Session } from '../session'
+import { loadInviteCode, type Session } from '../session'
 import { createHud } from '../ui/hud'
 import { mulberry32 } from '../util/rng'
 import { drawScenery } from './scenery'
@@ -53,11 +54,20 @@ export class GardenScene extends Phaser.Scene {
         this.renderHud()
       },
       onCare: (action) => void this.care(action),
+      loadInviteCode: () => loadInviteCode(this.session.householdId),
     })
     void this.reload()
     this.unsubscribe = subscribeToHousehold(this.session, () => void this.reload())
     this.time.addEvent({ delay: 5000, loop: true, callback: () => this.refreshNeeds() })
-    this.events.once('shutdown', () => this.unsubscribe?.())
+    // Zurueck aus dem Hintergrund oder Netz wieder da: Stand neu holen.
+    const resync = (): void => { if (document.visibilityState === 'visible') void this.reload() }
+    document.addEventListener('visibilitychange', resync)
+    window.addEventListener('online', resync)
+    this.events.once('shutdown', () => {
+      this.unsubscribe?.()
+      document.removeEventListener('visibilitychange', resync)
+      window.removeEventListener('online', resync)
+    })
   }
 
   private async reload(): Promise<void> {
@@ -98,7 +108,7 @@ export class GardenScene extends Phaser.Scene {
   }
 
   private currentNeeds(e: Entry): Needs {
-    return applyElapsed(e.record.needs, Date.now() - Date.parse(e.record.needsUpdatedAt), e.record.personality)
+    return applyElapsed(e.record.needs, Date.now() - parseTimestamp(e.record.needsUpdatedAt), e.record.personality)
   }
 
   private refreshNeeds(): void {

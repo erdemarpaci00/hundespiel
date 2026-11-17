@@ -5,7 +5,7 @@ const RULES: [RegExp, string][] = [
   [/code unbekannt/i, 'Dieser Code ist unbekannt'],
   [/haushalt ist voll/i, 'Dieser Haushalt ist schon voll'],
   [/gehörst schon zu einem haushalt/i, 'Du gehörst schon zu einem Haushalt'],
-  [/failed to fetch|networkerror|network request failed/i, 'Keine Verbindung, bitte Netz prüfen'],
+  [/failed to fetch|load failed|networkerror|network request failed/i, 'Keine Verbindung, bitte Netz prüfen'],
 ]
 
 export function friendlyError(message: string | undefined): string {

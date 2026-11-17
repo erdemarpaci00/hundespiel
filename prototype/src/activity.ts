@@ -1,3 +1,4 @@
+import { parseTimestamp } from './time'
 export type ActivityKind = 'adopt' | 'feed' | 'pet'
 
 export interface ActivityEntry {
@@ -19,7 +20,7 @@ export function describeActivity(e: ActivityEntry): string {
 }
 
 export function relativeTime(iso: string, nowMs: number): string {
-  const diff = nowMs - Date.parse(iso)
+  const diff = nowMs - parseTimestamp(iso)
   if (!Number.isFinite(diff) || diff < 60_000) return 'gerade eben'
   const min = Math.floor(diff / 60_000)
   if (min < 60) return `vor ${min} Min`

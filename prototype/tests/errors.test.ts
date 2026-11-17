@@ -15,3 +15,7 @@ test('Netzfehler und Unbekanntes ergeben verständliche Meldungen', () => {
   expect(friendlyError('irgendwas Unerwartetes')).toBe('Etwas ist schiefgelaufen, bitte nochmal versuchen')
   expect(friendlyError(undefined)).toBe('Etwas ist schiefgelaufen, bitte nochmal versuchen')
 })
+
+test('Safari meldet Netzfehler als "Load failed"', () => {
+  expect(friendlyError('TypeError: Load failed')).toBe('Keine Verbindung, bitte Netz prüfen')
+})

@@ -1,3 +1,4 @@
+import { parseTimestamp } from './time'
 import type { ActivityEntry, ActivityKind } from './activity'
 import type { Personality } from './dog/behavior'
 import type { DogLook } from './dog/look'
@@ -97,7 +98,7 @@ async function loadDog(id: string): Promise<DogRecord> {
 export async function careForDog(session: Session, dog: DogRecord, action: 'feed' | 'pet'): Promise<DogRecord> {
   let current = dog
   for (let attempt = 0; attempt < 2; attempt++) {
-    const elapsed = Date.now() - Date.parse(current.needsUpdatedAt)
+    const elapsed = Date.now() - parseTimestamp(current.needsUpdatedAt)
     const decayed = applyElapsed(current.needs, elapsed, current.personality)
     const next = action === 'feed' ? feed(decayed) : pet(decayed, current.personality)
     const { data, error } = await supabase.rpc('update_needs', {
@@ -116,11 +117,18 @@ export async function careForDog(session: Session, dog: DogRecord, action: 'feed
 }
 
 export function subscribeToHousehold(session: Session, onChange: () => void): () => void {
+  let connectedBefore = false
   const channel = supabase
     .channel(`household-${session.householdId}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'dogs', filter: `household_id=eq.${session.householdId}` }, onChange)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'activity', filter: `household_id=eq.${session.householdId}` }, onChange)
-    .subscribe()
+    .subscribe((status) => {
+      // Nach einem Verbindungsabbruch (Handy gesperrt, App im Hintergrund) werden verpasste Aenderungen nicht nachgeliefert: neu laden.
+      if (status === 'SUBSCRIBED') {
+        if (connectedBefore) onChange()
+        connectedBefore = true
+      }
+    })
   return () => {
     void supabase.removeChannel(channel)
   }
