@@ -154,10 +154,10 @@ export class GardenScene extends Phaser.Scene {
     if (!e) return
     this.selectedId = dogId
     const bg = this.add.graphics()
-    bg.fillStyle(0xffffff, 0.95).fillRoundedRect(-78, -10, 156, 76, 12)
+    bg.fillStyle(0xffffff, 1).fillRoundedRect(-92, -10, 184, 76, 12)
     const title = this.add.text(0, 6, '', { fontSize: '12px', color: '#2b2b2b', fontStyle: 'bold', resolution: 3, fontFamily: FONT }).setOrigin(0.5)
-    const feed = this.pill('Füttern', '#2b6cb0', () => void this.care('feed')).setPosition(-36, 42)
-    const pet = this.pill('Streicheln', '#4a9b3a', () => void this.care('pet')).setPosition(40, 42)
+    const feed = this.pill('Füttern', '#2b6cb0', () => void this.care('feed')).setPosition(-44, 42)
+    const pet = this.pill('Streicheln', '#4a9b3a', () => void this.care('pet')).setPosition(46, 42)
     const box = this.add.container(0, 0, [bg, title, feed, pet]).setDepth(2000)
     const timer = this.time.delayedCall(8000, () => this.closeBubble())
     this.bubble = { box, title, buttons: [feed, pet], dogId, timer }
@@ -184,8 +184,8 @@ export class GardenScene extends Phaser.Scene {
     if (!this.bubble) return
     const e = this.entries.get(this.bubble.dogId)
     if (!e) return
-    const x = Math.min(556, Math.max(84, e.dog.x))
-    const y = Math.min(280, Math.max(6, e.dog.y - 120))
+    const x = Math.min(544, Math.max(96, e.dog.x))
+    const y = Math.min(280, Math.max(6, e.dog.y - 112))
     this.bubble.box.setPosition(x, y)
   }
 
