@@ -2,6 +2,14 @@ import type { Rng } from '../util/rng'
 import type { Personality } from './behavior'
 import type { DogLook, EarType, Pattern, TailType } from './look'
 
+// Start-Begabungen 0..1, Grundlage fuer die Stats (Tempo, Ausdauer, Sprungkraft, Gehorsam) in Schritt 2.
+export interface BreedStats {
+  tempo: number
+  ausdauer: number
+  sprungkraft: number
+  gehorsam: number
+}
+
 export interface Breed {
   id: string
   name: string
@@ -14,6 +22,7 @@ export interface Breed {
   patternColor: number
   // Mittelpunkt der Charakter-Tendenz, der einzelne Hund streut darum herum.
   personality: Personality
+  stats: BreedStats
 }
 
 // Farben wie in look.ts: Braun, Creme, Schwarz, Grau, Rotbraun
@@ -22,14 +31,14 @@ const p = (energy: number, courage: number, affection: number, learning: number,
   ({ energy, courage, affection, learning, appetite })
 
 export const BREEDS: Breed[] = [
-  { id: 'husky', name: 'Husky', sizeMin: 1.1, sizeMax: 1.25, ears: ['pointy'], tails: ['curly'], coats: [GREY], pattern: 'patch', patternColor: CREAM, personality: p(0.85, 0.6, 0.45, 0.35, 0.35) },
-  { id: 'labrador', name: 'Labrador', sizeMin: 1.1, sizeMax: 1.25, ears: ['floppy'], tails: ['long'], coats: [CREAM, BROWN, BLACK], pattern: 'plain', patternColor: CREAM, personality: p(0.7, 0.6, 0.85, 0.75, 0.95) },
-  { id: 'dackel', name: 'Dackel', sizeMin: 0.7, sizeMax: 0.8, ears: ['floppy'], tails: ['long'], coats: [RED, BROWN], pattern: 'plain', patternColor: BROWN, personality: p(0.55, 0.85, 0.6, 0.4, 0.7) },
-  { id: 'schaeferhund', name: 'Schäferhund', sizeMin: 1.2, sizeMax: 1.3, ears: ['pointy'], tails: ['long'], coats: [BROWN], pattern: 'patch', patternColor: BLACK, personality: p(0.7, 0.85, 0.65, 0.9, 0.5) },
-  { id: 'corgi', name: 'Corgi', sizeMin: 0.75, sizeMax: 0.85, ears: ['pointy'], tails: ['short'], coats: [RED], pattern: 'patch', patternColor: CREAM, personality: p(0.7, 0.7, 0.7, 0.7, 0.85) },
-  { id: 'pudel', name: 'Pudel', sizeMin: 0.85, sizeMax: 1.0, ears: ['round'], tails: ['curly'], coats: [CREAM, BLACK, GREY], pattern: 'plain', patternColor: CREAM, personality: p(0.75, 0.5, 0.8, 0.9, 0.4) },
-  { id: 'dalmatiner', name: 'Dalmatiner', sizeMin: 1.1, sizeMax: 1.2, ears: ['floppy'], tails: ['long'], coats: [CREAM], pattern: 'spots', patternColor: BLACK, personality: p(0.9, 0.65, 0.6, 0.5, 0.6) },
-  { id: 'mops', name: 'Mops', sizeMin: 0.7, sizeMax: 0.8, ears: ['round'], tails: ['curly'], coats: [CREAM, BROWN], pattern: 'plain', patternColor: BLACK, personality: p(0.3, 0.45, 0.9, 0.4, 0.95) },
+  { id: 'husky', name: 'Husky', sizeMin: 1.1, sizeMax: 1.25, ears: ['pointy'], tails: ['curly'], coats: [GREY], pattern: 'patch', patternColor: CREAM, personality: p(0.85, 0.6, 0.45, 0.35, 0.35), stats: { tempo: 0.6, ausdauer: 0.95, sprungkraft: 0.6, gehorsam: 0.35 } },
+  { id: 'labrador', name: 'Labrador', sizeMin: 1.1, sizeMax: 1.25, ears: ['floppy'], tails: ['long'], coats: [CREAM, BROWN, BLACK], pattern: 'plain', patternColor: CREAM, personality: p(0.7, 0.6, 0.85, 0.75, 0.95), stats: { tempo: 0.6, ausdauer: 0.7, sprungkraft: 0.6, gehorsam: 0.75 } },
+  { id: 'dackel', name: 'Dackel', sizeMin: 0.7, sizeMax: 0.8, ears: ['floppy'], tails: ['long'], coats: [RED, BROWN], pattern: 'plain', patternColor: BROWN, personality: p(0.55, 0.85, 0.6, 0.4, 0.7), stats: { tempo: 0.45, ausdauer: 0.5, sprungkraft: 0.3, gehorsam: 0.4 } },
+  { id: 'schaeferhund', name: 'Schäferhund', sizeMin: 1.2, sizeMax: 1.3, ears: ['pointy'], tails: ['long'], coats: [BROWN], pattern: 'patch', patternColor: BLACK, personality: p(0.7, 0.85, 0.65, 0.9, 0.5), stats: { tempo: 0.75, ausdauer: 0.8, sprungkraft: 0.7, gehorsam: 0.95 } },
+  { id: 'corgi', name: 'Corgi', sizeMin: 0.75, sizeMax: 0.85, ears: ['pointy'], tails: ['short'], coats: [RED], pattern: 'patch', patternColor: CREAM, personality: p(0.7, 0.7, 0.7, 0.7, 0.85), stats: { tempo: 0.9, ausdauer: 0.55, sprungkraft: 0.85, gehorsam: 0.65 } },
+  { id: 'pudel', name: 'Pudel', sizeMin: 0.85, sizeMax: 1.0, ears: ['round'], tails: ['curly'], coats: [CREAM, BLACK, GREY], pattern: 'plain', patternColor: CREAM, personality: p(0.75, 0.5, 0.8, 0.9, 0.4), stats: { tempo: 0.65, ausdauer: 0.6, sprungkraft: 0.75, gehorsam: 0.9 } },
+  { id: 'dalmatiner', name: 'Dalmatiner', sizeMin: 1.1, sizeMax: 1.2, ears: ['floppy'], tails: ['long'], coats: [CREAM], pattern: 'spots', patternColor: BLACK, personality: p(0.9, 0.65, 0.6, 0.5, 0.6), stats: { tempo: 0.85, ausdauer: 0.9, sprungkraft: 0.7, gehorsam: 0.5 } },
+  { id: 'mops', name: 'Mops', sizeMin: 0.7, sizeMax: 0.8, ears: ['round'], tails: ['curly'], coats: [CREAM, BROWN], pattern: 'plain', patternColor: BLACK, personality: p(0.3, 0.45, 0.9, 0.4, 0.95), stats: { tempo: 0.25, ausdauer: 0.25, sprungkraft: 0.25, gehorsam: 0.45 } },
 ]
 
 export function breedById(id: string): Breed {

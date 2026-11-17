@@ -62,3 +62,25 @@ test('rollPuppies: drei verschiedene Rassen', () => {
     expect(new Set(breeds).size).toBe(3)
   }
 })
+
+test('Rassen haben Begabungen: Corgi ist schneller und flinker, Husky ausdauernder, Schäferhund gehorsamer', () => {
+  const corgi = breedById('corgi').stats
+  const husky = breedById('husky').stats
+  const schaefer = breedById('schaeferhund').stats
+  expect(corgi.tempo).toBeGreaterThan(husky.tempo)
+  expect(corgi.sprungkraft).toBeGreaterThan(husky.sprungkraft)
+  expect(husky.ausdauer).toBeGreaterThan(corgi.ausdauer)
+  expect(schaefer.gehorsam).toBeGreaterThan(husky.gehorsam)
+})
+
+test('jede Rasse hat eine erkennbare Stärke (Begabung ab 0.75 oder Charakterzug ab 0.85), alle Begabungen liegen in [0, 1]', () => {
+  for (const b of BREEDS) {
+    const stats = Object.values(b.stats)
+    for (const v of stats) {
+      expect(v).toBeGreaterThanOrEqual(0)
+      expect(v).toBeLessThanOrEqual(1)
+    }
+    const best = Math.max(Math.max(...stats) / 0.75, Math.max(...Object.values(b.personality)) / 0.85)
+    expect(best).toBeGreaterThanOrEqual(1)
+  }
+})
