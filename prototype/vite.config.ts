@@ -1,2 +1,4 @@
 import { defineConfig } from 'vite'
-export default defineConfig({ server: { host: true } })
+
+// base './' macht die Seite unabhaengig vom Repo-Namen (GitHub Pages liegt unter /<repo>/).
+export default defineConfig({ base: './', server: { host: true } })
