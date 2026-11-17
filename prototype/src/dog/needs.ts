@@ -41,3 +41,14 @@ export function mood(n: Needs): Mood {
   if (n.hunger >= 70 && n.energy >= 70 && n.happiness >= 70) return 'happy'
   return 'ok'
 }
+
+// Die Stimmung verschiebt nur die Energie, die Persoenlichkeit selbst bleibt.
+export function moodPersonality(p: Personality, m: Mood): Personality {
+  switch (m) {
+    case 'tired': return { ...p, energy: p.energy * 0.3 }
+    case 'sad': return { ...p, energy: p.energy * 0.6 }
+    case 'hungry': return { ...p, energy: p.energy * 0.7 }
+    case 'happy': return { ...p, energy: Math.min(1, p.energy + 0.2) }
+    default: return p
+  }
+}

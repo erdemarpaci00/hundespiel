@@ -31,15 +31,17 @@ export class LivingDog {
   private target: Vec
   private behavior: Behavior = 'sit'
   private remainingMs = 0
+  private caption: string
 
   constructor(
     scene: Phaser.Scene,
     look: DogLook,
-    private readonly personality: Personality,
+    private personality: Personality,
     private readonly bounds: Rect,
     start: Vec,
     private readonly rng: Rng,
   ) {
+    this.caption = standoutTrait(personality)
     this.pos = { ...start }
     this.target = { ...start }
     this.sprite = new DogSprite(scene, look, start.x, start.y)
@@ -73,7 +75,15 @@ export class LivingDog {
     this.label
       .setPosition(this.pos.x, this.pos.y - 92)
       .setDepth(1000)
-      .setText(`${standoutTrait(this.personality)}\n${NAME[this.behavior]}`)
+      .setText(`${this.caption}\n${NAME[this.behavior]}`)
+  }
+
+  setPersonality(p: Personality): void {
+    this.personality = p
+  }
+
+  setCaption(text: string): void {
+    this.caption = text
   }
 
   destroy(): void {

@@ -56,3 +56,14 @@ test('mood: Priorität sad vor hungry vor tired, happy ab 70, sonst ok', () => {
   expect(mood({ hunger: 60, energy: 20, happiness: 60 })).toBe('tired')
   expect(mood({ hunger: 20, energy: 20, happiness: 20 })).toBe('sad')
 })
+
+test('moodPersonality: müde und traurige Hunde sind träger, glückliche aufgeweckter, Rest bleibt', async () => {
+  const { moodPersonality } = await import('../src/dog/needs')
+  const base = p(0.5)
+  expect(moodPersonality(base, 'tired').energy).toBeLessThan(base.energy)
+  expect(moodPersonality(base, 'sad').energy).toBeLessThan(base.energy)
+  expect(moodPersonality(base, 'happy').energy).toBeGreaterThan(base.energy)
+  expect(moodPersonality({ ...base, energy: 0.95 }, 'happy').energy).toBeLessThanOrEqual(1)
+  expect(moodPersonality(base, 'tired').appetite).toBe(base.appetite)
+  expect(moodPersonality(base, 'ok')).toEqual(base)
+})

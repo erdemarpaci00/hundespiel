@@ -5,6 +5,7 @@ export type TailType = 'short' | 'long' | 'curly'
 export type Pattern = 'plain' | 'spots' | 'patch'
 
 export interface DogLook {
+  breed?: string
   size: number
   ear: EarType
   tail: TailType
