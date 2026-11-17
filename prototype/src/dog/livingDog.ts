@@ -6,7 +6,6 @@ import type { DogLook } from './look'
 import { nextTarget, stepToward, type Rect, type Vec } from './wander'
 
 const POSE: Record<Behavior, Pose> = { wander: 'walk', sniff: 'sniff', sit: 'sit', sleep: 'sleep' }
-const NAME: Record<Behavior, string> = { wander: 'läuft', sniff: 'schnüffelt', sit: 'sitzt', sleep: 'schläft' }
 const TRAITS: [keyof Personality, string, string][] = [
   ['energy', 'aufgeweckt', 'träge'],
   ['courage', 'mutig', 'schüchtern'],
@@ -75,7 +74,15 @@ export class LivingDog {
     this.label
       .setPosition(this.pos.x, this.pos.y - 92)
       .setDepth(1000)
-      .setText(`${this.caption}\n${NAME[this.behavior]}`)
+      .setText(this.caption)
+  }
+
+  get x(): number { return this.pos.x }
+  get y(): number { return this.pos.y }
+
+  onTap(cb: () => void): void {
+    this.sprite.container.setInteractive(new Phaser.Geom.Rectangle(-55, -80, 110, 100), Phaser.Geom.Rectangle.Contains)
+    this.sprite.container.on('pointerdown', cb)
   }
 
   setPersonality(p: Personality): void {

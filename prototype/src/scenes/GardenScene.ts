@@ -7,10 +7,21 @@ import { randomLook } from '../dog/look'
 import { applyElapsed, mood, moodPersonality, type Mood, type Needs } from '../dog/needs'
 import { careForDog, loadActivity, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
 import { GARDEN_BOUNDS } from '../garden'
-import { loadInviteCode, type Session } from '../session'
+import type { Session } from '../session'
 import { createHud } from '../ui/hud'
 import { mulberry32 } from '../util/rng'
 import { drawScenery } from './scenery'
+
+interface Bubble {
+  box: Phaser.GameObjects.Container
+  title: Phaser.GameObjects.Text
+  buttons: Phaser.GameObjects.Text[]
+  dogId: string
+  timer: Phaser.Time.TimerEvent
+}
+
+const MOOD_PHRASE: Record<Mood, string> = { happy: 'glücklich', ok: 'zufrieden', hungry: 'hungrig', tired: 'müde', sad: 'traurig' }
+const FONT = 'Arial, Helvetica, sans-serif'
 
 interface Entry {
   record: DogRecord
@@ -24,7 +35,8 @@ export class GardenScene extends Phaser.Scene {
   private hud!: ReturnType<typeof createHud>
   private selectedId: string | null = null
   private activity: ActivityEntry[] = []
-  private message = ''
+  private seenActivity: Set<string> | null = null
+  private bubble: Bubble | null = null
   private busy = false
   private unsubscribe: (() => void) | null = null
 
@@ -48,14 +60,9 @@ export class GardenScene extends Phaser.Scene {
     }
 
     this.session = this.registry.get('session') as Session
-    this.hud = createHud({
-      onSelect: (id) => {
-        this.selectedId = id
-        this.renderHud()
-      },
-      onCare: (action) => void this.care(action),
-      loadInviteCode: () => loadInviteCode(this.session.householdId),
-    })
+    this.hud = createHud({ householdId: this.session.householdId, getActivity: () => this.activityLines() })
+    // Ins Leere tippen schliesst die Sprechblase.
+    this.input.on('pointerdown', (_p: unknown, over: unknown[]) => { if (over.length === 0) this.closeBubble() })
     void this.reload()
     this.unsubscribe = subscribeToHousehold(this.session, () => void this.reload())
     this.time.addEvent({ delay: 5000, loop: true, callback: () => this.refreshNeeds() })
@@ -70,16 +77,31 @@ export class GardenScene extends Phaser.Scene {
     })
   }
 
+  private activityLines(): string[] {
+    const now = Date.now()
+    return this.activity.map((a) => `${describeActivity(a)}, ${relativeTime(a.at, now)}`)
+  }
+
   private async reload(): Promise<void> {
     try {
       const [records, activity] = await Promise.all([loadDogs(this.session), loadActivity(this.session, 8)])
+      this.announceNew(activity)
       this.activity = activity
       this.syncDogs(records)
-      this.message = ''
     } catch (e) {
-      this.message = e instanceof Error ? e.message : 'Keine Verbindung, bitte Netz prüfen'
+      this.hud.toast(e instanceof Error ? e.message : 'Keine Verbindung, bitte Netz prüfen')
     }
     this.refreshNeeds()
+  }
+
+  // Was der andere tut, erscheint kurz als Meldung, nicht als Dauerliste.
+  private announceNew(activity: ActivityEntry[]): void {
+    if (this.seenActivity) {
+      for (const a of activity) {
+        if (!this.seenActivity.has(a.id) && a.userName !== this.session.displayName) this.hud.toast(describeActivity(a))
+      }
+    }
+    this.seenActivity = new Set(activity.map((a) => a.id))
   }
 
   private syncDogs(records: DogRecord[]): void {
@@ -88,6 +110,7 @@ export class GardenScene extends Phaser.Scene {
       if (!ids.has(id)) {
         e.dog.destroy()
         this.entries.delete(id)
+        if (this.bubble?.dogId === id) this.closeBubble()
       }
     }
     records.forEach((record, i) => {
@@ -99,12 +122,9 @@ export class GardenScene extends Phaser.Scene {
       const start = { x: 160 + (i % 4) * 110, y: 250 + (i % 2) * 50 }
       const dog = new LivingDog(this, record.look, record.personality, GARDEN_BOUNDS, start, Math.random)
       dog.setCaption(record.name)
+      dog.onTap(() => this.openBubble(record.id))
       this.entries.set(record.id, { record, dog })
     })
-    if (!this.selectedId || !this.entries.has(this.selectedId)) {
-      const own = records.find((r) => r.pickedBy === this.session.userId)
-      this.selectedId = (own ?? records[0])?.id ?? null
-    }
   }
 
   private currentNeeds(e: Entry): Needs {
@@ -115,45 +135,80 @@ export class GardenScene extends Phaser.Scene {
     for (const e of this.entries.values()) {
       e.dog.setPersonality(moodPersonality(e.record.personality, mood(this.currentNeeds(e))))
     }
-    this.renderHud()
+    this.updateBubbleText()
   }
 
-  private renderHud(): void {
-    if (!this.hud) return
-    const sel = this.selectedId ? this.entries.get(this.selectedId) : undefined
-    const needs = sel ? this.currentNeeds(sel) : null
-    const m: Mood | null = needs ? mood(needs) : null
-    const now = Date.now()
-    this.hud.render({
-      dogs: [...this.entries.values()].map((e) => ({ id: e.record.id, name: e.record.name })),
-      selectedId: this.selectedId,
-      needs,
-      mood: m,
-      activity: this.activity.map((a) => `${describeActivity(a)}, ${relativeTime(a.at, now)}`),
-      busy: this.busy,
-      message: this.message,
-    })
+  private pill(label: string, color: string, onTap: () => void): Phaser.GameObjects.Text {
+    const t = this.add
+      .text(0, 0, label, { fontSize: '12px', color: '#ffffff', backgroundColor: color, padding: { x: 9, y: 6 }, resolution: 3, fontFamily: FONT, fontStyle: 'bold' })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true })
+    t.on('pointerdown', onTap)
+    return t
+  }
+
+  // Der Gemuetszustand zeigt sich nur auf Antippen, als Sprechblase am Hund.
+  private openBubble(dogId: string): void {
+    this.closeBubble()
+    const e = this.entries.get(dogId)
+    if (!e) return
+    this.selectedId = dogId
+    const bg = this.add.graphics()
+    bg.fillStyle(0xffffff, 0.95).fillRoundedRect(-78, -10, 156, 76, 12)
+    const title = this.add.text(0, 6, '', { fontSize: '12px', color: '#2b2b2b', fontStyle: 'bold', resolution: 3, fontFamily: FONT }).setOrigin(0.5)
+    const feed = this.pill('Füttern', '#2b6cb0', () => void this.care('feed')).setPosition(-36, 42)
+    const pet = this.pill('Streicheln', '#4a9b3a', () => void this.care('pet')).setPosition(40, 42)
+    const box = this.add.container(0, 0, [bg, title, feed, pet]).setDepth(2000)
+    const timer = this.time.delayedCall(8000, () => this.closeBubble())
+    this.bubble = { box, title, buttons: [feed, pet], dogId, timer }
+    this.updateBubbleText()
+    this.placeBubble()
+  }
+
+  private closeBubble(): void {
+    if (!this.bubble) return
+    this.bubble.timer.remove(false)
+    this.bubble.box.destroy()
+    this.bubble = null
+  }
+
+  private updateBubbleText(): void {
+    if (!this.bubble) return
+    const e = this.entries.get(this.bubble.dogId)
+    if (!e) return
+    this.bubble.title.setText(`${e.record.name} ist ${MOOD_PHRASE[mood(this.currentNeeds(e))]}`)
+    for (const b of this.bubble.buttons) b.setAlpha(this.busy ? 0.5 : 1)
+  }
+
+  private placeBubble(): void {
+    if (!this.bubble) return
+    const e = this.entries.get(this.bubble.dogId)
+    if (!e) return
+    const x = Math.min(556, Math.max(84, e.dog.x))
+    const y = Math.min(280, Math.max(6, e.dog.y - 120))
+    this.bubble.box.setPosition(x, y)
   }
 
   private async care(action: 'feed' | 'pet'): Promise<void> {
     const sel = this.selectedId ? this.entries.get(this.selectedId) : undefined
     if (!sel || this.busy) return
     this.busy = true
-    this.message = ''
-    this.renderHud()
+    this.updateBubbleText()
     try {
       await careForDog(this.session, sel.record, action)
       await this.reload()
+      this.bubble?.timer.reset({ delay: 8000, callback: () => this.closeBubble() })
     } catch (e) {
-      this.message = e instanceof Error ? e.message : 'Etwas ist schiefgelaufen, bitte nochmal versuchen'
+      this.hud.toast(e instanceof Error ? e.message : 'Etwas ist schiefgelaufen, bitte nochmal versuchen')
     } finally {
       this.busy = false
-      this.renderHud()
+      this.updateBubbleText()
     }
   }
 
   update(_time: number, delta: number): void {
     for (const d of this.poseDogs) d.update(delta)
     for (const e of this.entries.values()) e.dog.update(delta)
+    this.placeBubble()
   }
 }

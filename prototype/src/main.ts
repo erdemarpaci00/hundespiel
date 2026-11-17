@@ -4,10 +4,12 @@ import { GardenScene } from './scenes/GardenScene'
 import { PickerScene } from './scenes/PickerScene'
 import { friendlyError } from './errors'
 import { runAuthFlow } from './ui/authScreen'
+import { showTitleScreen } from './ui/titleScreen'
 
 async function start(): Promise<void> {
   const session = await runAuthFlow()
   const dogs = await loadDogs(session)
+  await showTitleScreen(session)
   const hasOwnStarter = dogs.some((d) => d.isStarter && d.pickedBy === session.userId)
   const game = new Phaser.Game({
     type: Phaser.AUTO,
@@ -20,7 +22,8 @@ async function start(): Promise<void> {
     scene: hasOwnStarter ? [GardenScene, PickerScene] : [PickerScene, GardenScene],
     callbacks: { preBoot: (g) => g.registry.set('session', session) },
   })
-  void game
+  // Nur zum Testen: mit ?debug in der Adresse ist das Spiel von aussen erreichbar.
+  if (location.search.includes('debug')) (window as unknown as { __game: Phaser.Game }).__game = game
 }
 
 // Scheitert der Start (zum Beispiel kein Netz), steht sonst eine leere Flaeche da, und die installierte App hat keinen Neu-laden-Knopf.
