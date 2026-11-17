@@ -2,24 +2,23 @@ import Phaser from 'phaser'
 import { mulberry32 } from '../util/rng'
 
 // Alles in Welt-Koordinaten 640x360, nur gezeichnete Formen, keine fremden Dateien.
-export function drawScenery(scene: Phaser.Scene): void {
+export function drawScenery(scene: Phaser.Scene): { sun: Phaser.GameObjects.Graphics; clouds: Phaser.GameObjects.Graphics } {
   const g = scene.add.graphics().setDepth(0)
   const rng = mulberry32(7)
 
   // Himmel mit Verlauf
-  g.fillGradientStyle(0x6ec6ff, 0x6ec6ff, 0xcdeeff, 0xcdeeff, 1)
-  g.fillRect(0, 0, 640, 150)
+  scene.add.graphics().setDepth(-1).fillGradientStyle(0x6ec6ff, 0x6ec6ff, 0xcdeeff, 0xcdeeff, 1).fillRect(0, 0, 640, 150)
 
-  // Sonne mit weichem Schein
-  g.fillStyle(0xfff3a0, 0.25).fillCircle(560, 46, 40)
-  g.fillStyle(0xfff3a0, 0.4).fillCircle(560, 46, 30)
-  g.fillStyle(0xffd84a, 1).fillCircle(560, 46, 22)
+  const sun = scene.add.graphics().setDepth(-0.5)
+  sun.fillStyle(0xfff3a0, 0.25).fillCircle(560, 46, 40)
+  sun.fillStyle(0xfff3a0, 0.4).fillCircle(560, 46, 30)
+  sun.fillStyle(0xffd84a, 1).fillCircle(560, 46, 22)
 
-  // Wolken
+  const clouds = scene.add.graphics().setDepth(-0.5)
   for (const [cx, cy, s] of [[110, 40, 1], [300, 70, 0.8], [440, 30, 0.7]]) {
-    g.fillStyle(0xffffff, 0.95)
-    g.fillCircle(cx, cy, 16 * s).fillCircle(cx + 18 * s, cy + 4 * s, 13 * s)
-    g.fillCircle(cx - 18 * s, cy + 5 * s, 12 * s).fillRect(cx - 18 * s, cy + 4 * s, 36 * s, 13 * s)
+    clouds.fillStyle(0xffffff, 0.95)
+    clouds.fillCircle(cx, cy, 16 * s).fillCircle(cx + 18 * s, cy + 4 * s, 13 * s)
+    clouds.fillCircle(cx - 18 * s, cy + 5 * s, 12 * s).fillRect(cx - 18 * s, cy + 4 * s, 36 * s, 13 * s)
   }
 
   // Ferne Huegel
@@ -79,4 +78,5 @@ export function drawScenery(scene: Phaser.Scene): void {
   g.fillStyle(0xa23b2a).fillEllipse(138, 224, 30, 10)
   g.fillStyle(0xc4553f).fillEllipse(138, 221, 30, 10)
   g.fillStyle(0x7a4a2a).fillEllipse(138, 220, 22, 6)
+  return { sun, clouds }
 }

@@ -49,8 +49,8 @@ export class GardenScene extends Phaser.Scene {
   create(): void {
     // Welt ist 640x360, gerendert wird 3-fach scharf auf 1920x1080
     this.cameras.main.setZoom(3).centerOn(320, 180)
-    drawScenery(this)
-    this.atmosphere = createAtmosphere(this, true)
+    const backdrop = drawScenery(this)
+    this.atmosphere = createAtmosphere(this, true, backdrop)
 
     if (new URLSearchParams(location.search).get('demo') === 'poses') {
       const poses: Pose[] = ['walk', 'sit', 'sleep', 'sniff']
