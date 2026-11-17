@@ -68,6 +68,8 @@ Godot bleibt als Ausweichoption, falls die Spielphysik später nicht reicht.
 - Persönlichkeit zufällig, etwa fünf Eigenschaften (zum Beispiel Anhänglichkeit, Mut, Energie, Lernwille, Verfressenheit).
 - Persönlichkeit beeinflusst das Verhalten im Garten, die Lerngeschwindigkeit und das Verhalten im Wettkampf.
 - Bindungswert pro Person: Wer sich mehr kümmert, wird Lieblingsmensch, und anhängliche Hunde warten auf diese Person.
+- Beziehungen zwischen den Hunden: Jedes Hundepaar hat einen Beziehungswert (von Feinde über Fremde bis beste Freunde). Er wächst durch gemeinsame Zeit und passende Charaktere (zwei verspielte Hunde, ein mutiger und ein ängstlicher beschützter) und sinkt durch Streit, etwa ums Futter. Sichtbar in einer Beziehungsansicht (Herzen pro Paar) und im Garten.
+- Interaktionen im Garten: beschnuppern, zusammen spielen und herumtollen, nebeneinander schlafen, Futter teilen oder verteidigen, Streit. Welche Interaktion entsteht, hängt von Charakter, Rasse und Beziehungswert ab. Die Hunde der zwei Personen sehen dasselbe, der Beziehungswert liegt gemeinsam in der Datenbank. Das kommt als eigener Schritt nach Schritt 1.
 
 ### Training und Stats
 - Werte: Tempo, Ausdauer, Sprungkraft, Gehorsam, jeweils mit Level.
