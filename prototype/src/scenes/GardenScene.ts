@@ -142,7 +142,9 @@ export class GardenScene extends Phaser.Scene {
 
   private refreshNeeds(): void {
     for (const e of this.entries.values()) {
-      e.dog.setPersonality(moodPersonality(e.record.personality, mood(this.currentNeeds(e))))
+      const m = mood(this.currentNeeds(e))
+      e.dog.setPersonality(moodPersonality(e.record.personality, m))
+      e.dog.setEmote(m === 'hungry' ? 'hungry' : m === 'sad' ? 'sad' : null)
       e.dog.setResting(this.atmosphere.isNight() && !isRestless(e.record.id, e.record.personality, new Date()))
     }
     this.updateBubbleText()

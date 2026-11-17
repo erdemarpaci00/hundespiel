@@ -29,6 +29,9 @@ export class LivingDog {
 
   private readonly sprite: DogSprite
   private readonly label: Phaser.GameObjects.Text
+  private readonly emoteGfx: Phaser.GameObjects.Graphics
+  private emote: 'hungry' | 'sad' | null = null
+  private pulse = 0
   private pos: Vec
   private target: Vec
   private behavior: Behavior = 'sit'
@@ -53,6 +56,7 @@ export class LivingDog {
     this.label = scene.add
       .text(start.x, start.y, '', { fontSize: '11px', color: '#ffffff', stroke: '#2b2b2b', strokeThickness: 3, resolution: 3, fontFamily: 'Arial, Helvetica, sans-serif' })
       .setOrigin(0.5, 1)
+    this.emoteGfx = scene.add.graphics().setVisible(false)
     this.next()
   }
 
@@ -78,10 +82,27 @@ export class LivingDog {
     if (this.remainingMs <= 0) this.next()
     this.sprite.container.setPosition(this.pos.x, this.pos.y).setDepth(this.pos.y)
     this.sprite.update(dt)
+    this.pulse += dt
+    this.emoteGfx.setPosition(this.pos.x, this.pos.y - 118 + Math.sin(this.pulse / 300) * 2).setDepth(1001).setVisible(this.emote !== null && !this.resting)
     this.label
       .setPosition(this.pos.x, this.pos.y - 92)
       .setDepth(1000)
       .setText(this.caption)
+  }
+
+  // Denkblase ueber dem Kopf: Knochen bei Hunger, Traene bei Traurigkeit.
+  setEmote(kind: 'hungry' | 'sad' | null): void {
+    if (kind === this.emote) return
+    this.emote = kind
+    const g = this.emoteGfx.clear()
+    g.setVisible(kind !== null)
+    if (!kind) return
+    g.fillStyle(0xffffff, 0.95).fillRoundedRect(-13, -11, 26, 22, 8).fillCircle(-4, 17, 3).fillCircle(-8, 23, 2)
+    if (kind === 'hungry') {
+      g.fillStyle(0xb98a5a).fillRect(-7, -2, 14, 4).fillCircle(-8, -2, 3).fillCircle(-8, 2, 3).fillCircle(8, -2, 3).fillCircle(8, 2, 3)
+    } else {
+      g.fillStyle(0x4a90d9).fillTriangle(0, -7, -4, 1, 4, 1).fillCircle(0, 2, 4)
+    }
   }
 
   get x(): number { return this.pos.x }
@@ -129,6 +150,7 @@ export class LivingDog {
   }
 
   destroy(): void {
+    this.emoteGfx.destroy()
     this.sprite.destroy()
     this.label.destroy()
   }
