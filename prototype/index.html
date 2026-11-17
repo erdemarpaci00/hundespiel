@@ -28,11 +28,30 @@
       #ui button:disabled { opacity: .6; }
       #ui .row { display: flex; gap: 8px; } #ui .row button { flex: 1; }
       #ui .msg { margin: 0; min-height: 18px; color: #c53030; font-size: 14px; }
+      #ui.bar { background: transparent; align-items: flex-end; padding-bottom: 10px; pointer-events: none; }
+      #ui.bar .card { pointer-events: auto; width: min(560px, 92vw); padding: 12px 16px; gap: 6px; }
+      #ui .card .row input { flex: 2; min-width: 0; }
+      #ui .pick-title { font-weight: 600; font-size: 15px; }
+      #hud { display: none; position: fixed; inset: 0; z-index: 4; pointer-events: none; font-family: Arial, Helvetica, sans-serif; color: #2b2b2b; touch-action: manipulation; }
+      #hud .hud-panel { pointer-events: auto; position: absolute; left: 8px; top: 8px; width: min(210px, 34vw); background: rgba(255,255,255,.92);
+        border-radius: 12px; padding: 8px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 3px 12px rgba(0,0,0,.25); font-size: 13px; }
+      #hud .tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+      #hud button { font-size: 13px; font-weight: 600; border: 0; border-radius: 8px; padding: 7px 8px; background: #2b6cb0; color: #fff; }
+      #hud button.alt { background: #4a9b3a; } #hud button:disabled { opacity: .5; }
+      #hud button.tab { background: #cbd5e0; color: #2b2b2b; } #hud button.tab.on { background: #2b6cb0; color: #fff; }
+      #hud .row { display: flex; gap: 6px; } #hud .row button { flex: 1; }
+      #hud .mood { font-weight: 700; text-align: center; }
+      #hud .bar-row { display: flex; align-items: center; gap: 6px; } #hud .bar-row span { width: 50px; }
+      #hud .track { flex: 1; height: 10px; background: #e2e8f0; border-radius: 5px; overflow: hidden; } #hud .fill { height: 100%; }
+      #hud .hud-msg { margin: 0; min-height: 14px; color: #c53030; font-size: 12px; }
+      #hud .hud-log { position: absolute; right: 8px; top: 8px; width: min(220px, 36vw); font-size: 12px; text-align: right; color: #fff;
+        text-shadow: 0 1px 3px rgba(0,0,0,.8); display: flex; flex-direction: column; gap: 3px; }
       #ui .code { font: 700 36px monospace; letter-spacing: 6px; background: #edf2f7; border-radius: 10px; padding: 8px; }
     </style>
   </head>
   <body>
     <div id="game"></div>
+    <div id="hud"></div>
     <div id="ui"></div>
     <div id="rotate">Bitte das Handy quer halten</div>
     <script type="module" src="/src/main.ts"></script>
