@@ -35,9 +35,9 @@ Der zweite Reiz ist, den Hund einfach zu beobachten und zu merken, dass jeder an
 
 ## Randbedingungen
 
-- Zielgeräte: zwei Android-Handys, außerdem PC-Browser.
+- Zielgeräte: ein Android-Handy und ein iPhone, außerdem PC-Browser. Gespielt wird im Querformat und im Vollbild (installiert als App-Symbol auf dem Homescreen).
 - Hunger, Müdigkeit und Ähnliches laufen in Echtzeit weiter, werden aber aus der vergangenen Zeit berechnet, damit kein Server dauernd laufen muss.
-- Sehr geringe Kosten, am liebsten kostenlos.
+- Komplett kostenlos: kostenloser Supabase-Tarif, GitHub Pages (dafür ist das Repo öffentlich, Geheimnisse sind nicht darin). Grafik selbst gezeichnet, im 2D-Cartoon-Look, ohne Menschen.
 
 ## Ansätze, die wir betrachtet haben
 
@@ -62,7 +62,9 @@ Godot bleibt als Ausweichoption, falls die Spielphysik später nicht reicht.
 - Start mit einer Welpenauswahl: drei zufällige Welpen verschiedener Rassen, grober Eindruck sichtbar, genaue Werte erst im Zusammenleben.
 - Jeder der zwei wählt am Anfang seinen eigenen Welpen aus einer eigenen Auswahl, der Haushalt startet also mit zwei Hunden. Beide Hunde gehören dem Haushalt, beide pflegen beide.
 - Mehr Hunde möglich: neue Welpen für Preisgeld, Platz begrenzt durch die Wohnung (zum Beispiel 2 am Anfang, 5 am Ende).
-- Rassen und Aussehen als Baukasten aus Körpergröße, Ohren, Schwanz und Fellmuster.
+- Echte Rassen (acht zum Start: Husky, Labrador, Dackel, Schäferhund, Corgi, Pudel, Dalmatiner, Mops) mit eigenem Aussehen, Charaktertendenz und Begabungen (Tempo, Ausdauer, Sprungkraft, Gehorsam). Zum Beispiel ist der Corgi schnell und flink, der Husky ausdauernd, der Schäferhund gehorsam. Die Begabungen sind die Startwerte für die Stats ab Schritt 2.
+- Aussehen als Baukasten aus Körpergröße, Ohren, Schwanz und Fellmuster innerhalb der Rasse.
+- Alter läuft in Echtzeit mit (Welpe, Junghund, Erwachsen, aus dem Anlagedatum berechnet, mit Babyvariante der Grafik). Das kommt als eigener Schritt nach Schritt 1.
 - Persönlichkeit zufällig, etwa fünf Eigenschaften (zum Beispiel Anhänglichkeit, Mut, Energie, Lernwille, Verfressenheit).
 - Persönlichkeit beeinflusst das Verhalten im Garten, die Lerngeschwindigkeit und das Verhalten im Wettkampf.
 - Bindungswert pro Person: Wer sich mehr kümmert, wird Lieblingsmensch, und anhängliche Hunde warten auf diese Person.
@@ -100,7 +102,7 @@ Godot bleibt als Ausweichoption, falls die Spielphysik später nicht reicht.
 - Events als Datendatei (Bedingungen, Wahrscheinlichkeit, Auswahl, Folgen), Start mit etwa zehn.
 
 ### Zugang und Benachrichtigungen
-- Zwei Konten, Login per E-Mail-Link, nichts öffentlich.
+- Zwei Konten, Login mit E-Mail und Passwort (ohne Bestätigungsmail), ein Haushalt mit höchstens zwei Personen, Beitritt über einen Einladungscode. Alle Daten sind per Zugriffsregeln nur für den eigenen Haushalt sichtbar.
 - Benachrichtigungen sparsam: höchstens zwei pro Tag, nachts keine, pro Person abschaltbar.
 
 ## Reihenfolge
@@ -116,8 +118,8 @@ Das Datenmodell ist von Schritt 1 an für mehrere Hunde und Persönlichkeiten au
 
 ## Meine Entscheidungen zum Wie (nicht vom Nutzer genannt)
 
-- Phaser als 2D-Engine, Next.js als Rahmen.
-- Supabase als Speicher (Login, Live-Aktualisierung).
+- Phaser als 2D-Engine, Vite als Rahmen (statt Next.js: das Spiel ist rein im Browser, ein Server wird nicht gebraucht, die fertige Seite liegt statisch auf GitHub Pages).
+- Supabase als Speicher (Login, Live-Aktualisierung), ein eigenes Projekt nur für das Spiel.
 - Zustand der Hunde aus Zeitstempeln berechnet, kein dauernd laufender Server.
 - Installation als App-Symbol auf dem Homescreen (PWA).
 - Benachrichtigungen über Web-Push.
