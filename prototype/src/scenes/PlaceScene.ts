@@ -29,8 +29,8 @@ export class PlaceScene extends Phaser.Scene {
     this.cameras.main.setZoom(3).centerOn(320, 180)
     this.dogs = []
     this.nightOwls = new Set()
-    this.draw()
-    this.atmosphere = createAtmosphere(this, this.kind === 'walk' || this.kind === 'training')
+    const backdrop = this.draw()
+    this.atmosphere = createAtmosphere(this, this.kind === 'walk' || this.kind === 'training', backdrop)
     this.add.text(320, 14, TITLES[this.kind], { fontSize: '14px', color: '#ffffff', stroke: '#2b2b2b', strokeThickness: 4, resolution: 3, fontFamily: 'Arial, Helvetica, sans-serif', fontStyle: 'bold' }).setOrigin(0.5, 0).setDepth(5)
     this.hud = createHud({ householdId: session.householdId, getActivity: () => [], travel: (k) => this.scene.start(k), current: this.kind })
     if (this.kind === 'shop') this.openShopPanel()
@@ -98,7 +98,10 @@ export class PlaceScene extends Phaser.Scene {
     }
   }
 
-  private draw(): void {
+  private draw(): { sun: Phaser.GameObjects.Graphics; clouds: Phaser.GameObjects.Graphics } {
+    const sun = this.add.graphics().setDepth(0.05)
+    const clouds = this.add.graphics()
+    const backdrop = { sun, clouds }
     const g = this.add.graphics().setDepth(0)
     const rng = mulberry32(11)
     if (this.kind === 'shop' || this.kind === 'kennel') {
@@ -119,10 +122,10 @@ export class PlaceScene extends Phaser.Scene {
           g.fillRect(30 + i * 100, 190, 100, 4)
         }
       }
-      return
+      return backdrop
     }
     g.fillGradientStyle(0x6ec6ff, 0x6ec6ff, 0xcdeeff, 0xcdeeff, 1).fillRect(0, 0, 640, 150)
-    g.fillStyle(0xfff3a0, 1).fillCircle(80, 46, 20)
+    sun.fillStyle(0xfff3a0, 0.35).fillCircle(250, 40, 28).fillStyle(0xffd84a, 1).fillCircle(250, 40, 18)
     for (const tx of [60, 180, 330, 470, 590]) {
       g.fillStyle(0x7a4e2a).fillRect(tx - 5, 90, 10, 50)
       g.fillStyle(0x3f9b4a).fillCircle(tx, 78, 28).fillCircle(tx - 18, 96, 18).fillCircle(tx + 18, 96, 18)
@@ -138,5 +141,6 @@ export class PlaceScene extends Phaser.Scene {
       const x = rng() * 640, y = 160 + rng() * 195
       g.fillStyle(0x4c9b3a).fillTriangle(x - 4, y, x - 1, y - 9, x + 1, y)
     }
+    return backdrop
   }
 }
