@@ -83,7 +83,7 @@ export class LivingDog {
     this.sprite.container.setPosition(this.pos.x, this.pos.y).setDepth(this.pos.y)
     this.sprite.update(dt)
     this.pulse += dt
-    this.emoteGfx.setPosition(this.pos.x, this.pos.y - 118 + Math.sin(this.pulse / 300) * 2).setDepth(1001).setVisible(this.emote !== null && !this.resting)
+    this.emoteGfx.setPosition(this.pos.x, this.pos.y - 134 + Math.sin(this.pulse / 300) * 2).setDepth(1001).setVisible(this.emote !== null && !this.resting)
     this.label
       .setPosition(this.pos.x, this.pos.y - 92)
       .setDepth(1000)
