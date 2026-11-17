@@ -10,6 +10,7 @@ import { GARDEN_BOUNDS } from '../garden'
 import type { Session } from '../session'
 import { createHud } from '../ui/hud'
 import { mulberry32 } from '../util/rng'
+import { isRestless, resistsWaking } from '../nightlife'
 import { createAtmosphere, type Atmosphere } from './atmosphere'
 import { drawScenery } from './scenery'
 
@@ -18,6 +19,7 @@ interface Bubble {
   title: Phaser.GameObjects.Text
   buttons: Phaser.GameObjects.Text[]
   wake: Phaser.GameObjects.Text
+  walk: Phaser.GameObjects.Text
   dogId: string
   timer: Phaser.Time.TimerEvent
 }
@@ -40,6 +42,7 @@ export class GardenScene extends Phaser.Scene {
   private seenActivity: Set<string> | null = null
   private bubble: Bubble | null = null
   private busy = false
+  private refusals = new Map<string, number>()
   private atmosphere!: Atmosphere
   private unsubscribe: (() => void) | null = null
 
@@ -139,7 +142,7 @@ export class GardenScene extends Phaser.Scene {
   private refreshNeeds(): void {
     for (const e of this.entries.values()) {
       e.dog.setPersonality(moodPersonality(e.record.personality, mood(this.currentNeeds(e))))
-      e.dog.setResting(this.atmosphere.isNight())
+      e.dog.setResting(this.atmosphere.isNight() && !isRestless(e.record.id, e.record.personality, new Date()))
     }
     this.updateBubbleText()
   }
@@ -164,12 +167,29 @@ export class GardenScene extends Phaser.Scene {
     const title = this.add.text(0, 6, '', { fontSize: '12px', color: '#2b2b2b', fontStyle: 'bold', resolution: 3, fontFamily: FONT }).setOrigin(0.5)
     const feed = this.pill('Füttern', '#2b6cb0', () => void this.care('feed')).setPosition(-44, 42)
     const pet = this.pill('Streicheln', '#4a9b3a', () => void this.care('pet')).setPosition(46, 42)
-    const wake = this.pill('Wecken', '#8a5cc2', () => { e.dog.wake(15 * 60 * 1000); this.hud.toast(`${e.record.name} ist wach, aber noch müde`); this.updateBubbleText() }).setPosition(0, 42)
-    const box = this.add.container(0, 0, [bg, title, feed, pet, wake]).setDepth(2000)
+    const wake = this.pill('Wecken', '#8a5cc2', () => this.tryWake(dogId)).setPosition(0, 42)
+    const walk = this.pill('Gassi gehen', '#d9822b', () => this.scene.start('walk')).setPosition(0, 42)
+    const box = this.add.container(0, 0, [bg, title, feed, pet, wake, walk]).setDepth(2000)
     const timer = this.time.delayedCall(8000, () => this.closeBubble())
-    this.bubble = { box, title, buttons: [feed, pet], wake, dogId, timer }
+    this.bubble = { box, title, buttons: [feed, pet], wake, walk, dogId, timer }
     this.updateBubbleText()
     this.placeBubble()
+  }
+
+  // Ein Hund, der aus dem Schlaf geholt wird, wehrt sich manchmal.
+  private tryWake(dogId: string): void {
+    const e = this.entries.get(dogId)
+    if (!e) return
+    const n = this.refusals.get(dogId) ?? 0
+    if (resistsWaking(e.record.personality, n, Math.random())) {
+      this.refusals.set(dogId, n + 1)
+      this.hud.toast(`${e.record.name} knurrt und dreht sich um`)
+      return
+    }
+    this.refusals.delete(dogId)
+    e.dog.wake(15 * 60 * 1000)
+    this.hud.toast(`${e.record.name} ist wach, aber noch müde`)
+    this.updateBubbleText()
   }
 
   private closeBubble(): void {
@@ -184,9 +204,12 @@ export class GardenScene extends Phaser.Scene {
     const e = this.entries.get(this.bubble.dogId)
     if (!e) return
     const asleep = e.dog.sleeping
-    this.bubble.title.setText(asleep ? `${e.record.name} schläft` : `${e.record.name} ist ${MOOD_PHRASE[mood(this.currentNeeds(e))]}`)
+    const restless = this.atmosphere.isNight() && !asleep && isRestless(e.record.id, e.record.personality, new Date())
+    const phrase = asleep ? `${e.record.name} schläft` : restless ? `${e.record.name} ist unruhig und will raus` : `${e.record.name} ist ${MOOD_PHRASE[mood(this.currentNeeds(e))]}`
+    this.bubble.title.setText(phrase)
     this.bubble.wake.setVisible(asleep)
-    for (const b of this.bubble.buttons) b.setVisible(!asleep)
+    this.bubble.walk.setVisible(restless)
+    for (const b of this.bubble.buttons) b.setVisible(!asleep && !restless)
     for (const b of this.bubble.buttons) b.setAlpha(this.busy ? 0.5 : 1)
   }
 

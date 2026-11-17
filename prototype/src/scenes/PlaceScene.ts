@@ -3,6 +3,7 @@ import { BREEDS, breedById, rollBreedPuppy } from '../dog/breeds'
 import { LivingDog } from '../dog/livingDog'
 import { loadDogs } from '../dogRepo'
 import type { Session } from '../session'
+import { isRestless } from '../nightlife'
 import { createAtmosphere, type Atmosphere } from './atmosphere'
 import { createHud } from '../ui/hud'
 import { buildShop } from '../ui/shop'
@@ -17,6 +18,7 @@ export class PlaceScene extends Phaser.Scene {
   private hud!: ReturnType<typeof createHud>
   private dogs: LivingDog[] = []
   private atmosphere!: Atmosphere
+  private nightOwls = new Set<LivingDog>()
 
   constructor(private readonly kind: Kind) {
     super(kind)
@@ -26,6 +28,7 @@ export class PlaceScene extends Phaser.Scene {
     const session = this.registry.get('session') as Session
     this.cameras.main.setZoom(3).centerOn(320, 180)
     this.dogs = []
+    this.nightOwls = new Set()
     this.draw()
     this.atmosphere = createAtmosphere(this, this.kind === 'walk' || this.kind === 'training')
     this.add.text(320, 14, TITLES[this.kind], { fontSize: '14px', color: '#ffffff', stroke: '#2b2b2b', strokeThickness: 4, resolution: 3, fontFamily: 'Arial, Helvetica, sans-serif', fontStyle: 'bold' }).setOrigin(0.5, 0).setDepth(5)
@@ -58,11 +61,13 @@ export class PlaceScene extends Phaser.Scene {
     let own: Awaited<ReturnType<typeof loadDogs>> = []
     try { own = await loadDogs(session) } catch { this.hud.toast('Keine Verbindung, bitte Netz prüfen') }
     if (!this.scene.isActive(this.kind)) return
+    const restless = own.filter((r) => isRestless(r.id, r.personality, new Date()))
     own.forEach((r, i) => {
       if (this.kind === 'kennel') return
       const d = new LivingDog(this, r.look, r.personality, area, { x: 100 + i * 70, y: 270 }, Math.random)
       d.setCaption(r.name)
       d.setKey(r.id)
+      if (isRestless(r.id, r.personality, new Date())) d.wake(30 * 60 * 1000)
       d.onTap(() => {
         if (d.sleeping) { d.wake(15 * 60 * 1000); this.hud.toast(`${r.name} ist wach, aber noch müde`) }
         else this.hud.toast(`${r.name} (${r.look.breed ? breedById(r.look.breed).name : 'Mischling'})`)
@@ -77,16 +82,18 @@ export class PlaceScene extends Phaser.Scene {
       const d = new LivingDog(this, pup.look, pup.personality, pen, this.kind === 'kennel' ? { x: pen.x + 20, y: pen.y + 10 } : { x: 120 + i * 90, y: 230 + (i % 2) * 50 }, Math.random)
       d.setCaption(breed.name)
       d.onTap(() => this.hud.toast(this.kind === 'kennel' ? `${breed.name} sucht ein Zuhause (bald adoptierbar)` : `Ein fremder ${breed.name}`))
+      if (this.kind !== 'kennel') this.nightOwls.add(d)
       this.dogs.push(d)
     }
-    if (this.atmosphere.isNight() && (this.kind === 'walk' || this.kind === 'training')) this.hud.toast('Es ist spät, die Hunde schlafen. Antippen weckt sie, aber sie sind dann müde.')
+    if (this.atmosphere.isNight() && this.kind === 'walk' && restless.length > 0) this.hud.toast(`${restless.map((r) => r.name).join(' und ')} wollte unbedingt noch raus`)
+    else if (this.atmosphere.isNight() && (this.kind === 'walk' || this.kind === 'training')) this.hud.toast('Es ist spät, die Hunde schlafen. Antippen weckt sie, aber sie sind dann müde.')
     else if (this.kind === 'training') this.hud.toast('Training kommt bald: Tricks, Hindernisse, Kraft')
   }
 
   update(_t: number, delta: number): void {
     this.atmosphere.update(delta)
     for (const d of this.dogs) {
-      d.setResting(this.atmosphere.isNight())
+      d.setResting(this.atmosphere.isNight() && !this.nightOwls.has(d))
       d.update(delta)
     }
   }
