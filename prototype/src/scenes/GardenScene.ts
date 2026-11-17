@@ -267,10 +267,16 @@ export class GardenScene extends Phaser.Scene {
   private async care(action: 'feed' | 'pet'): Promise<void> {
     const sel = this.selectedId ? this.entries.get(this.selectedId) : undefined
     if (!sel || this.busy) return
+    const before = this.currentNeeds(sel)
+    if (action === 'feed' && before.hunger >= 95) {
+      this.hud.toast(`${sel.record.name} ist satt`)
+      return
+    }
     this.busy = true
     this.updateBubbleText()
     try {
       await careForDog(this.session, sel.record, action)
+      this.hud.toast(action === 'feed' ? `${sel.record.name} frisst und ist satt` : `${sel.record.name} genießt das Streicheln`)
       await this.reload()
       this.bubble?.timer.reset({ delay: 8000, callback: () => this.closeBubble() })
     } catch (e) {
