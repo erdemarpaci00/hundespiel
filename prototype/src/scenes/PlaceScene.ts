@@ -62,7 +62,11 @@ export class PlaceScene extends Phaser.Scene {
       if (this.kind === 'kennel') return
       const d = new LivingDog(this, r.look, r.personality, area, { x: 100 + i * 70, y: 270 }, Math.random)
       d.setCaption(r.name)
-      d.onTap(() => this.hud.toast(`${r.name} (${(r.look.breed ? breedById(r.look.breed).name : 'Mischling')})`))
+      d.setKey(r.id)
+      d.onTap(() => {
+        if (d.sleeping) { d.wake(15 * 60 * 1000); this.hud.toast(`${r.name} ist wach, aber noch müde`) }
+        else this.hud.toast(`${r.name} (${r.look.breed ? breedById(r.look.breed).name : 'Mischling'})`)
+      })
       this.dogs.push(d)
     })
     const strangers = this.kind === 'walk' ? 4 : this.kind === 'kennel' ? 6 : 0
@@ -75,7 +79,8 @@ export class PlaceScene extends Phaser.Scene {
       d.onTap(() => this.hud.toast(this.kind === 'kennel' ? `${breed.name} sucht ein Zuhause (bald adoptierbar)` : `Ein fremder ${breed.name}`))
       this.dogs.push(d)
     }
-    if (this.kind === 'training') this.hud.toast('Training kommt bald: Tricks, Hindernisse, Kraft')
+    if (this.atmosphere.isNight() && (this.kind === 'walk' || this.kind === 'training')) this.hud.toast('Es ist spät, die Hunde schlafen. Antippen weckt sie, aber sie sind dann müde.')
+    else if (this.kind === 'training') this.hud.toast('Training kommt bald: Tricks, Hindernisse, Kraft')
   }
 
   update(_t: number, delta: number): void {

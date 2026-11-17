@@ -17,6 +17,7 @@ interface Bubble {
   box: Phaser.GameObjects.Container
   title: Phaser.GameObjects.Text
   buttons: Phaser.GameObjects.Text[]
+  wake: Phaser.GameObjects.Text
   dogId: string
   timer: Phaser.Time.TimerEvent
 }
@@ -125,6 +126,7 @@ export class GardenScene extends Phaser.Scene {
       const start = { x: 160 + (i % 4) * 110, y: 250 + (i % 2) * 50 }
       const dog = new LivingDog(this, record.look, record.personality, GARDEN_BOUNDS, start, Math.random)
       dog.setCaption(record.name)
+      dog.setKey(record.id)
       dog.onTap(() => this.openBubble(record.id))
       this.entries.set(record.id, { record, dog })
     })
@@ -162,9 +164,10 @@ export class GardenScene extends Phaser.Scene {
     const title = this.add.text(0, 6, '', { fontSize: '12px', color: '#2b2b2b', fontStyle: 'bold', resolution: 3, fontFamily: FONT }).setOrigin(0.5)
     const feed = this.pill('Füttern', '#2b6cb0', () => void this.care('feed')).setPosition(-44, 42)
     const pet = this.pill('Streicheln', '#4a9b3a', () => void this.care('pet')).setPosition(46, 42)
-    const box = this.add.container(0, 0, [bg, title, feed, pet]).setDepth(2000)
+    const wake = this.pill('Wecken', '#8a5cc2', () => { e.dog.wake(15 * 60 * 1000); this.hud.toast(`${e.record.name} ist wach, aber noch müde`); this.updateBubbleText() }).setPosition(0, 42)
+    const box = this.add.container(0, 0, [bg, title, feed, pet, wake]).setDepth(2000)
     const timer = this.time.delayedCall(8000, () => this.closeBubble())
-    this.bubble = { box, title, buttons: [feed, pet], dogId, timer }
+    this.bubble = { box, title, buttons: [feed, pet], wake, dogId, timer }
     this.updateBubbleText()
     this.placeBubble()
   }
@@ -180,7 +183,10 @@ export class GardenScene extends Phaser.Scene {
     if (!this.bubble) return
     const e = this.entries.get(this.bubble.dogId)
     if (!e) return
-    this.bubble.title.setText(`${e.record.name} ist ${MOOD_PHRASE[mood(this.currentNeeds(e))]}`)
+    const asleep = e.dog.sleeping
+    this.bubble.title.setText(asleep ? `${e.record.name} schläft` : `${e.record.name} ist ${MOOD_PHRASE[mood(this.currentNeeds(e))]}`)
+    this.bubble.wake.setVisible(asleep)
+    for (const b of this.bubble.buttons) b.setVisible(!asleep)
     for (const b of this.bubble.buttons) b.setAlpha(this.busy ? 0.5 : 1)
   }
 

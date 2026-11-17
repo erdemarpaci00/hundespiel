@@ -24,6 +24,9 @@ export function standoutTrait(p: Personality): string {
 }
 
 export class LivingDog {
+  // Geweckte Hunde bleiben bis zu diesem Zeitpunkt wach, auch ueber Szenenwechsel hinweg.
+  static awakeUntil = new Map<string, number>()
+
   private readonly sprite: DogSprite
   private readonly label: Phaser.GameObjects.Text
   private pos: Vec
@@ -32,6 +35,8 @@ export class LivingDog {
   private remainingMs = 0
   private caption: string
   private resting = false
+  private nightWanted = false
+  private key: string | null = null
 
   constructor(
     scene: Phaser.Scene,
@@ -59,6 +64,7 @@ export class LivingDog {
   }
 
   update(dtMs: number): void {
+    this.applyRest()
     const dt = clampDelta(dtMs)
     this.remainingMs -= dt
     if (this.behavior === 'wander') {
@@ -86,10 +92,31 @@ export class LivingDog {
     this.sprite.container.on('pointerdown', cb)
   }
 
-  // Nachts schlaeft der Hund und bleibt liegen.
+  // Nachts schlaeft der Hund und bleibt liegen, ausser er wurde geweckt.
   setResting(on: boolean): void {
-    if (on === this.resting) return
-    this.resting = on
+    this.nightWanted = on
+    this.applyRest()
+  }
+
+  setKey(key: string): void {
+    this.key = key
+  }
+
+  get sleeping(): boolean {
+    return this.resting
+  }
+
+  wake(ms: number): void {
+    if (this.key) LivingDog.awakeUntil.set(this.key, Date.now() + ms)
+    this.nightWanted = false
+    this.applyRest()
+  }
+
+  private applyRest(): void {
+    const awake = this.key !== null && (LivingDog.awakeUntil.get(this.key) ?? 0) > Date.now()
+    const want = this.nightWanted && !awake
+    if (want === this.resting) return
+    this.resting = want
     this.next()
   }
 
