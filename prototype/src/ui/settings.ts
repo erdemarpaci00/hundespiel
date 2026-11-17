@@ -26,7 +26,7 @@ export function openSettings(opts: SettingsOptions): void {
   card.appendChild(codeBtn)
 
   const shop = document.createElement('div')
-  shop.className = 'verlauf'
+  shop.className = 'verlauf shop'
   shop.textContent = 'Laden …'
   const render = (e: Economy): void => {
     shop.replaceChildren()
