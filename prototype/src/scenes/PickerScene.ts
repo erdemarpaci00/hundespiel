@@ -8,7 +8,7 @@ import type { Session } from '../session'
 import { drawScenery } from './scenery'
 
 const XS = [120, 320, 520]
-const Y = 262
+const Y = 205
 
 export class PickerScene extends Phaser.Scene {
   private sprites: DogSprite[] = []
