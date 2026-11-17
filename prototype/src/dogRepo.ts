@@ -2,7 +2,8 @@ import { parseTimestamp } from './time'
 import type { ActivityEntry, ActivityKind } from './activity'
 import type { Personality } from './dog/behavior'
 import type { DogLook } from './dog/look'
-import { applyElapsed, feed, pet, type Needs } from './dog/needs'
+import { applyElapsed, feed, pet, TRAIN_MIN_ENERGY, train, type Needs } from './dog/needs'
+import { NO_TRAINING, trainGain, type StatKey, type Training } from './dog/stats'
 import { friendlyError } from './errors'
 import type { Puppy } from './puppies'
 import type { Session } from './session'
@@ -17,6 +18,7 @@ export interface DogRecord {
   personality: Personality
   needs: Needs
   needsUpdatedAt: string
+  training: Training
 }
 
 interface DogRow {
@@ -28,9 +30,10 @@ interface DogRow {
   personality: Personality
   needs: Needs
   needs_updated_at: string
+  training: Training | null
 }
 
-const COLUMNS = 'id, name, picked_by, is_starter, look, personality, needs, needs_updated_at'
+const COLUMNS = 'id, name, picked_by, is_starter, look, personality, needs, needs_updated_at, training'
 
 const toRecord = (r: DogRow): DogRecord => ({
   id: r.id,
@@ -41,6 +44,7 @@ const toRecord = (r: DogRow): DogRecord => ({
   personality: r.personality,
   needs: r.needs,
   needsUpdatedAt: r.needs_updated_at,
+  training: { ...NO_TRAINING, ...(r.training ?? {}) },
 })
 
 function fail(error: { message?: string } | null): void {
@@ -109,6 +113,27 @@ export async function careForDog(session: Session, dog: DogRecord, action: 'feed
       await logActivity(session, current.id, action)
       return loadDog(current.id)
     }
+    current = await loadDog(current.id)
+  }
+  throw new Error('Gerade war jemand schneller, bitte nochmal tippen')
+}
+
+// Ein Trainingsdurchgang: braucht Restkraft, kostet Energie, steigert genau einen Wert.
+export async function trainDog(dog: DogRecord, stat: StatKey): Promise<{ dog: DogRecord; gain: number }> {
+  let current = dog
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const decayed = applyElapsed(current.needs, Date.now() - parseTimestamp(current.needsUpdatedAt), current.personality)
+    if (decayed.energy < TRAIN_MIN_ENERGY) throw new Error(`${current.name} ist zu müde zum Trainieren`)
+    const gain = trainGain(current.personality.learning)
+    const { data, error } = await supabase.rpc('train_dog', {
+      p_dog_id: current.id,
+      p_expected: current.needsUpdatedAt,
+      p_needs: train(decayed),
+      p_stat: stat,
+      p_gain: gain,
+    })
+    fail(error)
+    if (data === true) return { dog: await loadDog(current.id), gain }
     current = await loadDog(current.id)
   }
   throw new Error('Gerade war jemand schneller, bitte nochmal tippen')

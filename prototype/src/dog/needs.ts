@@ -52,3 +52,10 @@ export function moodPersonality(p: Personality, m: Mood): Personality {
     default: return p
   }
 }
+
+export const TRAIN_MIN_ENERGY = 35
+
+// Training kostet Kraft und macht hungrig, aber zufrieden.
+export function train(n: Needs): Needs {
+  return { hunger: clamp(n.hunger - 8), energy: clamp(n.energy - 20), happiness: clamp(n.happiness + 4) }
+}

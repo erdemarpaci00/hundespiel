@@ -8,6 +8,7 @@ import { applyElapsed, mood, moodPersonality, type Mood, type Needs } from '../d
 import { careForDog, loadActivity, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
 import { GARDEN_BOUNDS } from '../garden'
 import type { Session } from '../session'
+import { openDogDetail } from '../ui/dogPanels'
 import { createHud } from '../ui/hud'
 import { mulberry32 } from '../util/rng'
 import { isRestless, resistsWaking } from '../nightlife'
@@ -163,13 +164,14 @@ export class GardenScene extends Phaser.Scene {
     if (!e) return
     this.selectedId = dogId
     const bg = this.add.graphics()
-    bg.fillStyle(0xffffff, 1).fillRoundedRect(-92, -10, 184, 76, 12)
+    bg.fillStyle(0xffffff, 1).fillRoundedRect(-92, -10, 184, 104, 12)
     const title = this.add.text(0, 6, '', { fontSize: '12px', color: '#2b2b2b', fontStyle: 'bold', resolution: 3, fontFamily: FONT }).setOrigin(0.5)
     const feed = this.pill('Füttern', '#2b6cb0', () => void this.care('feed')).setPosition(-44, 42)
     const pet = this.pill('Streicheln', '#4a9b3a', () => void this.care('pet')).setPosition(46, 42)
     const wake = this.pill('Wecken', '#8a5cc2', () => this.tryWake(dogId)).setPosition(0, 42)
     const walk = this.pill('Gassi gehen', '#d9822b', () => this.scene.start('walk')).setPosition(0, 42)
-    const box = this.add.container(0, 0, [bg, title, feed, pet, wake, walk]).setDepth(2000)
+    const details = this.pill('Details', '#5a6b7d', () => openDogDetail(e.record, this.currentNeeds(e))).setPosition(0, 76)
+    const box = this.add.container(0, 0, [bg, title, feed, pet, wake, walk, details]).setDepth(2000)
     const timer = this.time.delayedCall(8000, () => this.closeBubble())
     this.bubble = { box, title, buttons: [feed, pet], wake, walk, dogId, timer }
     this.updateBubbleText()

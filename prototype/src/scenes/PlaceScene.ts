@@ -5,6 +5,7 @@ import { loadDogs } from '../dogRepo'
 import type { Session } from '../session'
 import { isRestless } from '../nightlife'
 import { createAtmosphere, type Atmosphere } from './atmosphere'
+import { openTraining } from '../ui/dogPanels'
 import { createHud } from '../ui/hud'
 import { buildShop } from '../ui/shop'
 import { mulberry32 } from '../util/rng'
@@ -61,6 +62,7 @@ export class PlaceScene extends Phaser.Scene {
     let own: Awaited<ReturnType<typeof loadDogs>> = []
     try { own = await loadDogs(session) } catch { this.hud.toast('Keine Verbindung, bitte Netz prüfen') }
     if (!this.scene.isActive(this.kind)) return
+    const records = new Map(own.map((r) => [r.id, r]))
     const restless = own.filter((r) => isRestless(r.id, r.personality, new Date()))
     own.forEach((r, i) => {
       if (this.kind === 'kennel') return
@@ -70,6 +72,7 @@ export class PlaceScene extends Phaser.Scene {
       if (isRestless(r.id, r.personality, new Date())) d.wake(30 * 60 * 1000)
       d.onTap(() => {
         if (d.sleeping) { d.wake(15 * 60 * 1000); this.hud.toast(`${r.name} ist wach, aber noch müde`) }
+        else if (this.kind === 'training') openTraining(records.get(r.id) ?? r, (t) => this.hud.toast(t), (nd) => records.set(r.id, nd))
         else this.hud.toast(`${r.name} (${r.look.breed ? breedById(r.look.breed).name : 'Mischling'})`)
       })
       this.dogs.push(d)
@@ -87,7 +90,7 @@ export class PlaceScene extends Phaser.Scene {
     }
     if (this.atmosphere.isNight() && this.kind === 'walk' && restless.length > 0) this.hud.toast(`${restless.map((r) => r.name).join(' und ')} wollte unbedingt noch raus`)
     else if (this.atmosphere.isNight() && (this.kind === 'walk' || this.kind === 'training')) this.hud.toast('Es ist spät, die Hunde schlafen. Antippen weckt sie, aber sie sind dann müde.')
-    else if (this.kind === 'training') this.hud.toast('Training kommt bald: Tricks, Hindernisse, Kraft')
+    else if (this.kind === 'training') this.hud.toast('Tippe einen Hund an, um mit ihm zu trainieren')
   }
 
   update(_t: number, delta: number): void {

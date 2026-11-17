@@ -107,5 +107,21 @@ check('Fremder kann nicht füttern', foreignFeed.data === false || !!foreignFeed
 const peekEco = await D.c.from('household_items').select('item').eq('household_id', hidA)
 check('Fremder sieht den Vorrat nicht', peekEco.data?.length === 0, JSON.stringify(peekEco.data))
 
+// Training
+const t0 = await B.c.from('dogs').select('needs_updated_at, training').eq('id', a1.data.id).single()
+const tr = await B.c.rpc('train_dog', { p_dog_id: a1.data.id, p_expected: t0.data.needs_updated_at, p_needs: { hunger: 80, energy: 60, happiness: 100 }, p_stat: 'tempo', p_gain: 2 })
+const t1 = await A.c.from('dogs').select('needs_updated_at, training').eq('id', a1.data.id).single()
+check('Training erhöht genau den geübten Wert', tr.data === true && t1.data?.training?.tempo === 2 && t1.data?.training?.gehorsam === 0, JSON.stringify([tr, t1.data]))
+const quick = await B.c.rpc('train_dog', { p_dog_id: a1.data.id, p_expected: t1.data.needs_updated_at, p_needs: { hunger: 70, energy: 50, happiness: 100 }, p_stat: 'tempo', p_gain: 1 })
+check('Zu schnelles zweites Training wird abgelehnt', !!quick.error, JSON.stringify(quick))
+const bigGain = await B.c.rpc('train_dog', { p_dog_id: a1.data.id, p_expected: t1.data.needs_updated_at, p_needs: { hunger: 70, energy: 50, happiness: 100 }, p_stat: 'tempo', p_gain: 50 })
+check('Zu großer Gewinn wird abgelehnt', !!bigGain.error)
+const badStat = await B.c.rpc('train_dog', { p_dog_id: a1.data.id, p_expected: t1.data.needs_updated_at, p_needs: { hunger: 70, energy: 50, happiness: 100 }, p_stat: 'zauberei', p_gain: 1 })
+check('Unbekannte Übung wird abgelehnt', !!badStat.error)
+const foreignTrain = await C.c.rpc('train_dog', { p_dog_id: a1.data.id, p_expected: t1.data.needs_updated_at, p_needs: { hunger: 70, energy: 50, happiness: 100 }, p_stat: 'tempo', p_gain: 1 })
+check('Fremder kann nicht trainieren', foreignTrain.data === false || !!foreignTrain.error, JSON.stringify(foreignTrain))
+const directTrain = await A.c.from('dogs').update({ training: { tempo: 100, ausdauer: 100, sprungkraft: 100, gehorsam: 100 } }).eq('id', a1.data.id).select()
+check('Trainingswerte lassen sich nicht direkt ändern', !directTrain.data?.length, JSON.stringify(directTrain.data))
+
 console.log(failed === 0 ? '\nALLES GRUEN' : `\n${failed} FEHLER`)
 process.exit(failed === 0 ? 0 : 1)
