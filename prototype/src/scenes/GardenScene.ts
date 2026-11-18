@@ -570,8 +570,8 @@ export class GardenScene extends Phaser.Scene {
     const dist = Math.hypot(catchPt.x - e.dog.x, catchPt.y - e.dog.y)
     const dur = Math.min(3000, Math.max(1500, (dist / 0.11) * 0.9 + 500))
     const g = this.add.graphics().setDepth(3000)
-    g.fillStyle(0xe8453c, 1).fillEllipse(0, 0, 9, 3.5).fillStyle(0xffffff, 1).fillEllipse(0, -0.5, 5, 1.6)
-    const shadow = this.add.ellipse(from.x, from.y, 8, 3, 0x000000, 0.25).setDepth(1)
+    g.fillStyle(0xe8453c, 1).fillEllipse(0, 0, 14, 5.5).fillStyle(0xffffff, 1).fillEllipse(0, -0.8, 8, 2.4)
+    const shadow = this.add.ellipse(from.x, from.y, 12, 4, 0x000000, 0.25).setDepth(1)
     const place = (v: number): void => {
       const x = from.x + (land.x - from.x) * v
       const y = from.y + (land.y - from.y) * v
