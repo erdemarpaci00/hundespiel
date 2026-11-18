@@ -13,9 +13,9 @@ export interface League {
 
 export const LEAGUES: League[] = [
   { id: 'bronze', name: 'Bronze-Liga', rival: 28, win: 15, consolation: 5, entry: 0 },
-  { id: 'silber', name: 'Silber-Liga', rival: 50, win: 40, consolation: 10, entry: 35 },
-  { id: 'gold', name: 'Gold-Liga', rival: 66, win: 100, consolation: 20, entry: 50 },
-  { id: 'olympia', name: 'Olympia', rival: 80, win: 260, consolation: 40, entry: 68 },
+  { id: 'silber', name: 'Silber-Liga', rival: 50, win: 30, consolation: 8, entry: 35 },
+  { id: 'gold', name: 'Gold-Liga', rival: 66, win: 60, consolation: 12, entry: 50 },
+  { id: 'olympia', name: 'Olympia', rival: 80, win: 120, consolation: 20, entry: 68 },
 ]
 
 export const CONTEST_MIN_ENERGY = 40
