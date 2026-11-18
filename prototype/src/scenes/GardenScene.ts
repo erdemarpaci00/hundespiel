@@ -51,6 +51,10 @@ export class GardenScene extends Phaser.Scene {
   private busy = false
   private throwMode = false
   private swipe = 0
+  private modeHint: Phaser.GameObjects.Text | null = null
+  private modeTimer: Phaser.Time.TimerEvent | null = null
+  private tapDist = 0
+  private lastPetSave = new Map<string, number>()
   private welcomed = false
   private heartAcc = 0
   private poops: { data: Poop; obj: Phaser.GameObjects.Container }[] = []
@@ -78,6 +82,10 @@ export class GardenScene extends Phaser.Scene {
     this.food = null
     this.seenActivity = null
     this.swipe = 0
+    this.modeHint = null
+    this.modeTimer = null
+    this.tapDist = 0
+    this.lastPetSave = new Map()
     this.welcomed = false
     this.poops = []
     // Welt ist 640x360, gerendert wird 3-fach scharf auf 1920x1080
@@ -116,6 +124,7 @@ export class GardenScene extends Phaser.Scene {
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
       for (const e of this.entries.values()) if (Math.hypot(p.worldX - e.dog.x, p.worldY - e.dog.y) < 110) e.dog.lookAt(p.worldX)
       this.hand.setVisible(false)
+      if (p.isDown) this.tapDist += Math.hypot(p.x - p.prevPosition.x, p.y - p.prevPosition.y) / this.cameras.main.zoom
       if (!p.isDown || this.throwMode || this.ballFor || this.busy) { this.swipe = 0; return }
       const hit = [...this.entries.values()].find((e) => Math.abs(p.worldX - e.dog.x) < 40 * e.dog.scale + 10 && Math.abs(p.worldY - (e.dog.y - 25 * e.dog.scale)) < 35)
       if (!hit) { this.swipe = 0; return }
@@ -123,12 +132,15 @@ export class GardenScene extends Phaser.Scene {
       this.hand.setPosition(p.worldX, p.worldY).setAngle(Math.sin(this.time.now / 90) * 14).setVisible(true)
       const step = Math.hypot(p.x - p.prevPosition.x, p.y - p.prevPosition.y) / this.cameras.main.zoom
       this.swipe += step
+      hit.dog.hold(900)
       this.heartAcc += step
       if (this.heartAcc > 30) { this.heartAcc = 0; this.heartsAt(hit.dog.x + (Math.random() - 0.5) * 24, hit.dog.y - 55 * hit.dog.scale) }
       if (this.swipe > 120) {
         this.swipe = 0
         this.closeBubble()
-        void this.care('pet', hit.record.id)
+        // Herzen sofort, gespeichert wird hoechstens alle 5 Minuten pro Hund (sonst Verlaufsspam und Dauerladen).
+        const last = this.lastPetSave.get(hit.record.id) ?? 0
+        if (Date.now() - last > 5 * 60 * 1000) { this.lastPetSave.set(hit.record.id, Date.now()); void this.care('pet', hit.record.id) }
       }
     })
     this.input.on('pointerdown', (p: Phaser.Input.Pointer, over: unknown[]) => {
@@ -201,7 +213,13 @@ export class GardenScene extends Phaser.Scene {
       dog.setCaption(record.name)
       dog.setSize(ageStage(ageDays(parseTimestamp(record.createdAt), Date.now())).scale)
       dog.setKey(record.id)
-      dog.onTap(() => { if (!dialogJustClosed()) this.openBubble(record.id) })
+      dog.onTap(() => {
+        if (dialogJustClosed()) return
+        if (this.throwMode || this.ballFor) { this.cancelModes(true); return }
+        // Ring erst oeffnen, wenn der Finger nicht zum Wischen ansetzt (sonst flackert er bei jedem Streicheln).
+        this.tapDist = 0
+        this.time.delayedCall(180, () => { if (this.tapDist < 6) this.openBubble(record.id) })
+      })
       this.entries.set(record.id, { record, dog })
     })
   }
@@ -397,6 +415,30 @@ export class GardenScene extends Phaser.Scene {
   }
 
   // Futter in den Garten werfen: der erste Hund, der ankommt, frisst.
+  // Dauerhinweis im Wurf-Modus: bleibt stehen, bis geworfen oder abgebrochen wird (Tipp auf einen Hund oder nach 15 Sekunden).
+  private showModeHint(text: string): void {
+    this.hideModeHint()
+    const t = this.add.text(320, 52, `${text}
+(Zum Abbrechen einen Hund antippen)`, { fontSize: '9px', color: '#ffffff', backgroundColor: 'rgba(0,0,0,0.6)', padding: { x: 6, y: 3 }, align: 'center', resolution: 3, fontFamily: 'Arial, Helvetica, sans-serif' }).setOrigin(0.5, 0).setDepth(3002)
+    this.modeHint = t
+    this.modeTimer = this.time.delayedCall(15000, () => this.cancelModes(true))
+  }
+
+  private hideModeHint(): void {
+    this.modeHint?.destroy()
+    this.modeHint = null
+    this.modeTimer?.remove(false)
+    this.modeTimer = null
+  }
+
+  private cancelModes(announce: boolean): void {
+    const was = this.throwMode || this.ballFor !== null
+    this.throwMode = false
+    this.ballFor = null
+    this.hideModeHint()
+    if (was && announce) this.hud.toast('Abgebrochen')
+  }
+
   private async startThrow(): Promise<void> {
     this.closeBubble()
     try {
@@ -407,11 +449,12 @@ export class GardenScene extends Phaser.Scene {
       return
     }
     this.throwMode = true
-    this.hud.toast('Tippe in den Garten, um das Futter zu werfen')
+    this.showModeHint('Tippe in den Garten, um das Futter zu werfen')
   }
 
   private throwFood(wx: number, wy: number): void {
     this.throwMode = false
+    this.hideModeHint()
     this.food?.destroy()
     const x = Math.min(GARDEN_BOUNDS.x + GARDEN_BOUNDS.w, Math.max(GARDEN_BOUNDS.x, wx))
     const y = Math.min(GARDEN_BOUNDS.y + GARDEN_BOUNDS.h, Math.max(GARDEN_BOUNDS.y, wy))
@@ -428,7 +471,8 @@ export class GardenScene extends Phaser.Scene {
         g.destroy()
         this.food = null
         for (const o of eager) if (o !== e) o.dog.cancelChase()
-        void this.care('feed', e.record.id)
+        const feedWhenFree = (n: number): void => { if (this.busy && n < 12) this.time.delayedCall(500, () => feedWhenFree(n + 1)); else void this.care('feed', e.record.id) }
+        feedWhenFree(0)
       })
     }
     this.time.delayedCall(25000, () => {
@@ -472,12 +516,13 @@ export class GardenScene extends Phaser.Scene {
     if (this.currentNeeds(e).energy < PLAY_MIN_ENERGY) { this.hud.toast(`${e.record.name} ist zu müde zum Spielen`); return }
     this.throwMode = false
     this.ballFor = dogId
-    this.hud.toast('Tippe in den Garten, um den Ball zu werfen')
+    this.showModeHint('Tippe in den Garten, um den Ball zu werfen')
   }
 
   private throwBall(wx: number, wy: number): void {
     const e = this.ballFor ? this.entries.get(this.ballFor) : undefined
     this.ballFor = null
+    this.hideModeHint()
     if (!e || e.dog.sleeping) return
     const x = Math.min(GARDEN_BOUNDS.x + GARDEN_BOUNDS.w, Math.max(GARDEN_BOUNDS.x, wx))
     const y = Math.min(GARDEN_BOUNDS.y + GARDEN_BOUNDS.h, Math.max(GARDEN_BOUNDS.y, wy))

@@ -136,6 +136,14 @@ export class LivingDog {
     this.sprite.face(x >= this.pos.x ? 1 : -1)
   }
 
+  // Bleibt beim Streicheln kurz sitzen, statt weiterzulaufen.
+  hold(ms: number): void {
+    if (this.resting || this.chase || this.behavior === 'sit') { if (this.behavior === 'sit') this.remainingMs = Math.max(this.remainingMs, ms); return }
+    this.behavior = 'sit'
+    this.remainingMs = ms
+    this.sprite.setPose('sit')
+  }
+
   // Freude zeigen (Herz ueber dem Kopf), z.B. bei der Begruessung nach langer Abwesenheit.
   cheer(ms: number): void {
     if (this.resting) return
