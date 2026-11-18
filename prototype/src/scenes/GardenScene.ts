@@ -10,7 +10,7 @@ import { enterContest, cleanPoop, dropPoop, findTreasure, loadPoopsFromDb, loadR
 import { GARDEN_BOUNDS } from '../garden'
 import type { Session } from '../session'
 import { markVisit, readLastVisit, shouldWelcome } from '../garden/welcome'
-import { CONTEST_MIN_ENERGY, playRound, rivalForm, summarize, type League, type Round } from '../dog/contest'
+import { MEDAL_COLORS, topLeague, CONTEST_MIN_ENERGY, playRound, rivalForm, summarize, type League, type Round } from '../dog/contest'
 import { STAT_KEYS, STAT_LABEL, statValue } from '../dog/stats'
 import { wishBlock, wishFor, type Wish } from '../dog/wish'
 import { wantsPoop, type Poop } from '../garden/poop'
@@ -363,6 +363,8 @@ export class GardenScene extends Phaser.Scene {
     for (const e of this.entries.values()) {
       const m = mood(this.currentNeeds(e))
       e.dog.setPersonality(moodPersonality(e.record.personality, m))
+      const top = topLeague(e.record.trophies)
+      e.dog.setMedal(top >= 0 ? MEDAL_COLORS[top] : null)
       e.dog.setFeeling(m === 'happy' || (m === 'ok' && favoriteOf(this.affection[e.record.id] ?? {}) === this.session.displayName) ? 'happy' : m === 'sad' || m === 'hungry' ? 'sad' : 'ok')
       const w = this.currentWish(e)
       e.dog.setEmote(m === 'hungry' ? 'hungry' : m === 'sad' ? 'sad' : w ? (`wish-${w}` as const) : null)

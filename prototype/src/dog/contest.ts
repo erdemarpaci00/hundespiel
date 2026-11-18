@@ -91,3 +91,12 @@ export function runContest(league: League, values: Record<StatKey, number>, rng:
   const form = rivalForm(rng)
   return summarize(league, STAT_KEYS.map((stat) => playRound({ stat, value: values[stat], league, form, happiness, affection, throwQuality: 0.5 }, rng)))
 }
+
+// Hoechste Liga mit mindestens einem Pokal (Index in LEAGUES), -1 ohne Pokal. Bestimmt die Medaille am Halsband.
+export function topLeague(trophies: Partial<Record<string, number>>): number {
+  let top = -1
+  LEAGUES.forEach((l, i) => { if ((trophies[l.id] ?? 0) > 0) top = i })
+  return top
+}
+
+export const MEDAL_COLORS = [0xcd7f32, 0xc0c0c0, 0xffd700, 0x66e0ff]

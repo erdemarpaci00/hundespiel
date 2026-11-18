@@ -111,6 +111,20 @@ export class DogSprite {
     this.layout(0)
   }
 
+  private medal: Phaser.GameObjects.Container | null = null
+
+  // Medaille am Halsband (Farbe der hoechsten gewonnenen Liga), null entfernt sie.
+  setMedal(color: number | null): void {
+    this.medal?.destroy()
+    this.medal = null
+    if (color === null) return
+    const m = this.container.scene.add.container(24, -36)
+    m.add(this.container.scene.add.rectangle(0, -3, 3, 7, 0xc62828))
+    m.add(this.container.scene.add.circle(0, 2, 4.5, color).setStrokeStyle(1, 0x000000, 0.4))
+    this.container.add(m)
+    this.medal = m
+  }
+
   private feeling: Feeling = 'ok'
 
   // Stimmung am Koerper: froehlich wedelt schnell und weit, traurig haengt Schwanz und Kopf, genussvoll schliesst die Augen.

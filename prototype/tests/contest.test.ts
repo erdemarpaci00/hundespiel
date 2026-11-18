@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { average, cupsMissing, fitBonus, playRound, summarize, throwBonus, eligible, formBonus, LEAGUES, runContest } from '../src/dog/contest'
+import { topLeague, average, cupsMissing, fitBonus, playRound, summarize, throwBonus, eligible, formBonus, LEAGUES, runContest } from '../src/dog/contest'
 
 const stats = (v: number) => ({ tempo: v, ausdauer: v, sprungkraft: v, gehorsam: v })
 const fixed = (x: number) => () => x
@@ -72,4 +72,10 @@ describe('Frisbee-Runde', () => {
     expect(summarize(LEAGUES[0], [r(true), r(true), r(true), r(false)]).won).toBe(true)
     expect(summarize(LEAGUES[0], [r(true), r(false), r(false), r(false)]).prize).toBe(LEAGUES[0].consolation)
   })
+})
+
+it('Medaille richtet sich nach der hoechsten Liga mit Pokal', () => {
+  expect(topLeague({})).toBe(-1)
+  expect(topLeague({ bronze: 2 })).toBe(0)
+  expect(topLeague({ bronze: 3, gold: 1 })).toBe(2)
 })

@@ -235,6 +235,10 @@ export class LivingDog {
     if (this.blissMs <= 0) this.sprite.setFeeling(f)
   }
 
+  setMedal(color: number | null): void {
+    this.sprite.setMedal(color)
+  }
+
   bliss(ms: number): void {
     this.blissMs = ms
     this.sprite.setFeeling('blissful')
