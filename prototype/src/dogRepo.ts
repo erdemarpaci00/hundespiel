@@ -339,11 +339,18 @@ export async function loadAffection(session: Session): Promise<Record<string, Re
   return out
 }
 
-// Muenzen fuer einen erfuellten Wunsch (Server begrenzt auf alle 10 Minuten). Liefert die gezahlten Muenzen.
-export async function wishReward(): Promise<number> {
-  const { data, error } = await supabase.rpc('wish_reward')
+// Merkt einen erfuellten Wunsch fuer den Haushalt und liefert die gezahlten Muenzen (Server begrenzt auf alle 10 Minuten).
+export async function wishReward(dogId: string, block: number): Promise<number> {
+  const { data, error } = await supabase.rpc('wish_reward', { p_dog: dogId, p_block: block })
   fail(error)
   return typeof data === 'number' ? data : 0
+}
+
+// Erfuellte Wuensche des aktuellen Zeitblocks als "Hund-Id|Block".
+export async function loadWishDone(block: number): Promise<string[]> {
+  const { data, error } = await supabase.from('wish_done').select('dog_id, block').eq('block', block)
+  fail(error)
+  return (data ?? []).map((r) => `${r.dog_id as string}|${r.block as number}`)
 }
 
 // Taten des Partners seit einem Zeitpunkt (ohne Aufnahme) und dessen Name. Null, wenn kein Partner da ist.

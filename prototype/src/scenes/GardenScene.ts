@@ -7,7 +7,7 @@ import { ageDays, ageStage } from '../dog/age'
 import { LivingDog } from '../dog/livingDog'
 import { randomLook } from '../dog/look'
 import { applyElapsed, energyDots, PLAY_MIN_ENERGY, mood, moodPersonality, type Mood, type Needs } from '../dog/needs'
-import { loadPartnerSince, wishReward, enterContest, cleanPoop, dropPoop, findTreasure, loadPoopsFromDb, loadRelations, recordMeeting, type Relation, careForDog, groomDog, treatDog, playWithDog, loadActivity, loadAffection, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
+import { loadPartnerSince, loadWishDone, wishReward, enterContest, cleanPoop, dropPoop, findTreasure, loadPoopsFromDb, loadRelations, recordMeeting, type Relation, careForDog, groomDog, treatDog, playWithDog, loadActivity, loadAffection, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
 import { GARDEN_BOUNDS } from '../garden'
 import type { Session } from '../session'
 import { markVisit, readLastVisit, shouldWelcome } from '../garden/welcome'
@@ -232,6 +232,7 @@ export class GardenScene extends Phaser.Scene {
     try {
       const [records, activity, relations, poops] = await Promise.all([loadDogs(this.session), loadActivity(this.session, 8), loadRelations().catch(() => this.relations), loadPoopsFromDb().catch(() => null)])
       this.affection = await loadAffection(this.session).catch(() => this.affection)
+      for (const k of await loadWishDone(wishBlock(Date.now())).catch(() => [])) this.wishDone.add(k)
       this.relations = relations
       if (poops) this.syncPoops(poops)
       if (!this.welcomed) { this.welcomed = true; this.events.emit('welcome') }
@@ -366,7 +367,7 @@ export class GardenScene extends Phaser.Scene {
     e.dog.cheer(2500)
     this.hud.toast(`Genau das wollte ${e.record.name}!`)
     this.refreshNeeds()
-    void wishReward().then((c) => { if (c > 0) { this.hud.toast(`Genau das wollte ${e.record.name}! +${c} Münzen`); this.hud.refresh() } }).catch(() => { /* Belohnung ist nur ein Extra */ })
+    void wishReward(dogId, wishBlock(Date.now())).then((c) => { if (c > 0) { this.hud.toast(`Genau das wollte ${e.record.name}! +${c} Münzen`); this.hud.refresh() } }).catch(() => { /* Belohnung ist nur ein Extra */ })
   }
 
   // Beim Oeffnen: was hat der Partner seit dem letzten Besuch getan (nur wenn mind. 30 Minuten vergangen sind).
