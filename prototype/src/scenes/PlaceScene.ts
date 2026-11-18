@@ -110,7 +110,7 @@ export class PlaceScene extends Phaser.Scene {
       const y = area.y + 20 + rng() * (area.h - 40)
       const g = this.add.graphics().setPosition(x, y).setDepth(y)
       g.fillStyle(0xfff3a0, 1).fillTriangle(0, -7, 2.2, 0, -2.2, 0).fillTriangle(0, 7, 2.2, 0, -2.2, 0).fillTriangle(-7, 0, 0, 2.2, 0, -2.2).fillTriangle(7, 0, 0, 2.2, 0, -2.2)
-      const hit = this.add.zone(x, y, 36, 36).setInteractive().setDepth(5000)
+      const hit = this.add.zone(x, y, 48, 48).setInteractive().setDepth(5000)
       this.tweens.add({ targets: g, alpha: 0.35, scale: 0.8, duration: 700, yoyo: true, repeat: -1 })
       hit.on('pointerdown', () => {
         if (dialogJustClosed()) return
