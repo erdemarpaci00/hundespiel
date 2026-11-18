@@ -847,6 +847,11 @@ export class GardenScene extends Phaser.Scene {
     if (!b || b.carrier) return
     if (b.flying) { e.dog.hold(300); this.time.delayedCall(150, () => this.reachBall(e, runners)); return }
     b.carrier = e
+    // Die anderen jagen dem Ballträger hinterher.
+    const chase = this.time.addEvent({ delay: 900, loop: true, callback: () => {
+      if (this.ball?.carrier !== e) { chase.remove(false); return }
+      for (const o of runners) if (o !== e && !o.dog.sleeping) o.dog.goTo({ x: e.dog.x - e.dog.facing * 28 + (Math.random() - 0.5) * 20, y: e.dog.y + (Math.random() - 0.5) * 14 }, () => undefined)
+    } })
     for (const o of runners) if (o !== e) o.dog.cancelChase()
     const back = { x: 320 + (Math.random() - 0.5) * 90, y: GARDEN_BOUNDS.y + GARDEN_BOUNDS.h - 12 - Math.random() * 20 }
     e.dog.goTo(back, () => this.dropBall(e, true))
