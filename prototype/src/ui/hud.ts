@@ -3,6 +3,7 @@ import { claimDaily, loadDaily, loadEconomy } from '../economy'
 import { DAILY_TASKS, readyCount, taskStatus } from '../daily'
 import { friendlyError } from '../errors'
 import { openSettings } from './settings'
+import { breedCollection } from '../dog/breedCollection'
 
 export type Tool = 'hand' | 'futter' | 'leckerli' | 'ball' | 'buerste'
 
@@ -11,6 +12,7 @@ export interface HudActions {
   onTool?(t: Tool): void
   householdId: string
   getActivity(): string[]
+  getBreeds?(): (string | undefined)[]
   travel(key: string): void
   current: string
 }
@@ -91,6 +93,13 @@ export function createHud(actions: HudActions): { toast(text: string): void; ref
       row.appendChild(b)
       card.appendChild(row)
     })
+    if (actions.getBreeds) {
+      const col = breedCollection(actions.getBreeds())
+      const box = document.createElement('div')
+      box.className = 'task'
+      box.innerHTML = `<div>Rassen bei euch: ${col.have} von ${col.items.length}<br><small>${col.items.map((i) => (i.owned ? `<b>${i.name}</b>` : i.name)).join(' · ')}</small></div>`
+      card.appendChild(box)
+    }
     const close = document.createElement('button')
     close.className = 'tab'
     close.textContent = 'Zurück'

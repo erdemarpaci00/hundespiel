@@ -125,7 +125,7 @@ export class GardenScene extends Phaser.Scene {
     }
 
     this.session = this.registry.get('session') as Session
-    this.hud = createHud({ householdId: this.session.householdId, getActivity: () => this.activityLines(), travel: (k) => this.scene.start(k), current: 'garden', onEconomy: (items) => this.onEconomy(items), onTool: (t) => this.pick(t) })
+    this.hud = createHud({ householdId: this.session.householdId, getActivity: () => this.activityLines(), getBreeds: () => [...this.entries.values()].map((e) => e.record.look.breed), travel: (k) => this.scene.start(k), current: 'garden', onEconomy: (items) => this.onEconomy(items), onTool: (t) => this.pick(t) })
     this.hand = this.makeHand()
     this.time.addEvent({ delay: 7000, loop: true, callback: () => this.ambientBall() })
     this.time.delayedCall(1500, () => showTutorial())
