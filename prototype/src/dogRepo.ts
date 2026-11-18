@@ -307,3 +307,11 @@ export async function treatDog(dog: DogRecord): Promise<DogRecord> {
   }
   throw new Error('Gerade war jemand schneller, bitte nochmal tippen')
 }
+
+// Zufallsfund beim Buddeln. Null, wenn gerade Pause ist.
+export async function findTreasure(dogId: string): Promise<{ coins: number; what: string } | null> {
+  const { data, error } = await supabase.rpc('find_treasure', { p_dog_id: dogId })
+  fail(error)
+  const d = data as { coins?: number; what?: string } | null
+  return d && typeof d.coins === 'number' ? { coins: d.coins, what: String(d.what ?? 'etwas') } : null
+}

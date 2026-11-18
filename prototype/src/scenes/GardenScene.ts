@@ -6,7 +6,7 @@ import { ageDays, ageStage } from '../dog/age'
 import { LivingDog } from '../dog/livingDog'
 import { randomLook } from '../dog/look'
 import { applyElapsed, PLAY_MIN_ENERGY, mood, moodPersonality, type Mood, type Needs } from '../dog/needs'
-import { cleanPoop, dropPoop, loadPoopsFromDb, loadRelations, recordMeeting, type Relation, careForDog, groomDog, playWithDog, loadActivity, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
+import { cleanPoop, dropPoop, findTreasure, loadPoopsFromDb, loadRelations, recordMeeting, type Relation, careForDog, groomDog, playWithDog, loadActivity, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
 import { GARDEN_BOUNDS } from '../garden'
 import type { Session } from '../session'
 import { markVisit, readLastVisit, shouldWelcome } from '../garden/welcome'
@@ -119,6 +119,25 @@ export class GardenScene extends Phaser.Scene {
         }
       },
     })
+    // Zufallsereignis: ein wacher Hund geht buddeln und findet manchmal etwas.
+    const dig = (dogId?: string): void => {
+      const pool = [...this.entries.values()].filter((e) => !e.dog.sleeping && !e.dog.busyMeeting && (!dogId || e.record.id === dogId))
+      if (pool.length === 0 || this.throwMode || this.ballFor) return
+      const e = pool[Math.floor(Math.random() * pool.length)]
+      const x = GARDEN_BOUNDS.x + 20 + Math.random() * (GARDEN_BOUNDS.w - 40)
+      const y = GARDEN_BOUNDS.y + 20 + Math.random() * (GARDEN_BOUNDS.h - 40)
+      e.dog.goTo({ x, y }, () => {
+        e.dog.cheer(1800)
+        void findTreasure(e.record.id).then((f) => {
+          if (!f) return
+          this.heartsAt(e.dog.x, e.dog.y - 20 * e.dog.scale)
+          this.hud.toast(`${e.record.name} hat ${f.what} ausgebuddelt: +${f.coins} Münzen`)
+          this.hud.refresh()
+        }).catch(() => undefined)
+      })
+    }
+    if (location.search.includes('debug')) (window as unknown as { __dig: typeof dig }).__dig = dig
+    this.time.addEvent({ delay: 60000, loop: true, callback: () => { if (Math.random() < 0.3) dig() } })
     this.input.on('pointerup', () => this.hand.setVisible(false))
     // Wischen ueber einen Hund streichelt ihn (ca. 120 Pixel Weg ueber dem Hund, einmal pro Wisch).
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
