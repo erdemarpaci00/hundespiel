@@ -1,3 +1,4 @@
+import { bondLabel } from '../dog/bond'
 import { ageDays, ageLabel } from '../dog/age'
 import { parseTimestamp } from '../time'
 import { breedById } from '../dog/breeds'
@@ -56,7 +57,7 @@ const TRAITS: [keyof DogRecord['personality'], string][] = [
 ]
 
 // Alles ueber einen Hund: Rasse, Charakter, Befinden, Werte. Nur auf Wunsch sichtbar.
-export function openDogDetail(dog: DogRecord, needs: Needs): void {
+export function openDogDetail(dog: DogRecord, needs: Needs, bonds: { name: string; meetings: number }[] = []): void {
   const { overlay: o, card } = overlay()
   const h = document.createElement('h1')
   const breed = dog.look.breed ? breedById(dog.look.breed).name : 'Mischling'
@@ -70,6 +71,17 @@ export function openDogDetail(dog: DogRecord, needs: Needs): void {
   for (const [k, label] of TRAITS) card.appendChild(row(label, dog.personality[k] * 100))
   card.appendChild(heading('Befinden'))
   card.append(row('Sattheit', needs.hunger), row('Kraft', needs.energy), row('Laune', needs.happiness))
+  if (bonds.length > 0) {
+    card.appendChild(heading('Freundschaften'))
+    for (const b of bonds) {
+      const r = row(b.name, Math.min(100, (b.meetings / 15) * 100))
+      r.title = bondLabel(b.meetings)
+      const lab = r.lastElementChild as HTMLElement
+      lab.textContent = bondLabel(b.meetings)
+      lab.style.fontSize = '11px'
+      card.appendChild(r)
+    }
+  }
   card.appendChild(closeButton(o))
 }
 

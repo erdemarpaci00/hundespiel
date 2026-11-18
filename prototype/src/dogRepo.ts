@@ -223,3 +223,16 @@ export async function loadActivity(session: Session, limit: number): Promise<Act
     at: r.created_at,
   }))
 }
+
+export interface Relation { a: string; b: string; meetings: number }
+
+export async function loadRelations(): Promise<Relation[]> {
+  const { data, error } = await supabase.from('dog_relations').select('dog_a, dog_b, meetings')
+  fail(error)
+  return (data ?? []).map((r) => ({ a: r.dog_a as string, b: r.dog_b as string, meetings: r.meetings as number }))
+}
+
+export async function recordMeeting(a: string, b: string): Promise<void> {
+  const { error } = await supabase.rpc('record_meeting', { p_a: a, p_b: b })
+  fail(error)
+}

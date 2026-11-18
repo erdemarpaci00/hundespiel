@@ -6,7 +6,7 @@ import { ageDays, ageStage } from '../dog/age'
 import { LivingDog } from '../dog/livingDog'
 import { randomLook } from '../dog/look'
 import { applyElapsed, PLAY_MIN_ENERGY, mood, moodPersonality, type Mood, type Needs } from '../dog/needs'
-import { careForDog, groomDog, playWithDog, loadActivity, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
+import { loadRelations, recordMeeting, type Relation, careForDog, groomDog, playWithDog, loadActivity, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
 import { GARDEN_BOUNDS } from '../garden'
 import type { Session } from '../session'
 import { openDogDetail } from '../ui/dogPanels'
@@ -48,6 +48,7 @@ export class GardenScene extends Phaser.Scene {
   private bubble: Bubble | null = null
   private busy = false
   private throwMode = false
+  private relations: Relation[] = []
   private ballFor: string | null = null
   private food: Phaser.GameObjects.Graphics | null = null
   private refusals = new Map<string, number>()
@@ -114,7 +115,8 @@ export class GardenScene extends Phaser.Scene {
 
   private async reload(): Promise<void> {
     try {
-      const [records, activity] = await Promise.all([loadDogs(this.session), loadActivity(this.session, 8)])
+      const [records, activity, relations] = await Promise.all([loadDogs(this.session), loadActivity(this.session, 8), loadRelations().catch(() => this.relations)])
+      this.relations = relations
       this.announceNew(activity)
       this.activity = activity
       this.syncDogs(records)
@@ -157,6 +159,16 @@ export class GardenScene extends Phaser.Scene {
       dog.onTap(() => this.openBubble(record.id))
       this.entries.set(record.id, { record, dog })
     })
+  }
+
+  private bondsOf(id: string): { name: string; meetings: number }[] {
+    const out: { name: string; meetings: number }[] = []
+    for (const r of this.relations) {
+      const other = r.a === id ? r.b : r.b === id ? r.a : null
+      const e = other ? this.entries.get(other) : undefined
+      if (e) out.push({ name: e.record.name, meetings: r.meetings })
+    }
+    return out
   }
 
   private currentNeeds(e: Entry): Needs {
@@ -228,9 +240,9 @@ export class GardenScene extends Phaser.Scene {
     const box = this.bubble.box
     box.removeAll(true)
     const actions: [Action, () => void][] =
-      state === 'asleep' ? [['wake', () => this.tryWake(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e))]]
-      : state === 'restless' ? [['walk', () => this.scene.start('walk')], ['details', () => openDogDetail(e.record, this.currentNeeds(e))]]
-      : [['feed', () => this.startThrow()], ['pet', () => void this.care('pet')], ['ball', () => void this.startBall(e.record.id)], ['brush', () => void this.brush(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e))]]
+      state === 'asleep' ? [['wake', () => this.tryWake(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id))]]
+      : state === 'restless' ? [['walk', () => this.scene.start('walk')], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id))]]
+      : [['feed', () => this.startThrow()], ['pet', () => void this.care('pet')], ['ball', () => void this.startBall(e.record.id)], ['brush', () => void this.brush(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id))]]
     const n = actions.length
     actions.forEach(([kind, fn], i) => {
       const u = n === 1 ? 0 : (i / (n - 1)) * 2 - 1
@@ -423,6 +435,7 @@ export class GardenScene extends Phaser.Scene {
         const key = [a.record.id, b.record.id].sort().join('|')
         if ((this.meetCooldown.get(key) ?? 0) > now) continue
         this.meetCooldown.set(key, now + 60000)
+        void recordMeeting(a.record.id, b.record.id).catch(() => { /* Freundschaft zaehlt spaeter */ })
         a.dog.meet(b.dog.x, 3500)
         b.dog.meet(a.dog.x, 3500)
       }
