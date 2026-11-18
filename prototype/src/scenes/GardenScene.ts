@@ -255,9 +255,9 @@ export class GardenScene extends Phaser.Scene {
     const box = this.bubble.box
     box.removeAll(true)
     const actions: [Action, () => void][] =
-      state === 'asleep' ? [['wake', () => this.tryWake(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id))]]
-      : state === 'restless' ? [['walk', () => this.scene.start('walk')], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id))]]
-      : [['feed', () => this.startThrow()], ['pet', () => void this.care('pet')], ['ball', () => void this.startBall(e.record.id)], ['brush', () => void this.brush(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id))]]
+      state === 'asleep' ? [['wake', () => this.tryWake(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id), () => void this.reload())]]
+      : state === 'restless' ? [['walk', () => this.scene.start('walk')], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id), () => void this.reload())]]
+      : [['feed', () => this.startThrow()], ['pet', () => void this.care('pet')], ['ball', () => void this.startBall(e.record.id)], ['brush', () => void this.brush(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id), () => void this.reload())]]
     const n = actions.length
     actions.forEach(([kind, fn], i) => {
       const u = n === 1 ? 0 : (i / (n - 1)) * 2 - 1

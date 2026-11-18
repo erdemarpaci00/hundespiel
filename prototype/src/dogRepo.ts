@@ -2,8 +2,9 @@ import { parseTimestamp } from './time'
 import type { ActivityEntry, ActivityKind } from './activity'
 import type { Personality } from './dog/behavior'
 import type { DogLook } from './dog/look'
+import { CONTEST_MIN_ENERGY, runContest, type League, type Result } from './dog/contest'
 import { applyElapsed, feed, groom, pet, play, PLAY_MIN_ENERGY, TRAIN_MIN_ENERGY, train, type Needs } from './dog/needs'
-import { NO_TRAINING, trainGain, type StatKey, type Training } from './dog/stats'
+import { NO_TRAINING, STAT_KEYS, statValue, trainGain, type StatKey, type Training } from './dog/stats'
 import { friendlyError } from './errors'
 import type { Puppy } from './puppies'
 import type { Session } from './session'
@@ -19,6 +20,7 @@ export interface DogRecord {
   needs: Needs
   needsUpdatedAt: string
   training: Training
+  trophies: Record<string, number>
   createdAt: string
 }
 
@@ -32,10 +34,11 @@ interface DogRow {
   needs: Needs
   needs_updated_at: string
   training: Training | null
+  trophies: Record<string, number> | null
   created_at: string
 }
 
-const COLUMNS = 'id, name, picked_by, is_starter, look, personality, needs, needs_updated_at, training, created_at'
+const COLUMNS = 'id, name, picked_by, is_starter, look, personality, needs, needs_updated_at, training, trophies, created_at'
 
 const toRecord = (r: DogRow): DogRecord => ({
   id: r.id,
@@ -47,6 +50,7 @@ const toRecord = (r: DogRow): DogRecord => ({
   needs: r.needs,
   needsUpdatedAt: r.needs_updated_at,
   training: { ...NO_TRAINING, ...(r.training ?? {}) },
+  trophies: r.trophies ?? {},
   createdAt: r.created_at,
 })
 
@@ -235,4 +239,27 @@ export async function loadRelations(): Promise<Relation[]> {
 export async function recordMeeting(a: string, b: string): Promise<void> {
   const { error } = await supabase.rpc('record_meeting', { p_a: a, p_b: b })
   fail(error)
+}
+
+// Wettkampf: braucht Restkraft, kostet Energie, das Preisgeld geht aufs Haushaltskonto.
+export async function enterContest(dog: DogRecord, league: League): Promise<{ dog: DogRecord; result: Result }> {
+  let current = dog
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const decayed = applyElapsed(current.needs, Date.now() - parseTimestamp(current.needsUpdatedAt), current.personality)
+    if (decayed.energy < CONTEST_MIN_ENERGY) throw new Error(`${current.name} ist zu müde für ein Turnier`)
+    const values = Object.fromEntries(STAT_KEYS.map((k) => [k, statValue(current.look.breed, current.training, k)])) as Record<StatKey, number>
+    const result = runContest(league, values, Math.random)
+    const { data, error } = await supabase.rpc('enter_contest', {
+      p_dog_id: current.id,
+      p_expected: current.needsUpdatedAt,
+      p_needs: { ...decayed, energy: Math.max(10, decayed.energy - 30), hunger: Math.max(10, decayed.hunger - 10) },
+      p_league: league.id,
+      p_won: result.won,
+      p_prize: result.prize,
+    })
+    fail(error)
+    if (data === true) return { dog: await loadDog(current.id), result }
+    current = await loadDog(current.id)
+  }
+  throw new Error('Gerade war jemand schneller, bitte nochmal tippen')
 }

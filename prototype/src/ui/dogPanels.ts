@@ -3,9 +3,10 @@ import { ageDays, ageLabel } from '../dog/age'
 import { parseTimestamp } from '../time'
 import { breedById } from '../dog/breeds'
 import type { Needs } from '../dog/needs'
-import { EXERCISE, STAT_KEYS, STAT_LABEL, statValue } from '../dog/stats'
+import { EXERCISE, STAT_KEYS, STAT_LABEL, statValue, type StatKey } from '../dog/stats'
 import type { DogRecord } from '../dogRepo'
-import { adoptFromKennel, trainDog } from '../dogRepo'
+import { adoptFromKennel, enterContest, trainDog } from '../dogRepo'
+import { eligible, LEAGUES } from '../dog/contest'
 import type { Puppy } from '../puppies'
 import type { Session } from '../session'
 import { friendlyError } from '../errors'
@@ -57,7 +58,7 @@ const TRAITS: [keyof DogRecord['personality'], string][] = [
 ]
 
 // Alles ueber einen Hund: Rasse, Charakter, Befinden, Werte. Nur auf Wunsch sichtbar.
-export function openDogDetail(dog: DogRecord, needs: Needs, bonds: { name: string; meetings: number }[] = []): void {
+export function openDogDetail(dog: DogRecord, needs: Needs, bonds: { name: string; meetings: number }[] = [], onChange?: (d: DogRecord) => void): void {
   const { overlay: o, card } = overlay()
   const h = document.createElement('h1')
   const breed = dog.look.breed ? breedById(dog.look.breed).name : 'Mischling'
@@ -81,6 +82,13 @@ export function openDogDetail(dog: DogRecord, needs: Needs, bonds: { name: strin
       lab.style.fontSize = '11px'
       card.appendChild(r)
     }
+  }
+  if (onChange) {
+    const t = document.createElement('button')
+    t.className = 'alt'
+    t.textContent = 'Zum Turnier'
+    t.addEventListener('click', () => { o.remove(); openContest(dog, onChange) })
+    card.appendChild(t)
   }
   card.appendChild(closeButton(o))
 }
@@ -121,6 +129,56 @@ export function openTraining(dog: DogRecord, toast: (t: string) => void, onChang
   }
   render()
   void toast
+}
+
+// Turnier: Liga waehlen, vier Runden (je ein Wert), Preisgeld bei Sieg oder Trostpreis.
+export function openContest(dog: DogRecord, onChange: (d: DogRecord) => void): void {
+  const { overlay: o, card } = overlay()
+  let current = dog
+  const values = (): Record<StatKey, number> => Object.fromEntries(STAT_KEYS.map((k) => [k, statValue(current.look.breed, current.training, k)])) as Record<StatKey, number>
+  const render = (res?: { text: string; lines: string[] }): void => {
+    card.replaceChildren()
+    const h = document.createElement('h1')
+    h.textContent = `Turnier mit ${current.name}`
+    card.appendChild(h)
+    if (res) {
+      const m = document.createElement('div')
+      m.className = 'sub'
+      m.textContent = res.text
+      card.appendChild(m)
+      for (const l of res.lines) {
+        const d = document.createElement('div')
+        d.style.fontSize = '13px'
+        d.textContent = l
+        card.appendChild(d)
+      }
+    }
+    for (const league of LEAGUES) {
+      const ok = eligible(league, values())
+      const b = document.createElement('button')
+      b.className = 'alt'
+      const cups = current.trophies[league.id] ?? 0
+      b.textContent = `${league.name} (Sieg ${league.win} Münzen${cups ? `, ${cups} Pokal${cups > 1 ? 'e' : ''}` : ''})${ok ? '' : ` - ab Schnitt ${league.entry}`}`
+      b.disabled = !ok
+      b.addEventListener('click', async () => {
+        card.querySelectorAll('button').forEach((x) => { x.disabled = true })
+        try {
+          const r = await enterContest(current, league)
+          current = r.dog
+          onChange(current)
+          render({
+            text: r.result.won ? `Sieg! +${r.result.prize} Münzen` : `Nicht gewonnen, Trostpreis +${r.result.prize} Münzen`,
+            lines: r.result.rounds.map((x) => `${STAT_LABEL[x.stat]}: ${Math.round(x.dog)} gegen ${Math.round(x.rival)} ${x.won ? '✔' : '✘'}`),
+          })
+        } catch (e) {
+          render({ text: e instanceof Error ? e.message : friendlyError(undefined), lines: [] })
+        }
+      })
+      card.appendChild(b)
+    }
+    card.appendChild(closeButton(o, 'Fertig'))
+  }
+  render()
 }
 
 export const ADOPT_PRICE = 50
