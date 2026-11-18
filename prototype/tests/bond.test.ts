@@ -9,7 +9,7 @@ describe('bond', () => {
     expect(bondLevel(15)).toBe(3)
   })
   it('Beschriftung nach Stufe', () => {
-    expect(bondLabel(0)).toBe('kennen sich kaum')
+    expect(bondLabel(0)).toBe('Fremde')
     expect(bondLabel(3)).toBe('Bekannte')
     expect(bondLabel(8)).toBe('Freunde')
     expect(bondLabel(30)).toBe('beste Freunde')
