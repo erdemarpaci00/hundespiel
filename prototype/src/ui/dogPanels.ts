@@ -6,7 +6,7 @@ import { applyElapsed, type Needs } from '../dog/needs'
 import { EXERCISE, STAT_KEYS, STAT_LABEL, statValue, type StatKey } from '../dog/stats'
 import type { DogRecord } from '../dogRepo'
 import { adoptFromKennel, enterContest, trainDog, treatDog } from '../dogRepo'
-import { cupsMissing, eligible, formBonus, LEAGUES } from '../dog/contest'
+import { cupsMissing, eligible, formBonus, LEAGUES, type League } from '../dog/contest'
 import type { Puppy } from '../puppies'
 import type { Session } from '../session'
 import { friendlyError } from '../errors'
@@ -67,7 +67,7 @@ const TRAITS: [keyof DogRecord['personality'], string][] = [
 ]
 
 // Alles ueber einen Hund: Rasse, Charakter, Befinden, Werte. Nur auf Wunsch sichtbar.
-export function openDogDetail(dog: DogRecord, needs: Needs, bonds: { name: string; meetings: number }[] = [], onChange?: (d: DogRecord) => void): void {
+export function openDogDetail(dog: DogRecord, needs: Needs, bonds: { name: string; meetings: number }[] = [], onChange?: (d: DogRecord) => void, playContest?: PlayContest): void {
   const { overlay: o, card } = overlay()
   const h = document.createElement('h1')
   const breed = dog.look.breed ? breedById(dog.look.breed).name : 'Mischling'
@@ -96,7 +96,7 @@ export function openDogDetail(dog: DogRecord, needs: Needs, bonds: { name: strin
     const t = document.createElement('button')
     t.className = 'alt'
     t.textContent = 'Zum Turnier'
-    t.addEventListener('click', () => { o.remove(); openContest(dog, onChange) })
+    t.addEventListener('click', () => { o.remove(); openContest(dog, onChange, playContest) })
     const lk = document.createElement('button')
     lk.className = 'alt'
     lk.textContent = 'Leckerli geben'
@@ -154,7 +154,10 @@ export function openTraining(dog: DogRecord, toast: (t: string) => void, onChang
 }
 
 // Turnier: Liga waehlen, vier Runden (je ein Wert), Preisgeld bei Sieg oder Trostpreis.
-export function openContest(dog: DogRecord, onChange: (d: DogRecord) => void): void {
+// Startet das sichtbare Frisbee-Turnier im Garten (schliesst vorher das Fenster).
+export type PlayContest = (dog: DogRecord, league: League) => void
+
+export function openContest(dog: DogRecord, onChange: (d: DogRecord) => void, playContest?: PlayContest): void {
   const { overlay: o, card } = overlay()
   let current = dog
   const values = (): Record<StatKey, number> => Object.fromEntries(STAT_KEYS.map((k) => [k, statValue(current.look.breed, current.training, k)])) as Record<StatKey, number>
@@ -192,6 +195,7 @@ export function openContest(dog: DogRecord, onChange: (d: DogRecord) => void): v
       b.textContent = `${league.name} (Sieg ${league.win} Münzen${cups ? `, ${cups} Pokal${cups > 1 ? 'e' : ''}` : ''})${ok ? '' : missing > 0 ? ` - noch ${missing} Sieg${missing > 1 ? 'e' : ''} in der Liga davor` : ` - ab Schnitt ${league.entry}`}`
       b.disabled = !ok
       b.addEventListener('click', async () => {
+        if (playContest) { o.remove(); playContest(current, league); return }
         card.querySelectorAll('button').forEach((x) => { x.disabled = true })
         try {
           const r = await enterContest(current, league)

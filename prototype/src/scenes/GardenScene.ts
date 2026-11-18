@@ -6,10 +6,12 @@ import { ageDays, ageStage } from '../dog/age'
 import { LivingDog } from '../dog/livingDog'
 import { randomLook } from '../dog/look'
 import { applyElapsed, PLAY_MIN_ENERGY, mood, moodPersonality, type Mood, type Needs } from '../dog/needs'
-import { cleanPoop, dropPoop, findTreasure, loadPoopsFromDb, loadRelations, recordMeeting, type Relation, careForDog, groomDog, playWithDog, loadActivity, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
+import { enterContest, cleanPoop, dropPoop, findTreasure, loadPoopsFromDb, loadRelations, recordMeeting, type Relation, careForDog, groomDog, playWithDog, loadActivity, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
 import { GARDEN_BOUNDS } from '../garden'
 import type { Session } from '../session'
 import { markVisit, readLastVisit, shouldWelcome } from '../garden/welcome'
+import { CONTEST_MIN_ENERGY, playRound, rivalForm, summarize, type League, type Round } from '../dog/contest'
+import { STAT_KEYS, STAT_LABEL, statValue } from '../dog/stats'
 import { wishBlock, wishFor, type Wish } from '../dog/wish'
 import { wantsPoop, type Poop } from '../garden/poop'
 import { dialogJustClosed, openDogDetail } from '../ui/dogPanels'
@@ -52,6 +54,7 @@ export class GardenScene extends Phaser.Scene {
   private busy = false
   private throwMode = false
   private swipe = 0
+  private contestBusy = false
   private owned: Wish[] = ['pet']
   private wishDone = new Set<string>()
   private homeLevel = -1
@@ -101,6 +104,7 @@ export class GardenScene extends Phaser.Scene {
     this.homeGfx = null
     this.owned = ['pet']
     this.wishDone = new Set()
+    this.contestBusy = false
     const syncHome = (): void => { void loadEconomy().then((e) => { this.owned = ['pet', ...((e.items.ball ?? 0) > 0 ? ['ball' as const] : []), ...((e.items.buerste ?? 0) > 0 ? ['brush' as const] : [])]; this.drawHome(e.home ?? 0); this.refreshNeeds() }).catch(() => undefined) }
     syncHome()
     this.time.addEvent({ delay: 20000, loop: true, callback: syncHome })
@@ -170,7 +174,7 @@ export class GardenScene extends Phaser.Scene {
       for (const e of this.entries.values()) if (Math.hypot(p.worldX - e.dog.x, p.worldY - e.dog.y) < 110) e.dog.lookAt(p.worldX)
       this.hand.setVisible(false)
       if (p.isDown) this.tapDist += Math.hypot(p.x - p.prevPosition.x, p.y - p.prevPosition.y) / this.cameras.main.zoom
-      if (!p.isDown || this.throwMode || this.ballFor || this.busy) { this.swipe = 0; return }
+      if (!p.isDown || this.throwMode || this.ballFor || this.busy || this.contestBusy) { this.swipe = 0; return }
       const hit = [...this.entries.values()].find((e) => Math.abs(p.worldX - e.dog.x) < 40 * e.dog.scale + 10 && Math.abs(p.worldY - (e.dog.y - 25 * e.dog.scale)) < 35)
       if (!hit) { this.swipe = 0; return }
       // Die Hand folgt dem Finger, solange er ueber dem Hund wischt.
@@ -260,7 +264,7 @@ export class GardenScene extends Phaser.Scene {
       dog.setSize(ageStage(ageDays(parseTimestamp(record.createdAt), Date.now())).scale)
       dog.setKey(record.id)
       dog.onTap(() => {
-        if (dialogJustClosed()) return
+        if (dialogJustClosed() || this.contestBusy) return
         if (this.throwMode || this.ballFor) { this.cancelModes(true); return }
         // Ring erst oeffnen, wenn der Finger nicht zum Wischen ansetzt (sonst flackert er bei jedem Streicheln).
         this.tapDist = 0
@@ -418,9 +422,9 @@ export class GardenScene extends Phaser.Scene {
     const box = this.bubble.box
     box.removeAll(true)
     const actions: [Action, () => void][] =
-      state === 'asleep' ? [['wake', () => this.tryWake(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id), () => { this.hud.refresh(); void this.reload() })]]
-      : state === 'restless' ? [['walk', () => this.scene.start('walk')], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id), () => { this.hud.refresh(); void this.reload() })]]
-      : [['feed', () => this.startThrow()], ['pet', () => void this.care('pet')], ['ball', () => void this.startBall(e.record.id)], ['brush', () => void this.brush(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id), () => { this.hud.refresh(); void this.reload() })]]
+      state === 'asleep' ? [['wake', () => this.tryWake(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id), () => { this.hud.refresh(); void this.reload() }, (d, l) => void this.playFrisbee(d, l))]]
+      : state === 'restless' ? [['walk', () => this.scene.start('walk')], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id), () => { this.hud.refresh(); void this.reload() }, (d, l) => void this.playFrisbee(d, l))]]
+      : [['feed', () => this.startThrow()], ['pet', () => void this.care('pet')], ['ball', () => void this.startBall(e.record.id)], ['brush', () => void this.brush(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id), () => { this.hud.refresh(); void this.reload() }, (d, l) => void this.playFrisbee(d, l))]]
     const n = actions.length
     actions.forEach(([kind, fn], i) => {
       const u = n === 1 ? 0 : (i / (n - 1)) * 2 - 1
@@ -495,6 +499,115 @@ export class GardenScene extends Phaser.Scene {
       for (let i = 0; i < 7; i++) g.fillStyle(cols[i % 4], 1).fillCircle(48 + i * 9.5, 166 + (i % 2) * 5, 3.2)
     }
     if (level >= 3) g.fillStyle(0x8c7a5a, 1).fillEllipse(540, 300, 92, 46).fillStyle(0x4aa3df, 1).fillEllipse(540, 300, 82, 38).fillStyle(0xffffff, 0.35).fillEllipse(530, 295, 26, 8)
+  }
+
+  // Ein Zeiger pendelt ueber einen Balken, ein Tipp wirft. Mitte (gruen) = perfekter Wurf. Liefert 0 bis 1.
+  private timingThrow(title: string): Promise<number> {
+    return new Promise((resolve) => {
+      const cx = 320, cy = 322, w = 190
+      const bar = this.add.graphics().setDepth(3000)
+      bar.fillStyle(0x000000, 0.55).fillRoundedRect(cx - w / 2 - 6, cy - 12, w + 12, 24, 6)
+      bar.fillStyle(0xe05555, 1).fillRect(cx - w / 2, cy - 5, w, 10)
+      bar.fillStyle(0xf0c040, 1).fillRect(cx - w * 0.3, cy - 5, w * 0.6, 10)
+      bar.fillStyle(0x4caf50, 1).fillRect(cx - w * 0.1, cy - 5, w * 0.2, 10)
+      const label = this.add.text(cx, cy - 20, title, { fontSize: '10px', color: '#ffffff', backgroundColor: 'rgba(0,0,0,0.6)', padding: { x: 6, y: 3 }, resolution: 3, fontFamily: 'Arial, Helvetica, sans-serif' }).setOrigin(0.5, 1).setDepth(3002)
+      const cursor = this.add.rectangle(cx, cy, 3, 18, 0xffffff).setDepth(3001)
+      const t0 = this.time.now
+      const pos = (): number => 0.5 + 0.5 * Math.sin(((this.time.now - t0) / 1000) * 3.2 - Math.PI / 2)
+      const tick = this.time.addEvent({ delay: 16, loop: true, callback: () => cursor.setX(cx - w / 2 + pos() * w) })
+      let done = false
+      const finish = (q: number): void => {
+        if (done) return
+        done = true
+        tick.remove(false)
+        bar.destroy(); label.destroy(); cursor.destroy()
+        resolve(q)
+      }
+      this.time.delayedCall(300, () => {
+        if (done) return
+        this.input.once('pointerdown', () => finish(1 - Math.abs(pos() - 0.5) * 2))
+      })
+      this.time.delayedCall(8000, () => finish(0.2))
+    })
+  }
+
+  // Frisbee fliegt im Bogen vom Spieler (unten Mitte) zum Landepunkt.
+  private flyFrisbee(to: { x: number; y: number }): Promise<Phaser.GameObjects.Graphics> {
+    const from = { x: 320, y: 330 }
+    const g = this.add.graphics().setDepth(2999)
+    g.fillStyle(0xe8453c, 1).fillEllipse(0, 0, 9, 3.5).fillStyle(0xffffff, 1).fillEllipse(0, -0.5, 5, 1.6)
+    g.setPosition(from.x, from.y)
+    return new Promise((resolve) => {
+      this.tweens.addCounter({
+        from: 0, to: 1, duration: 700,
+        onUpdate: (tw) => {
+          const v = tw.getValue() ?? 0
+          g.setPosition(from.x + (to.x - from.x) * v, from.y + (to.y - from.y) * v - Math.sin(v * Math.PI) * 70).setAngle(v * 720)
+        },
+        onComplete: () => { g.setPosition(to.x, to.y).setAngle(0).setDepth(to.y - 1); resolve(g) },
+      })
+    })
+  }
+
+  private dogRunsTo(e: { dog: LivingDog }, to: { x: number; y: number }): Promise<void> {
+    return new Promise((resolve) => {
+      let done = false
+      const end = (): void => { if (!done) { done = true; resolve() } }
+      e.dog.goTo(to, end)
+      this.time.delayedCall(7000, () => { e.dog.cancelChase(); end() })
+    })
+  }
+
+  private floatText(x: number, y: number, text: string, color: string): void {
+    const t = this.add.text(x, y, text, { fontSize: '12px', color, stroke: '#000000', strokeThickness: 3, resolution: 3, fontFamily: 'Arial, Helvetica, sans-serif' }).setOrigin(0.5).setDepth(3003)
+    this.tweens.add({ targets: t, y: y - 26, alpha: 0, duration: 1100, onComplete: () => t.destroy() })
+  }
+
+  // Sichtbares Frisbee-Turnier: vier Wuerfe mit Timing, der Hund rennt und faengt (oder nicht).
+  // Ausgang: Wert + Tagesglueck + Laune + Passung (Anhaenglichkeit) + Wurfqualitaet gegen die Liga.
+  private async playFrisbee(record: DogRecord, league: League): Promise<void> {
+    const e = this.entries.get(record.id)
+    if (!e || this.contestBusy) return
+    if (e.dog.sleeping) { this.hud.toast(`${record.name} schläft gerade`); return }
+    const needs = this.currentNeeds(e)
+    if (needs.energy < CONTEST_MIN_ENERGY) { this.hud.toast(`${record.name} ist zu müde für ein Turnier`); return }
+    this.contestBusy = true
+    this.closeBubble()
+    this.cancelModes(false)
+    const form = rivalForm(Math.random)
+    const rounds: Round[] = []
+    try {
+      for (let i = 0; i < STAT_KEYS.length; i++) {
+        const stat = STAT_KEYS[i]
+        const q = await this.timingThrow(`${league.name}, Runde ${i + 1} von ${STAT_KEYS.length}: ${STAT_LABEL[stat]} - tippe in der Mitte!`)
+        const tx = GARDEN_BOUNDS.x + 40 + Math.random() * (GARDEN_BOUNDS.w - 80)
+        const ty = GARDEN_BOUNDS.y + 30 + Math.random() * (GARDEN_BOUNDS.h - 60)
+        const miss = (1 - q) * 70
+        const ang = Math.random() * Math.PI * 2
+        const land = {
+          x: Math.min(GARDEN_BOUNDS.x + GARDEN_BOUNDS.w, Math.max(GARDEN_BOUNDS.x, tx + Math.cos(ang) * miss)),
+          y: Math.min(GARDEN_BOUNDS.y + GARDEN_BOUNDS.h, Math.max(GARDEN_BOUNDS.y, ty + Math.sin(ang) * miss * 0.5)),
+        }
+        const disc = await this.flyFrisbee(land)
+        await this.dogRunsTo(e, land)
+        const round = playRound({ stat, value: statValue(record.look.breed, record.training, stat), league, form, happiness: needs.happiness, affection: record.personality.affection, throwQuality: q }, Math.random)
+        rounds.push(round)
+        disc.destroy()
+        if (round.won) { e.dog.cheer(1400); this.heartsAt(e.dog.x, e.dog.y - 60 * e.dog.scale); this.floatText(e.dog.x, e.dog.y - 70 * e.dog.scale, q > 0.8 ? 'Perfekt gefangen!' : 'Gefangen!', '#8dff8d') }
+        else this.floatText(e.dog.x, e.dog.y - 70 * e.dog.scale, q < 0.4 ? 'Zu weit geworfen' : 'Daneben', '#ffb3b3')
+        await new Promise((r) => this.time.delayedCall(1100, () => r(null)))
+      }
+      const result = summarize(league, rounds)
+      const r = await enterContest(record, league, result)
+      this.hud.toast(result.won ? `Sieg in der ${league.name}! +${r.result.prize} Münzen` : `Nicht gewonnen, Trostpreis +${r.result.prize} Münzen`)
+      if (result.won) { e.dog.cheer(3000); this.heartsAt(e.dog.x - 10, e.dog.y - 70 * e.dog.scale); this.heartsAt(e.dog.x + 10, e.dog.y - 60 * e.dog.scale) }
+      this.hud.refresh()
+      await this.reload()
+    } catch (err) {
+      this.hud.toast(err instanceof Error ? err.message : 'Etwas ist schiefgelaufen, bitte nochmal versuchen')
+    } finally {
+      this.contestBusy = false
+    }
   }
 
   // Futter in den Garten werfen: der erste Hund, der ankommt, frisst.

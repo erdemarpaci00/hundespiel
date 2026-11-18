@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { average, cupsMissing, eligible, formBonus, LEAGUES, runContest } from '../src/dog/contest'
+import { average, cupsMissing, fitBonus, playRound, summarize, throwBonus, eligible, formBonus, LEAGUES, runContest } from '../src/dog/contest'
 
 const stats = (v: number) => ({ tempo: v, ausdauer: v, sprungkraft: v, gehorsam: v })
 const fixed = (x: number) => () => x
@@ -42,5 +42,34 @@ describe('Aufstieg und Tagesform', () => {
     const mid = runContest(LEAGUES[0], stats(50), () => 0.5, 50)
     const good = runContest(LEAGUES[0], stats(50), () => 0.5, 90)
     expect(good.rounds[0].dog - mid.rounds[0].dog).toBe(5)
+  })
+})
+
+describe('Frisbee-Runde', () => {
+  const base = { stat: 'tempo' as const, value: 50, league: LEAGUES[1], form: 0, happiness: 50, affection: 0.5, throwQuality: 0.5 }
+  it('ein perfekter Wurf hilft, ein schlechter schadet', () => {
+    const mid = playRound(base, () => 0.5)
+    const good = playRound({ ...base, throwQuality: 1 }, () => 0.5)
+    const bad = playRound({ ...base, throwQuality: 0 }, () => 0.5)
+    expect(throwBonus(1)).toBe(15)
+    expect(good.dog - mid.dog).toBe(15)
+    expect(bad.dog - mid.dog).toBe(-15)
+  })
+  it('anhaengliche Hunde passen besser zum Spieler', () => {
+    expect(fitBonus(1)).toBeGreaterThan(fitBonus(0))
+  })
+  it('der schwaechere Hund mit perfekten Wuerfen schlaegt oft den staerkeren mit schlechten', () => {
+    let wins = 0
+    for (let i = 0; i < 2000; i++) {
+      const weak = playRound({ ...base, value: 40, throwQuality: 1 }, Math.random)
+      const strong = playRound({ ...base, value: 52, throwQuality: 0 }, Math.random)
+      if (weak.dog > strong.dog) wins++
+    }
+    expect(wins).toBeGreaterThan(1000)
+  })
+  it('summarize zaehlt Runden', () => {
+    const r = (won: boolean) => ({ stat: 'tempo' as const, dog: won ? 2 : 1, rival: won ? 1 : 2, won })
+    expect(summarize(LEAGUES[0], [r(true), r(true), r(true), r(false)]).won).toBe(true)
+    expect(summarize(LEAGUES[0], [r(true), r(false), r(false), r(false)]).prize).toBe(LEAGUES[0].consolation)
   })
 })

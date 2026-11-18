@@ -254,13 +254,14 @@ export async function recordMeeting(a: string, b: string): Promise<void> {
 }
 
 // Wettkampf: braucht Restkraft, kostet Energie, das Preisgeld geht aufs Haushaltskonto.
-export async function enterContest(dog: DogRecord, league: League): Promise<{ dog: DogRecord; result: Result }> {
+// `preset`: ein schon sichtbar gespieltes Ergebnis (Frisbee), sonst wird es ausgewuerfelt. Der Server deckelt den Preis.
+export async function enterContest(dog: DogRecord, league: League, preset?: Result): Promise<{ dog: DogRecord; result: Result }> {
   let current = dog
   for (let attempt = 0; attempt < 2; attempt++) {
     const decayed = applyElapsed(current.needs, Date.now() - parseTimestamp(current.needsUpdatedAt), current.personality)
     if (decayed.energy < CONTEST_MIN_ENERGY) throw new Error(`${current.name} ist zu müde für ein Turnier`)
     const values = Object.fromEntries(STAT_KEYS.map((k) => [k, statValue(current.look.breed, current.training, k)])) as Record<StatKey, number>
-    const result = runContest(league, values, Math.random, decayed.happiness)
+    const result = preset ?? runContest(league, values, Math.random, decayed.happiness, current.personality.affection)
     const { data, error } = await supabase.rpc('enter_contest', {
       p_dog_id: current.id,
       p_expected: current.needsUpdatedAt,

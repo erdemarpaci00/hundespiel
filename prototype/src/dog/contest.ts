@@ -45,18 +45,49 @@ export function formBonus(happiness: number): number {
 export interface Round { stat: StatKey; dog: number; rival: number; won: boolean }
 export interface Result { rounds: Round[]; won: boolean; prize: number }
 
-// Vier Runden, eine pro Wert. Beide Seiten haben pro Runde Tagesform (0 bis 30), der Gegner ist
-// pro Turnier um +-12 staerker oder schwaecher. Wer mehr Runden gewinnt, siegt; bei 2:2 zaehlt die Gesamtsumme.
-// Simuliert: Gewinnchance steigt ueber etwa 30 Wertpunkte von 10 auf 90 Prozent.
-export function runContest(league: League, values: Record<StatKey, number>, rng: () => number, happiness = 50): Result {
-  const form = (rng() - 0.5) * 24
-  const rounds = STAT_KEYS.map((stat): Round => {
-    const dog = values[stat] + rng() * 30 + formBonus(happiness)
-    const rival = league.rival + form + rng() * 30
-    return { stat, dog, rival, won: dog > rival }
-  })
+// Wurfqualitaet q (0 bis 1, 1 = perfekter Wurf) verschiebt die Leistung um -15 bis +15.
+export function throwBonus(q: number): number {
+  return (Math.min(1, Math.max(0, q)) - 0.5) * 30
+}
+
+// Wie gut Hund und Mensch zusammenpassen: anhaengliche Hunde laufen fuer ihre Leute besser (0 bis 6).
+export function fitBonus(affection: number): number {
+  return Math.round(Math.min(1, Math.max(0, affection)) * 6)
+}
+
+// Tagesform des Gegners fuer das ganze Turnier (-12 bis +12).
+export function rivalForm(rng: () => number): number {
+  return (rng() - 0.5) * 24
+}
+
+export interface RoundInput {
+  stat: StatKey
+  value: number
+  league: League
+  form: number
+  happiness: number
+  affection: number
+  // Wurfqualitaet dieser Runde, 0.5 = durchschnittlich (ohne Spielerwurf).
+  throwQuality: number
+}
+
+// Eine Runde: Wert + Tagesglueck (0 bis 30) + Laune + Passung + Wurf gegen Gegner mit Form.
+export function playRound(i: RoundInput, rng: () => number): Round {
+  const dog = i.value + rng() * 30 + formBonus(i.happiness) + fitBonus(i.affection) + throwBonus(i.throwQuality)
+  const rival = i.league.rival + i.form + rng() * 30
+  return { stat: i.stat, dog, rival, won: dog > rival }
+}
+
+// Wer mehr Runden gewinnt, siegt; bei 2:2 zaehlt die Gesamtsumme.
+export function summarize(league: League, rounds: Round[]): Result {
   const wins = rounds.filter((r) => r.won).length
   const sum = rounds.reduce((s, r) => s + r.dog - r.rival, 0)
   const won = wins > 2 || (wins === 2 && sum > 0)
   return { rounds, won, prize: won ? league.win : league.consolation }
+}
+
+// Ohne Spielerwurf (Tests, Schnelllauf): durchschnittliche Wuerfe.
+export function runContest(league: League, values: Record<StatKey, number>, rng: () => number, happiness = 50, affection = 0.5): Result {
+  const form = rivalForm(rng)
+  return summarize(league, STAT_KEYS.map((stat) => playRound({ stat, value: values[stat], league, form, happiness, affection, throwQuality: 0.5 }, rng)))
 }
