@@ -229,10 +229,10 @@ export class GardenScene extends Phaser.Scene {
       : [['feed', () => this.startThrow()], ['pet', () => void this.care('pet')], ['ball', () => void this.startBall(e.record.id)], ['brush', () => void this.brush(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e))]]
     const n = actions.length
     actions.forEach(([kind, fn], i) => {
-      const a = (-160 + (n === 1 ? 70 : (i * 140) / (n - 1))) * (Math.PI / 180)
+      const a = (-(n > 3 ? 172 : 160) + (n === 1 ? 70 : (i * (n > 3 ? 164 : 140)) / (n - 1))) * (Math.PI / 180)
       const b = this.iconButton(kind, fn)
-      const tx = Math.cos(a) * (n > 3 ? 58 : 46)
-      const ty = Math.sin(a) * 28
+      const tx = Math.cos(a) * (n > 3 ? 74 : 46)
+      const ty = Math.sin(a) * 22
       b.setPosition(0, 0).setScale(0.3).setAlpha(0)
       this.tweens.add({ targets: b, x: tx, y: ty, scale: 1, alpha: 1, duration: 160, ease: 'Back.easeOut', delay: i * 30 })
       box.add(b)
@@ -283,7 +283,7 @@ export class GardenScene extends Phaser.Scene {
     const e = this.entries.get(this.bubble.dogId)
     if (!e) return
     const x = Math.min(580, Math.max(60, e.dog.x))
-    const y = Math.min(300, Math.max(70, e.dog.y - 62))
+    const y = Math.min(300, Math.max(70, e.dog.y - 118))
     this.bubble.box.setPosition(x, y)
   }
 
