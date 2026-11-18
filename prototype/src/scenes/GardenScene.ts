@@ -10,7 +10,7 @@ import { cleanPoop, dropPoop, loadPoopsFromDb, loadRelations, recordMeeting, typ
 import { GARDEN_BOUNDS } from '../garden'
 import type { Session } from '../session'
 import { wantsPoop, type Poop } from '../garden/poop'
-import { openDogDetail } from '../ui/dogPanels'
+import { dialogJustClosed, openDogDetail } from '../ui/dogPanels'
 import { loadEconomy } from '../economy'
 import { createHud } from '../ui/hud'
 import { mulberry32 } from '../util/rng'
@@ -194,7 +194,7 @@ export class GardenScene extends Phaser.Scene {
       dog.setCaption(record.name)
       dog.setSize(ageStage(ageDays(parseTimestamp(record.createdAt), Date.now())).scale)
       dog.setKey(record.id)
-      dog.onTap(() => this.openBubble(record.id))
+      dog.onTap(() => { if (!dialogJustClosed()) this.openBubble(record.id) })
       this.entries.set(record.id, { record, dog })
     })
   }

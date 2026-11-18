@@ -11,9 +11,18 @@ import type { Puppy } from '../puppies'
 import type { Session } from '../session'
 import { friendlyError } from '../errors'
 
+let closedAt = 0
+
+// Ein Tipp auf "Schliessen" darf nicht gleichzeitig den Hund oder das Gehege darunter antippen.
+export function dialogJustClosed(): boolean {
+  return document.getElementById('settings') !== null || Date.now() - closedAt < 500
+}
+
 function overlay(): { overlay: HTMLElement; card: HTMLElement } {
   document.getElementById('settings')?.remove()
   const o = document.createElement('div')
+  const realRemove = o.remove.bind(o)
+  o.remove = () => { closedAt = Date.now(); realRemove() }
   o.id = 'settings'
   const card = document.createElement('div')
   card.className = 'card'

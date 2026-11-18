@@ -7,7 +7,7 @@ import { loadDogs } from '../dogRepo'
 import type { Session } from '../session'
 import { isRestless } from '../nightlife'
 import { createAtmosphere, type Atmosphere } from './atmosphere'
-import { openAdoption, openTraining } from '../ui/dogPanels'
+import { dialogJustClosed, openAdoption, openTraining } from '../ui/dogPanels'
 import { createHud } from '../ui/hud'
 import { buildShop } from '../ui/shop'
 import { mulberry32 } from '../util/rng'
@@ -74,6 +74,7 @@ export class PlaceScene extends Phaser.Scene {
       d.setKey(r.id)
       if (isRestless(r.id, r.personality, new Date())) d.wake(30 * 60 * 1000)
       d.onTap(() => {
+        if (dialogJustClosed()) return
         if (d.sleeping) { d.wake(15 * 60 * 1000); this.hud.toast(`${r.name} ist wach, aber noch müde`) }
         else if (this.kind === 'training') openTraining(records.get(r.id) ?? r, (t) => this.hud.toast(t), (nd) => records.set(r.id, nd))
         else this.hud.toast(`${r.name} (${r.look.breed ? breedById(r.look.breed).name : 'Mischling'})`)
@@ -88,6 +89,7 @@ export class PlaceScene extends Phaser.Scene {
       const d = new LivingDog(this, pup.look, pup.personality, pen, this.kind === 'kennel' ? { x: pen.x + 20, y: pen.y + 10 } : { x: 120 + i * 90, y: 230 + (i % 2) * 50 }, Math.random)
       d.setCaption(breed.name)
       d.onTap(() => {
+        if (dialogJustClosed()) return
         if (this.kind === 'kennel') openAdoption(session, pup, (nd) => { this.hud.toast(`${nd.name} ist jetzt bei euch zu Hause`); this.scene.start('garden') })
         else this.hud.toast(`Ein fremder ${breed.name}`)
       })
