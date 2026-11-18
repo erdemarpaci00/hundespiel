@@ -9,6 +9,7 @@ import { careForDog, loadActivity, loadDogs, subscribeToHousehold, type DogRecor
 import { GARDEN_BOUNDS } from '../garden'
 import type { Session } from '../session'
 import { openDogDetail } from '../ui/dogPanels'
+import { loadEconomy } from '../economy'
 import { createHud } from '../ui/hud'
 import { mulberry32 } from '../util/rng'
 import { isRestless, resistsWaking } from '../nightlife'
@@ -45,6 +46,8 @@ export class GardenScene extends Phaser.Scene {
   private seenActivity: Set<string> | null = null
   private bubble: Bubble | null = null
   private busy = false
+  private throwMode = false
+  private food: Phaser.GameObjects.Graphics | null = null
   private refusals = new Map<string, number>()
   private atmosphere!: Atmosphere
   private unsubscribe: (() => void) | null = null
@@ -60,6 +63,8 @@ export class GardenScene extends Phaser.Scene {
     this.bubble = null
     this.selectedId = null
     this.busy = false
+    this.throwMode = false
+    this.food = null
     this.seenActivity = null
     // Welt ist 640x360, gerendert wird 3-fach scharf auf 1920x1080
     this.cameras.main.setZoom(3).centerOn(320, 180)
@@ -79,7 +84,11 @@ export class GardenScene extends Phaser.Scene {
     this.session = this.registry.get('session') as Session
     this.hud = createHud({ householdId: this.session.householdId, getActivity: () => this.activityLines(), travel: (k) => this.scene.start(k), current: 'garden' })
     // Ins Leere tippen schliesst die Sprechblase.
-    this.input.on('pointerdown', (_p: unknown, over: unknown[]) => { if (over.length === 0) this.closeBubble() })
+    this.input.on('pointerdown', (p: Phaser.Input.Pointer, over: unknown[]) => {
+      if (over.length > 0) return
+      if (this.throwMode) { this.throwFood(p.worldX, p.worldY); return }
+      this.closeBubble()
+    })
     void this.reload()
     this.unsubscribe = subscribeToHousehold(this.session, () => void this.reload())
     this.time.addEvent({ delay: 5000, loop: true, callback: () => this.refreshNeeds() })
@@ -210,7 +219,7 @@ export class GardenScene extends Phaser.Scene {
     const actions: [Action, () => void][] =
       state === 'asleep' ? [['wake', () => this.tryWake(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e))]]
       : state === 'restless' ? [['walk', () => this.scene.start('walk')], ['details', () => openDogDetail(e.record, this.currentNeeds(e))]]
-      : [['feed', () => void this.care('feed')], ['pet', () => void this.care('pet')], ['details', () => openDogDetail(e.record, this.currentNeeds(e))]]
+      : [['feed', () => this.startThrow()], ['pet', () => void this.care('pet')], ['details', () => openDogDetail(e.record, this.currentNeeds(e))]]
     const n = actions.length
     actions.forEach(([kind, fn], i) => {
       const a = (-150 + (n === 1 ? 60 : (i * 120) / (n - 1))) * (Math.PI / 180)
@@ -271,8 +280,51 @@ export class GardenScene extends Phaser.Scene {
     this.bubble.box.setPosition(x, y)
   }
 
-  private async care(action: 'feed' | 'pet'): Promise<void> {
-    const sel = this.selectedId ? this.entries.get(this.selectedId) : undefined
+  // Futter in den Garten werfen: der erste Hund, der ankommt, frisst.
+  private async startThrow(): Promise<void> {
+    this.closeBubble()
+    try {
+      const eco = await loadEconomy()
+      if ((eco.items.futter ?? 0) < 1) { this.hud.toast('Kein Futter mehr, kauft neues im Laden'); return }
+    } catch (e) {
+      this.hud.toast(e instanceof Error ? e.message : 'Keine Verbindung, bitte Netz prüfen')
+      return
+    }
+    this.throwMode = true
+    this.hud.toast('Tippe in den Garten, um das Futter zu werfen')
+  }
+
+  private throwFood(wx: number, wy: number): void {
+    this.throwMode = false
+    this.food?.destroy()
+    const x = Math.min(GARDEN_BOUNDS.x + GARDEN_BOUNDS.w, Math.max(GARDEN_BOUNDS.x, wx))
+    const y = Math.min(GARDEN_BOUNDS.y + GARDEN_BOUNDS.h, Math.max(GARDEN_BOUNDS.y, wy))
+    const eager = [...this.entries.values()].filter((e) => !e.dog.sleeping && this.currentNeeds(e).hunger < 95)
+    if (eager.length === 0) { this.hud.toast('Gerade hat niemand Hunger'); return }
+    const g = this.add.graphics().setDepth(y - 1)
+    g.fillStyle(0x7a4a21, 1).fillCircle(x - 4, y, 2.5).fillCircle(x + 3, y - 1, 2.5).fillCircle(x, y + 3, 2.5).fillCircle(x + 6, y + 3, 2)
+    this.food = g
+    let taken = false
+    for (const e of eager) {
+      e.dog.goTo({ x, y }, () => {
+        if (taken || this.food !== g) return
+        taken = true
+        g.destroy()
+        this.food = null
+        for (const o of eager) if (o !== e) o.dog.cancelChase()
+        void this.care('feed', e.record.id)
+      })
+    }
+    this.time.delayedCall(25000, () => {
+      if (this.food !== g) return
+      g.destroy()
+      this.food = null
+      for (const o of eager) o.dog.cancelChase()
+    })
+  }
+
+  private async care(action: 'feed' | 'pet', dogId: string | null = this.selectedId): Promise<void> {
+    const sel = dogId ? this.entries.get(dogId) : undefined
     if (!sel || this.busy) return
     const before = this.currentNeeds(sel)
     if (action === 'feed' && before.hunger >= 95) {

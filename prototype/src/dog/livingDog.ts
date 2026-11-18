@@ -40,6 +40,7 @@ export class LivingDog {
   private resting = false
   private nightWanted = false
   private key: string | null = null
+  private chase: (() => void) | null = null
 
   constructor(
     scene: Phaser.Scene,
@@ -72,12 +73,17 @@ export class LivingDog {
     const dt = clampDelta(dtMs)
     this.remainingMs -= dt
     if (this.behavior === 'wander') {
-      const speed = 0.03 + 0.04 * this.personality.energy
+      const speed = (0.03 + 0.04 * this.personality.energy) * (this.chase ? 2.2 : 1)
       const dx = this.target.x - this.pos.x
       if (Math.abs(dx) > 1) this.sprite.face(dx > 0 ? 1 : -1)
       this.pos = stepToward(this.pos, this.target, speed, dt)
       const arrived = this.pos.x === this.target.x && this.pos.y === this.target.y
-      if (arrived && this.remainingMs > 0) this.target = nextTarget(this.bounds, this.pos, 140, this.rng)
+      if (arrived && this.chase) {
+        const cb = this.chase
+        this.chase = null
+        this.next()
+        cb()
+      } else if (arrived && this.remainingMs > 0) this.target = nextTarget(this.bounds, this.pos, 140, this.rng)
     }
     if (this.remainingMs <= 0) this.next()
     this.sprite.container.setPosition(this.pos.x, this.pos.y).setDepth(this.pos.y)
@@ -103,6 +109,22 @@ export class LivingDog {
     } else {
       g.fillStyle(0x4a90d9).fillTriangle(0, -7, -4, 1, 4, 1).fillCircle(0, 2, 4)
     }
+  }
+
+  // Zielstrebig zu einem Punkt laufen (z.B. zum geworfenen Futter), am Ziel wird onArrive gerufen.
+  goTo(target: Vec, onArrive: () => void): void {
+    if (this.resting) return
+    this.chase = onArrive
+    this.behavior = 'wander'
+    this.target = { ...target }
+    this.remainingMs = 30000
+    this.sprite.setPose('walk')
+  }
+
+  cancelChase(): void {
+    if (!this.chase) return
+    this.chase = null
+    this.next()
   }
 
   get x(): number { return this.pos.x }
@@ -138,6 +160,7 @@ export class LivingDog {
     const want = this.nightWanted && !awake
     if (want === this.resting) return
     this.resting = want
+    if (want) this.chase = null
     this.next()
   }
 
