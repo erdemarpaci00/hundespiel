@@ -502,7 +502,7 @@ export class GardenScene extends Phaser.Scene {
     })
   }
 
-  // Ball werfen: der gewaehlte Hund holt ihn, das macht froh und müde.
+  // Buersten: braucht eine Buerste im Vorrat und macht ein glaenzendes Fell.
   private async brush(dogId: string): Promise<void> {
     const e = this.entries.get(dogId)
     if (!e || this.busy) return
@@ -521,6 +521,7 @@ export class GardenScene extends Phaser.Scene {
     }
   }
 
+  // Ball werfen: der gewaehlte Hund holt ihn, das macht froh und müde.
   private async startBall(dogId: string): Promise<void> {
     const e = this.entries.get(dogId)
     if (!e) return
