@@ -596,7 +596,7 @@ export class GardenScene extends Phaser.Scene {
         }
         const disc = await this.flyFrisbee(land)
         await this.dogRunsTo(e, land)
-        const round = playRound({ stat, value: statValue(record.look.breed, record.training, stat), league, form, happiness: needs.happiness, affection: record.personality.affection, throwQuality: q }, Math.random)
+        const round = playRound({ stat, value: statValue(record.look.breed, record.training, stat), league, form, happiness: needs.happiness, affection: record.personality.affection, throwQuality: q, favorite: favoriteOf(this.affection[record.id] ?? {}) === this.session.displayName }, Math.random)
         rounds.push(round)
         disc.destroy()
         if (round.won) { e.dog.cheer(1400); this.heartsAt(e.dog.x, e.dog.y - 60 * e.dog.scale); this.floatText(e.dog.x, e.dog.y - 70 * e.dog.scale, q > 0.8 ? 'Perfekt gefangen!' : 'Gefangen!', '#8dff8d') }

@@ -69,11 +69,15 @@ export interface RoundInput {
   affection: number
   // Wurfqualitaet dieser Runde, 0.5 = durchschnittlich (ohne Spielerwurf).
   throwQuality: number
+  // Der Werfer ist der Lieblingsmensch des Hundes.
+  favorite?: boolean
 }
+
+export const FAVORITE_BONUS = 4
 
 // Eine Runde: Wert + Tagesglueck (0 bis 30) + Laune + Passung + Wurf gegen Gegner mit Form.
 export function playRound(i: RoundInput, rng: () => number): Round {
-  const dog = i.value + rng() * 30 + formBonus(i.happiness) + fitBonus(i.affection) + throwBonus(i.throwQuality)
+  const dog = i.value + rng() * 30 + formBonus(i.happiness) + fitBonus(i.affection) + throwBonus(i.throwQuality) + (i.favorite ? FAVORITE_BONUS : 0)
   const rival = i.league.rival + i.form + rng() * 30
   return { stat: i.stat, dog, rival, won: dog > rival }
 }
