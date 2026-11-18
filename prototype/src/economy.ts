@@ -4,6 +4,7 @@ import { supabase } from './supabase'
 export type Item = 'futter' | 'leckerli' | 'ball' | 'buerste'
 export interface Economy {
   coins: number
+  home?: number
   items: Partial<Record<Item, number>>
 }
 
@@ -21,6 +22,17 @@ function unwrap(data: unknown, error: { message?: string } | null): Economy {
 
 export async function loadEconomy(): Promise<Economy> {
   const { data, error } = await supabase.rpc('my_economy')
+  return unwrap(data, error)
+}
+
+export const HOME_UPGRADES = [
+  { label: 'Weiche Decke im Garten', price: 80 },
+  { label: 'Blumenbeet', price: 200 },
+  { label: 'Teich', price: 500 },
+]
+
+export async function upgradeHome(): Promise<Economy> {
+  const { data, error } = await supabase.rpc('upgrade_home')
   return unwrap(data, error)
 }
 

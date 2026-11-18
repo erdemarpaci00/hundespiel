@@ -51,6 +51,8 @@ export class GardenScene extends Phaser.Scene {
   private busy = false
   private throwMode = false
   private swipe = 0
+  private homeLevel = -1
+  private homeGfx: Phaser.GameObjects.Graphics | null = null
   private modeHint: Phaser.GameObjects.Text | null = null
   private modeTimer: Phaser.Time.TimerEvent | null = null
   private tapDist = 0
@@ -92,6 +94,11 @@ export class GardenScene extends Phaser.Scene {
     this.cameras.main.setZoom(3).centerOn(320, 180)
     const backdrop = drawScenery(this)
     this.atmosphere = createAtmosphere(this, true, backdrop)
+    this.homeLevel = -1
+    this.homeGfx = null
+    const syncHome = (): void => { void loadEconomy().then((e) => this.drawHome(e.home ?? 0)).catch(() => undefined) }
+    syncHome()
+    this.time.addEvent({ delay: 20000, loop: true, callback: syncHome })
 
     if (new URLSearchParams(location.search).get('demo') === 'poses') {
       const poses: Pose[] = ['walk', 'sit', 'sleep', 'sniff']
@@ -431,6 +438,22 @@ export class GardenScene extends Phaser.Scene {
     const x = Math.min(580, Math.max(60, e.dog.x))
     const y = Math.min(300, Math.max(70, e.dog.y - 26 - 92 * e.dog.scale))
     this.bubble.box.setPosition(x, y)
+  }
+
+  // Ausbau des Gartens: Decke, Blumenbeet, Teich. Zeichnet nur neu, wenn sich die Stufe aendert.
+  private drawHome(level: number): void {
+    if (level === this.homeLevel) return
+    this.homeLevel = level
+    this.homeGfx?.destroy()
+    const g = this.add.graphics().setDepth(1)
+    this.homeGfx = g
+    if (level >= 1) g.fillStyle(0xd9534f, 1).fillRoundedRect(410, 236, 44, 26, 4).fillStyle(0xf0ad4e, 1).fillRect(414, 240, 36, 3).fillRect(414, 255, 36, 3)
+    if (level >= 2) {
+      g.fillStyle(0x6b4423, 1).fillRoundedRect(40, 160, 70, 18, 4)
+      const cols = [0xff6b8a, 0xffd23f, 0xb084f0, 0xff9a4d]
+      for (let i = 0; i < 7; i++) g.fillStyle(cols[i % 4], 1).fillCircle(48 + i * 9.5, 166 + (i % 2) * 5, 3.2)
+    }
+    if (level >= 3) g.fillStyle(0x8c7a5a, 1).fillEllipse(540, 300, 92, 46).fillStyle(0x4aa3df, 1).fillEllipse(540, 300, 82, 38).fillStyle(0xffffff, 0.35).fillEllipse(530, 295, 26, 8)
   }
 
   // Futter in den Garten werfen: der erste Hund, der ankommt, frisst.
