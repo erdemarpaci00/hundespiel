@@ -134,6 +134,28 @@ export class LivingDog {
     return this.loveUntil > Date.now()
   }
 
+  // Welpen sind kleiner, Name und Denkblase sitzen entsprechend tiefer.
+  setSize(scale: number): void {
+    this.size = scale
+    this.sprite.setAge(scale)
+  }
+
+  // Zielstrebig zu einem Punkt laufen (z.B. zum geworfenen Futter), am Ziel wird onArrive gerufen.
+  goTo(target: Vec, onArrive: () => void): void {
+    if (this.resting) return
+    this.chase = onArrive
+    this.behavior = 'wander'
+    this.target = { ...target }
+    this.remainingMs = 30000
+    this.sprite.setPose('walk')
+  }
+
+  cancelChase(): void {
+    if (!this.chase) return
+    this.chase = null
+    this.next()
+  }
+
   get scale(): number { return this.size }
   get x(): number { return this.pos.x }
   get y(): number { return this.pos.y }
