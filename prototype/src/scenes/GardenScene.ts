@@ -6,7 +6,7 @@ import { DogSprite, type Pose } from '../dog/dogSprite'
 import { ageDays, ageStage } from '../dog/age'
 import { LivingDog } from '../dog/livingDog'
 import { randomLook } from '../dog/look'
-import { applyElapsed, PLAY_MIN_ENERGY, mood, moodPersonality, type Mood, type Needs } from '../dog/needs'
+import { applyElapsed, energyDots, PLAY_MIN_ENERGY, mood, moodPersonality, type Mood, type Needs } from '../dog/needs'
 import { wishReward, enterContest, cleanPoop, dropPoop, findTreasure, loadPoopsFromDb, loadRelations, recordMeeting, type Relation, careForDog, groomDog, treatDog, playWithDog, loadActivity, loadAffection, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
 import { GARDEN_BOUNDS } from '../garden'
 import type { Session } from '../session'
@@ -482,7 +482,8 @@ export class GardenScene extends Phaser.Scene {
     if (!e) return
     const state = this.bubbleState(e)
     const phrase = state === 'asleep' ? 'schläft' : state === 'restless' ? 'unruhig' : MOOD_PHRASE[mood(this.currentNeeds(e))]
-    e.dog.setCaption(`${e.record.name} · ${phrase}`)
+    const dots = energyDots(this.currentNeeds(e).energy)
+    e.dog.setCaption(`${e.record.name} · ${phrase} · Kraft ${'●'.repeat(dots)}${'○'.repeat(3 - dots)}`)
     if (this.bubble.state !== state) {
       this.bubble.state = state
       this.buildRing(e, state)

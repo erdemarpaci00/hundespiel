@@ -91,3 +91,8 @@ export function play(n: Needs): Needs {
 export function groom(n: Needs): Needs {
   return { ...n, happiness: clamp(n.happiness + 12) }
 }
+
+// Kraft als drei Punkte fuer die Anzeige: 3 = frisch, 0 = erschoepft (Training braucht 35, Spielen 25).
+export function energyDots(energy: number): number {
+  return energy >= 70 ? 3 : energy >= 45 ? 2 : energy >= 25 ? 1 : 0
+}

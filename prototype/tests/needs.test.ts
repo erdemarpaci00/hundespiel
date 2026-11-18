@@ -91,3 +91,8 @@ test('treat gibt etwas Hunger und viel Laune, nie ueber 100', () => {
   expect(treat({ hunger: 50, energy: 50, happiness: 50 })).toEqual({ hunger: 60, energy: 50, happiness: 62 })
   expect(treat({ hunger: 98, energy: 50, happiness: 99 })).toEqual({ hunger: 100, energy: 50, happiness: 100 })
 })
+
+test('energyDots zeigt die Kraft in drei Stufen', async () => {
+  const { energyDots } = await import('../src/dog/needs')
+  expect([100, 70, 69, 45, 44, 25, 24, 10].map(energyDots)).toEqual([3, 3, 2, 2, 1, 1, 0, 0])
+})
