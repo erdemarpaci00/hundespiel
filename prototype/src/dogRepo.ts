@@ -338,3 +338,10 @@ export async function loadAffection(session: Session): Promise<Record<string, Re
   }
   return out
 }
+
+// Muenzen fuer einen erfuellten Wunsch (Server begrenzt auf alle 10 Minuten). Liefert die gezahlten Muenzen.
+export async function wishReward(): Promise<number> {
+  const { data, error } = await supabase.rpc('wish_reward')
+  fail(error)
+  return typeof data === 'number' ? data : 0
+}

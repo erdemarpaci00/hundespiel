@@ -7,7 +7,7 @@ import { ageDays, ageStage } from '../dog/age'
 import { LivingDog } from '../dog/livingDog'
 import { randomLook } from '../dog/look'
 import { applyElapsed, PLAY_MIN_ENERGY, mood, moodPersonality, type Mood, type Needs } from '../dog/needs'
-import { enterContest, cleanPoop, dropPoop, findTreasure, loadPoopsFromDb, loadRelations, recordMeeting, type Relation, careForDog, groomDog, treatDog, playWithDog, loadActivity, loadAffection, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
+import { wishReward, enterContest, cleanPoop, dropPoop, findTreasure, loadPoopsFromDb, loadRelations, recordMeeting, type Relation, careForDog, groomDog, treatDog, playWithDog, loadActivity, loadAffection, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
 import { GARDEN_BOUNDS } from '../garden'
 import type { Session } from '../session'
 import { markVisit, readLastVisit, shouldWelcome } from '../garden/welcome'
@@ -364,6 +364,7 @@ export class GardenScene extends Phaser.Scene {
     e.dog.cheer(2500)
     this.hud.toast(`Genau das wollte ${e.record.name}!`)
     this.refreshNeeds()
+    void wishReward().then((c) => { if (c > 0) { this.hud.toast(`Genau das wollte ${e.record.name}! +${c} Münzen`); this.hud.refresh() } }).catch(() => { /* Belohnung ist nur ein Extra */ })
   }
 
   private refreshNeeds(): void {
