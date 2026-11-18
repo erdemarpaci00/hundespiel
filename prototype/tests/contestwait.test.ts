@@ -9,7 +9,7 @@ describe('Turnier-Sperre', () => {
     expect(contestWaitMinutes(dog(null), now)).toBe(0)
   })
   it('zeigt die verbleibenden Minuten aufgerundet', () => {
-    expect(contestWaitMinutes(dog('2026-11-18T11:55:30Z'), now)).toBe(5)
+    expect(contestWaitMinutes(dog('2026-11-18T11:55:30Z'), now)).toBe(6)
   })
   it('nach 10 Minuten wieder frei', () => {
     expect(contestWaitMinutes(dog('2026-11-18T11:50:00Z'), now)).toBe(0)
