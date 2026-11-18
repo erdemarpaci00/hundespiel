@@ -1,5 +1,5 @@
 import { parseTimestamp } from './time'
-export type ActivityKind = 'adopt' | 'feed' | 'pet' | 'train' | 'play' | 'groom' | 'contest' | 'treat'
+export type ActivityKind = 'adopt' | 'feed' | 'pet' | 'train' | 'play' | 'groom' | 'contest' | 'treat' | 'contest_win' | 'contest_lose'
 
 export interface ActivityEntry {
   id: string
@@ -18,6 +18,8 @@ const VERB: Record<ActivityKind, string> = {
   groom: 'gebürstet',
   contest: 'zum Turnier gebracht',
   treat: 'ein Leckerli gegeben',
+  contest_win: 'zum Turniersieg begleitet',
+  contest_lose: 'beim Turnier angefeuert',
 }
 
 export function describeActivity(e: ActivityEntry): string {

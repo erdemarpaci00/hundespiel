@@ -2,11 +2,11 @@ import { bondLabel } from '../dog/bond'
 import { ageDays, ageLabel } from '../dog/age'
 import { parseTimestamp } from '../time'
 import { breedById } from '../dog/breeds'
-import type { Needs } from '../dog/needs'
+import { applyElapsed, type Needs } from '../dog/needs'
 import { EXERCISE, STAT_KEYS, STAT_LABEL, statValue, type StatKey } from '../dog/stats'
 import type { DogRecord } from '../dogRepo'
 import { adoptFromKennel, enterContest, trainDog, treatDog } from '../dogRepo'
-import { eligible, LEAGUES } from '../dog/contest'
+import { cupsMissing, eligible, formBonus, LEAGUES } from '../dog/contest'
 import type { Puppy } from '../puppies'
 import type { Session } from '../session'
 import { friendlyError } from '../errors'
@@ -158,6 +158,7 @@ export function openContest(dog: DogRecord, onChange: (d: DogRecord) => void): v
   const { overlay: o, card } = overlay()
   let current = dog
   const values = (): Record<StatKey, number> => Object.fromEntries(STAT_KEYS.map((k) => [k, statValue(current.look.breed, current.training, k)])) as Record<StatKey, number>
+  const currentHappiness = (): number => applyElapsed(current.needs, Date.now() - parseTimestamp(current.needsUpdatedAt), current.personality).happiness
   const render = (res?: { text: string; lines: string[] }): void => {
     card.replaceChildren()
     const h = document.createElement('h1')
@@ -175,12 +176,20 @@ export function openContest(dog: DogRecord, onChange: (d: DogRecord) => void): v
         card.appendChild(d)
       }
     }
+    const bonus = formBonus(currentHappiness())
+    if (!res && bonus !== 0) {
+      const f = document.createElement('div')
+      f.className = 'sub'
+      f.textContent = bonus > 0 ? `${current.name} ist bester Laune: +${bonus} pro Runde` : `${current.name} ist niedergeschlagen: ${bonus} pro Runde`
+      card.appendChild(f)
+    }
     for (const league of LEAGUES) {
-      const ok = eligible(league, values())
+      const ok = eligible(league, values(), current.trophies)
+      const missing = cupsMissing(league, current.trophies)
       const b = document.createElement('button')
       b.className = 'alt'
       const cups = current.trophies[league.id] ?? 0
-      b.textContent = `${league.name} (Sieg ${league.win} Münzen${cups ? `, ${cups} Pokal${cups > 1 ? 'e' : ''}` : ''})${ok ? '' : ` - ab Schnitt ${league.entry}`}`
+      b.textContent = `${league.name} (Sieg ${league.win} Münzen${cups ? `, ${cups} Pokal${cups > 1 ? 'e' : ''}` : ''})${ok ? '' : missing > 0 ? ` - noch ${missing} Sieg${missing > 1 ? 'e' : ''} in der Liga davor` : ` - ab Schnitt ${league.entry}`}`
       b.disabled = !ok
       b.addEventListener('click', async () => {
         card.querySelectorAll('button').forEach((x) => { x.disabled = true })

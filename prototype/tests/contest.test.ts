@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { average, eligible, LEAGUES, runContest } from '../src/dog/contest'
+import { average, cupsMissing, eligible, formBonus, LEAGUES, runContest } from '../src/dog/contest'
 
 const stats = (v: number) => ({ tempo: v, ausdauer: v, sprungkraft: v, gehorsam: v })
 const fixed = (x: number) => () => x
@@ -8,7 +8,7 @@ describe('contest', () => {
   it('Liga-Zulassung nach Durchschnitt', () => {
     expect(eligible(LEAGUES[0], stats(0))).toBe(true)
     expect(eligible(LEAGUES[3], stats(60))).toBe(false)
-    expect(eligible(LEAGUES[3], stats(70))).toBe(true)
+    expect(eligible(LEAGUES[3], stats(70), { gold: 3 })).toBe(true)
     expect(average({ tempo: 10, ausdauer: 20, sprungkraft: 30, gehorsam: 40 })).toBe(25)
   })
   it('starker Hund gewinnt Bronze sicher', () => {
@@ -25,5 +25,22 @@ describe('contest', () => {
   it('Preisgeld steigt mit der Liga', () => {
     const wins = LEAGUES.map((l) => l.win)
     expect([...wins].sort((a, b) => a - b)).toEqual(wins)
+  })
+})
+
+describe('Aufstieg und Tagesform', () => {
+  it('hoehere Ligen brauchen 3 Pokale der Liga davor', () => {
+    expect(eligible(LEAGUES[1], stats(60), {})).toBe(false)
+    expect(cupsMissing(LEAGUES[1], { bronze: 1 })).toBe(2)
+    expect(eligible(LEAGUES[1], stats(60), { bronze: 3 })).toBe(true)
+    expect(cupsMissing(LEAGUES[0], {})).toBe(0)
+  })
+  it('gute Laune gibt Rueckenwind, schlechte kostet', () => {
+    expect(formBonus(90)).toBe(5)
+    expect(formBonus(50)).toBe(0)
+    expect(formBonus(10)).toBe(-5)
+    const mid = runContest(LEAGUES[0], stats(50), () => 0.5, 50)
+    const good = runContest(LEAGUES[0], stats(50), () => 0.5, 90)
+    expect(good.rounds[0].dog - mid.rounds[0].dog).toBe(5)
   })
 })

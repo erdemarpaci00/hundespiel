@@ -260,7 +260,7 @@ export async function enterContest(dog: DogRecord, league: League): Promise<{ do
     const decayed = applyElapsed(current.needs, Date.now() - parseTimestamp(current.needsUpdatedAt), current.personality)
     if (decayed.energy < CONTEST_MIN_ENERGY) throw new Error(`${current.name} ist zu müde für ein Turnier`)
     const values = Object.fromEntries(STAT_KEYS.map((k) => [k, statValue(current.look.breed, current.training, k)])) as Record<StatKey, number>
-    const result = runContest(league, values, Math.random)
+    const result = runContest(league, values, Math.random, decayed.happiness)
     const { data, error } = await supabase.rpc('enter_contest', {
       p_dog_id: current.id,
       p_expected: current.needsUpdatedAt,
@@ -270,7 +270,7 @@ export async function enterContest(dog: DogRecord, league: League): Promise<{ do
       p_prize: result.prize,
     })
     fail(error)
-    if (data === true) { void logQuiet(current.id, 'contest'); return { dog: await loadDog(current.id), result } }
+    if (data === true) { void logQuiet(current.id, result.won ? 'contest_win' : 'contest_lose'); return { dog: await loadDog(current.id), result } }
     current = await loadDog(current.id)
   }
   throw new Error('Gerade war jemand schneller, bitte nochmal tippen')
