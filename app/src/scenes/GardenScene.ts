@@ -706,47 +706,7 @@ export class GardenScene extends Phaser.Scene {
     if (needs.energy < CONTEST_MIN_ENERGY) { this.hud.toast(`${record.name} ist zu müde für ein Turnier`); return }
     const wait = contestWaitMinutes(record)
     if (wait > 0) { this.hud.toast(`${record.name} verschnauft noch, wieder in ${wait} Min`); return }
-    this.contestBusy = true
-    this.closeBubble()
-    this.cancelModes(false)
-    this.hud.showHotbar(false)
-    const form = rivalForm(Math.random)
-    const rounds: Round[] = []
-    e.dog.focused = true
-    try {
-      for (let i = 0; i < STAT_KEYS.length; i++) {
-        const stat = STAT_KEYS[i]
-        const q = await this.timingThrow(`${league.name}, Runde ${i + 1} von ${STAT_KEYS.length}: ${STAT_LABEL[stat]} - tippe in der Mitte!`)
-        const tx = GARDEN_BOUNDS.x + 40 + Math.random() * (GARDEN_BOUNDS.w - 80)
-        const ty = GARDEN_BOUNDS.y + 30 + Math.random() * (GARDEN_BOUNDS.h - 60)
-        const miss = (1 - q) * 70
-        const ang = Math.random() * Math.PI * 2
-        const land = {
-          x: Math.min(GARDEN_BOUNDS.x + GARDEN_BOUNDS.w, Math.max(GARDEN_BOUNDS.x, tx + Math.cos(ang) * miss)),
-          y: Math.min(GARDEN_BOUNDS.y + GARDEN_BOUNDS.h, Math.max(GARDEN_BOUNDS.y, ty + Math.sin(ang) * miss * 0.5)),
-        }
-        const round = playRound({ stat, value: statValue(record.look.breed, record.training, stat), league, form, happiness: needs.happiness, affection: record.personality.affection, throwQuality: q, favorite: favoriteOf(this.affection[record.id] ?? {}) === this.session.displayName }, Math.random)
-        rounds.push(round)
-        await this.airCatch(e, land, round.won)
-        cue(round.won ? 'good' : 'bad')
-        if (round.won) { e.dog.cheer(1400); this.heartsAt(e.dog.x, e.dog.y - 60 * e.dog.scale); this.floatText(e.dog.x, e.dog.y - 70 * e.dog.scale, q > 0.8 ? 'Perfekt gefangen!' : 'Gefangen!', '#8dff8d') }
-        else this.floatText(e.dog.x, e.dog.y - 70 * e.dog.scale, q < 0.4 ? 'Zu weit geworfen' : 'Daneben', '#ffb3b3')
-        await new Promise((r) => this.time.delayedCall(1100, () => r(null)))
-      }
-      const result = summarize(league, rounds)
-      const r = await enterContest(record, league, result)
-      cue(result.won ? 'win' : 'soft')
-      this.hud.toast(result.won ? `Sieg in der ${league.name}! +${r.result.prize} Münzen` : `Nicht gewonnen, Trostpreis +${r.result.prize} Münzen`)
-      if (result.won) { e.dog.cheer(3000); this.heartsAt(e.dog.x - 10, e.dog.y - 70 * e.dog.scale); this.heartsAt(e.dog.x + 10, e.dog.y - 60 * e.dog.scale) }
-      this.hud.refresh()
-      await this.reload()
-    } catch (err) {
-      this.hud.toast(err instanceof Error ? err.message : 'Etwas ist schiefgelaufen, bitte nochmal versuchen')
-    } finally {
-      e.dog.focused = false
-      this.contestBusy = false
-      this.hud.showHotbar(true)
-    }
+    this.scene.start('arena', { record, league })
   }
 
   // Duell: du wirfst abwechselnd fuer beide Hunde, wer vier Runden besser faengt, gewinnt. Nur zum Spass, ohne Preis.
