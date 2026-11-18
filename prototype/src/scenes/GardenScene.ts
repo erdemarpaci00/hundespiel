@@ -15,7 +15,7 @@ import { contestWaitMinutes, duelScore, MEDAL_COLORS, topLeague, CONTEST_MIN_ENE
 import { STAT_KEYS, STAT_LABEL, statValue } from '../dog/stats'
 import { wishBlock, wishFor, type Wish } from '../dog/wish'
 import { wantsPoop, type Poop } from '../garden/poop'
-import { dialogJustClosed, openDogDetail, pickDog } from '../ui/dogPanels'
+import { dialogJustClosed, openContest, openDogDetail, pickDog } from '../ui/dogPanels'
 import { loadEconomy } from '../economy'
 import { createHud, type Tool } from '../ui/hud'
 import { showTutorial } from '../ui/tutorial'
@@ -27,7 +27,7 @@ import { drawScenery } from './scenery'
 
 interface BallState { g: Phaser.GameObjects.Graphics; x: number; y: number; flying: boolean; carrier: Entry | null }
 
-type Action = 'feed' | 'pet' | 'details' | 'wake' | 'walk' | 'ball' | 'brush'
+type Action = 'feed' | 'pet' | 'details' | 'wake' | 'walk' | 'ball' | 'brush' | 'contest'
 
 // Ring aus runden Symbol-Knoepfen um den Hund, ohne Textkasten.
 interface Bubble {
@@ -37,7 +37,7 @@ interface Bubble {
   state: string
 }
 
-const ACTION_COLOR: Record<Action, number> = { feed: 0x2b6cb0, pet: 0xe0527a, details: 0x5a6b7d, wake: 0x8a5cc2, walk: 0xd9822b, ball: 0xc9a227, brush: 0x3a9ea5 }
+const ACTION_COLOR: Record<Action, number> = { feed: 0x2b6cb0, pet: 0xe0527a, details: 0x5a6b7d, wake: 0x8a5cc2, walk: 0xd9822b, ball: 0xc9a227, brush: 0x3a9ea5, contest: 0xb8860b }
 
 const MOOD_PHRASE: Record<Mood, string> = { happy: 'glücklich', ok: 'zufrieden', hungry: 'hungrig', tired: 'müde', sad: 'traurig' }
 const FONT = 'Arial, Helvetica, sans-serif'
@@ -412,6 +412,8 @@ export class GardenScene extends Phaser.Scene {
       g.fillRoundedRect(-8, -3, 16, 7, 2).fillStyle(ACTION_COLOR.brush, 1).fillRect(-5, -1, 1.5, 3).fillRect(-1, -1, 1.5, 3).fillRect(3, -1, 1.5, 3).fillStyle(0xffffff, 1).fillRect(-3, -8, 6, 4)
     } else if (kind === 'ball') {
       g.fillCircle(0, 0, 7).fillStyle(ACTION_COLOR.ball, 1).fillRect(-7, -1, 14, 2).fillStyle(0xffffff, 1)
+    } else if (kind === 'contest') {
+      g.fillRoundedRect(-5, -7, 10, 8, 2).fillRect(-1, 1, 2, 4).fillRoundedRect(-5, 5, 10, 2, 1).fillRect(-8, -5, 3, 2).fillRect(5, -5, 3, 2)
     } else if (kind === 'walk') {
       g.fillEllipse(0, 3, 9, 7).fillCircle(-5, -2, 2.3).fillCircle(-1.8, -5, 2.3).fillCircle(1.8, -5, 2.3).fillCircle(5, -2, 2.3)
     } else {
@@ -450,10 +452,12 @@ export class GardenScene extends Phaser.Scene {
     if (!this.bubble) return
     const box = this.bubble.box
     box.removeAll(true)
+    const showDetail = (): void => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id), () => { this.hud.refresh(); void this.reload() }, (d, l) => void this.playFrisbee(d, l), favoriteOf(this.affection[e.record.id] ?? {}), this.entries.size > 1 ? (d) => this.chooseDuel(d) : undefined)
+    const showContest = (): void => openContest(e.record, () => { this.hud.refresh(); void this.reload() }, (d, l) => void this.playFrisbee(d, l))
     const actions: [Action, () => void][] =
-      state === 'asleep' ? [['wake', () => this.tryWake(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id), () => { this.hud.refresh(); void this.reload() }, (d, l) => void this.playFrisbee(d, l), favoriteOf(this.affection[e.record.id] ?? {}), this.entries.size > 1 ? (d) => this.chooseDuel(d) : undefined)]]
-      : state === 'restless' ? [['walk', () => this.scene.start('walk')], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id), () => { this.hud.refresh(); void this.reload() }, (d, l) => void this.playFrisbee(d, l), favoriteOf(this.affection[e.record.id] ?? {}), this.entries.size > 1 ? (d) => this.chooseDuel(d) : undefined)]]
-      : [['feed', () => void this.care('feed', e.record.id)], ['pet', () => void this.care('pet')], ['ball', () => this.pick('ball')], ['brush', () => void this.brush(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id), () => { this.hud.refresh(); void this.reload() }, (d, l) => void this.playFrisbee(d, l), favoriteOf(this.affection[e.record.id] ?? {}), this.entries.size > 1 ? (d) => this.chooseDuel(d) : undefined)]]
+      state === 'asleep' ? [['wake', () => this.tryWake(e.record.id)], ['details', showDetail]]
+      : state === 'restless' ? [['walk', () => this.scene.start('walk')], ['details', showDetail]]
+      : [['feed', () => void this.care('feed', e.record.id)], ['pet', () => void this.care('pet')], ['ball', () => this.pick('ball')], ['brush', () => void this.brush(e.record.id)], ['contest', showContest], ['details', showDetail]]
     const n = actions.length
     actions.forEach(([kind, fn], i) => {
       const u = n === 1 ? 0 : (i / (n - 1)) * 2 - 1

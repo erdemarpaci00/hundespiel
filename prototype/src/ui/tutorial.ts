@@ -4,7 +4,7 @@ const STEPS = [
   { title: 'Willkommen!', text: 'Das ist euer Garten. Wische mit dem Finger über deinen Hund, um ihn zu streicheln. Tippe ihn an für das Menü.' },
   { title: 'Die Leiste unten', text: 'Wähle Futter, Leckerli, Ball oder Bürste und tippe dann direkt auf einen Hund oder in den Garten. Mit dem Ball spielen alle Hunde mit. Die Hand ist zum Streicheln.' },
   { title: 'Karte und Tagesbuch', text: 'Über die Karte geht es zum Training, in den Park und zum Laden. Im Tagesbuch warten jeden Tag drei Aufgaben mit Münzen auf euch beide.' },
-  { title: 'Turniere', text: 'Trainierte Hunde dürfen zum Frisbee-Turnier: Tippe auf den Hund und dann auf das i. Wirf in der Mitte des Balkens, dann springt dein Hund höher.' },
+  { title: 'Turniere', text: 'Trainierte Hunde dürfen zum Frisbee-Turnier: Tippe auf den Hund und dann auf den Pokal. Wirf in der Mitte des Balkens, dann springt dein Hund höher.' },
   { title: 'Gemeinsam spielen', text: 'Im Zahnrad oben links steht euer Einladungscode. Gib ihn deinem Partner, dann seht ihr beide dieselben Hunde, Münzen und das Tagesbuch.' },
 ]
 
