@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, test } from 'vitest'
 import { contestWaitMinutes } from '../src/dog/contest'
 
 const dog = (contestAt: string | null): { contestAt: string | null } => ({ contestAt })
