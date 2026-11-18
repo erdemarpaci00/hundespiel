@@ -63,6 +63,33 @@ function closeButton(o: HTMLElement, label = 'Zurück'): HTMLButtonElement {
   return b
 }
 
+// Zeigerbalken im Fenster: ein Tipp auf "Jetzt!" stoppt den Zeiger. Liefert 0 bis 1 (1 = Mitte). Ohne Tipp nach 6 s: 0.3.
+function timingBar(card: HTMLElement, text: string): Promise<number> {
+  return new Promise((resolve) => {
+    card.replaceChildren()
+    const t = document.createElement('div')
+    t.className = 'sub'
+    t.textContent = text
+    const bar = document.createElement('div')
+    bar.style.cssText = 'position:relative;height:18px;border-radius:9px;margin:12px 0;background:linear-gradient(90deg,#e05555 0%,#f0c040 20%,#4caf50 40%,#4caf50 60%,#f0c040 80%,#e05555 100%)'
+    const cur = document.createElement('div')
+    cur.style.cssText = 'position:absolute;top:-4px;width:4px;height:26px;background:#fff;border:1px solid #333;border-radius:2px'
+    bar.appendChild(cur)
+    const go = document.createElement('button')
+    go.textContent = 'Jetzt!'
+    card.append(t, bar, go)
+    const t0 = performance.now()
+    const pos = (): number => 0.5 + 0.5 * Math.sin(((performance.now() - t0) / 1000) * 3.2 - Math.PI / 2)
+    let raf = 0
+    const tick = (): void => { cur.style.left = `calc(${pos() * 100}% - 2px)`; raf = requestAnimationFrame(tick) }
+    tick()
+    let done = false
+    const finish = (q: number): void => { if (done) return; done = true; cancelAnimationFrame(raf); resolve(q) }
+    go.addEventListener('click', () => finish(1 - Math.abs(pos() - 0.5) * 2))
+    setTimeout(() => finish(0.3), 6000)
+  })
+}
+
 // Auswahl eines Hundes aus einer Liste (z.B. Gegner im Duell).
 export function pickDog(title: string, dogs: { id: string; name: string }[], onPick: (id: string) => void): void {
   const { overlay: o, card } = overlay()
@@ -168,10 +195,11 @@ export function openTraining(dog: DogRecord, toast: (t: string) => void, onChang
       b.addEventListener('click', async () => {
         card.querySelectorAll('button').forEach((x) => { x.disabled = true })
         try {
-          const res = await trainDog(current, k)
+          const q = await timingBar(card, `${EXERCISE[k]}: tippe, wenn der Zeiger in der Mitte ist!`)
+          const res = await trainDog(current, k, q)
           current = res.dog
           onChange(current)
-          render(`${STAT_LABEL[k]} +${res.gain}`)
+          render(`${q > 0.8 ? 'Perfektes Timing! ' : ''}${STAT_LABEL[k]} +${res.gain}`)
         } catch (e) {
           render(e instanceof Error ? e.message : friendlyError(undefined))
         }

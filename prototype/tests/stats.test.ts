@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { BREEDS } from '../src/dog/breeds'
 import { train } from '../src/dog/needs'
-import { NO_TRAINING, statValue, trainGain } from '../src/dog/stats'
+import { NO_TRAINING, statValue, trainGain, trainGainWith } from '../src/dog/stats'
 
 describe('statValue', () => {
   it('Corgi ist ab Start schneller als Husky ist ausdauernd gestartet', () => {
@@ -45,5 +45,15 @@ describe('groom', () => {
   it('hebt nur die Laune', () => {
     expect(groom({ hunger: 80, energy: 60, happiness: 50 })).toEqual({ hunger: 80, energy: 60, happiness: 62 })
     expect(groom({ hunger: 80, energy: 60, happiness: 98 }).happiness).toBe(100)
+  })
+})
+
+describe('Training mit Timing', () => {
+  it('gutes Timing gibt +1, schlechtes -1, immer 1 bis 3', () => {
+    expect(trainGainWith(0.5, 0.5)).toBe(2)
+    expect(trainGainWith(0.5, 0.9)).toBe(3)
+    expect(trainGainWith(0.5, 0.1)).toBe(1)
+    expect(trainGainWith(0.9, 1)).toBe(3)
+    expect(trainGainWith(0.1, 0)).toBe(1)
   })
 })

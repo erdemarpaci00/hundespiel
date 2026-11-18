@@ -5,7 +5,7 @@ import type { DogLook } from './dog/look'
 import type { Poop } from './garden/poop'
 import { CONTEST_MIN_ENERGY, runContest, type League, type Result } from './dog/contest'
 import { applyElapsed, feed, treat, groom, pet, play, PLAY_MIN_ENERGY, TRAIN_MIN_ENERGY, train, type Needs } from './dog/needs'
-import { NO_TRAINING, STAT_KEYS, statValue, trainGain, type StatKey, type Training } from './dog/stats'
+import { NO_TRAINING, STAT_KEYS, statValue, trainGainWith, type StatKey, type Training } from './dog/stats'
 import { friendlyError } from './errors'
 import type { Puppy } from './puppies'
 import type { Session } from './session'
@@ -175,12 +175,12 @@ export async function groomDog(dog: DogRecord): Promise<DogRecord> {
 }
 
 // Ein Trainingsdurchgang: braucht Restkraft, kostet Energie, steigert genau einen Wert.
-export async function trainDog(dog: DogRecord, stat: StatKey): Promise<{ dog: DogRecord; gain: number }> {
+export async function trainDog(dog: DogRecord, stat: StatKey, quality = 0.5): Promise<{ dog: DogRecord; gain: number }> {
   let current = dog
   for (let attempt = 0; attempt < 2; attempt++) {
     const decayed = applyElapsed(current.needs, Date.now() - parseTimestamp(current.needsUpdatedAt), current.personality)
     if (decayed.energy < TRAIN_MIN_ENERGY) throw new Error(`${current.name} ist zu müde zum Trainieren`)
-    const gain = trainGain(current.personality.learning)
+    const gain = trainGainWith(current.personality.learning, quality)
     const { data, error } = await supabase.rpc('train_dog', {
       p_dog_id: current.id,
       p_expected: current.needsUpdatedAt,
