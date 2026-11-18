@@ -157,7 +157,7 @@ export class ArenaScene extends Phaser.Scene {
         // Gegner werfen zuerst: ihre Punkte stehen an der Tafel, bevor man selbst dran ist.
         const base = playRound({ stat, value, league: this.league, form, happiness: needs.happiness, affection: rec.personality.affection, throwQuality: 0.5 }, Math.random)
         const top = base.rival
-        const scores = [top, top - (3 + Math.random() * 14), top - Math.random() * 26]
+        const scores = [top, top - (3 + Math.random() * 14), top - Math.random() * 26].map((s) => Math.max(0, s))
         scores.forEach((s, k) => { this.rows[k].push(String(Math.round(s))); this.rivalTotals[k] += s })
         this.refreshBoard()
         this.say(`Runde ${i + 1} von ${STAT_KEYS.length}: ${STAT_LABEL[stat]}\nZu toppen: ${Math.round(top)} Punkte`)
@@ -192,7 +192,7 @@ export class ArenaScene extends Phaser.Scene {
       this.say(err instanceof Error ? err.message : 'Etwas ist schiefgelaufen, bitte nochmal versuchen', '#ffb3b3')
     }
     await this.wait(2500)
-    const back = this.add.text(320, 300, 'Zurück in den Garten', { fontSize: '14px', color: '#ffffff', backgroundColor: '#2b6cb0', padding: { x: 12, y: 8 }, resolution: 3, fontFamily: FONT }).setOrigin(0.5).setDepth(4000).setInteractive({ useHandCursor: true })
+    const back = this.add.text(320, 250, 'Zurück in den Garten', { fontSize: '14px', color: '#ffffff', backgroundColor: '#2b6cb0', padding: { x: 12, y: 8 }, resolution: 3, fontFamily: FONT }).setOrigin(0.5).setDepth(4000).setInteractive({ useHandCursor: true })
     back.once('pointerdown', () => this.scene.start('garden'))
   }
 }
