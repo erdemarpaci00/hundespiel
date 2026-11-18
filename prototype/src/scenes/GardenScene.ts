@@ -246,6 +246,7 @@ export class GardenScene extends Phaser.Scene {
       const existing = this.entries.get(record.id)
       if (existing) {
         existing.record = record
+        existing.dog.setSize(ageStage(ageDays(parseTimestamp(record.createdAt), Date.now())).scale)
         return
       }
       const start = { x: 160 + (i % 4) * 110, y: 250 + (i % 2) * 50 }
