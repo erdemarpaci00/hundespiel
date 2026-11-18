@@ -544,7 +544,7 @@ export class GardenScene extends Phaser.Scene {
 
   // Frisbee fliegt im Bogen vom Spieler (unten Mitte) zum Landepunkt.
   private flyFrisbee(to: { x: number; y: number }): Promise<Phaser.GameObjects.Graphics> {
-    const from = { x: 320, y: 330 }
+    const from = { x: 320, y: 292 }
     const g = this.add.graphics().setDepth(2999)
     g.fillStyle(0xe8453c, 1).fillEllipse(0, 0, 9, 3.5).fillStyle(0xffffff, 1).fillEllipse(0, -0.5, 5, 1.6)
     g.setPosition(from.x, from.y)
@@ -679,6 +679,7 @@ export class GardenScene extends Phaser.Scene {
       this.hud.toast(err instanceof Error ? err.message : 'Etwas ist schiefgelaufen')
     } finally {
       this.contestBusy = false
+      this.hud.showHotbar(true)
     }
   }
 
@@ -819,14 +820,14 @@ export class GardenScene extends Phaser.Scene {
   // Ball werfen: alle wachen, nicht zu muede Hunde rennen los, der schnellste nimmt ihn ins Maul und bringt ihn zurueck.
   private throwBallAt(wx: number, wy: number): void {
     if (this.contestBusy) return
-    if (!this.ball) this.spawnBall(320, 330)
+    if (!this.ball) this.spawnBall(320, 292)
     const b = this.ball!
     if (b.flying) return
     const t = { x: Math.min(GARDEN_BOUNDS.x + GARDEN_BOUNDS.w, Math.max(GARDEN_BOUNDS.x, wx)), y: Math.min(GARDEN_BOUNDS.y + GARDEN_BOUNDS.h, Math.max(GARDEN_BOUNDS.y, wy)) }
     b.carrier = null
     for (const e of this.entries.values()) e.dog.cancelChase()
     const runners = [...this.entries.values()].filter((e) => !e.dog.sleeping && !e.dog.busyMeeting && this.currentNeeds(e).energy >= PLAY_MIN_ENERGY)
-    const from = { x: 320, y: 330 }
+    const from = { x: 320, y: 292 }
     b.flying = true
     this.tweens.addCounter({
       from: 0, to: 1, duration: 650,
@@ -853,7 +854,7 @@ export class GardenScene extends Phaser.Scene {
       for (const o of runners) if (o !== e && !o.dog.sleeping) o.dog.goTo({ x: e.dog.x - e.dog.facing * 28 + (Math.random() - 0.5) * 20, y: e.dog.y + (Math.random() - 0.5) * 14 }, () => undefined)
     } })
     for (const o of runners) if (o !== e) o.dog.cancelChase()
-    const back = { x: 320 + (Math.random() - 0.5) * 90, y: GARDEN_BOUNDS.y + GARDEN_BOUNDS.h - 12 - Math.random() * 20 }
+    const back = { x: 320 + (Math.random() - 0.5) * 90, y: GARDEN_BOUNDS.y + GARDEN_BOUNDS.h - 6 - Math.random() * 14 }
     e.dog.goTo(back, () => this.dropBall(e, true))
     this.time.delayedCall(20000, () => { if (this.ball?.carrier === e) this.dropBall(e, false) })
   }
