@@ -1,6 +1,6 @@
 import { describe, expect, it, test } from 'vitest'
 import type { Personality } from '../src/dog/behavior'
-import { applyElapsed, feed, MIN_NEED, mood, pet, type Needs } from '../src/dog/needs'
+import { applyElapsed, feed, treat, MIN_NEED, mood, pet, type Needs } from '../src/dog/needs'
 
 const H = 3600 * 1000
 const DAY = 24 * H
@@ -85,4 +85,9 @@ describe('Nachtschlaf', () => {
     const night = applyElapsed({ hunger: 100, energy: 50, happiness: 80 }, 6 * H, p(0.5), at(28))
     expect(100 - night.hunger).toBeCloseTo((100 - day.hunger) / 3, 0)
   })
+})
+
+test('treat gibt etwas Hunger und viel Laune, nie ueber 100', () => {
+  expect(treat({ hunger: 50, energy: 50, happiness: 50 })).toEqual({ hunger: 60, energy: 50, happiness: 62 })
+  expect(treat({ hunger: 98, energy: 50, happiness: 99 })).toEqual({ hunger: 100, energy: 50, happiness: 100 })
 })

@@ -5,7 +5,7 @@ import { breedById } from '../dog/breeds'
 import type { Needs } from '../dog/needs'
 import { EXERCISE, STAT_KEYS, STAT_LABEL, statValue, type StatKey } from '../dog/stats'
 import type { DogRecord } from '../dogRepo'
-import { adoptFromKennel, enterContest, trainDog } from '../dogRepo'
+import { adoptFromKennel, enterContest, trainDog, treatDog } from '../dogRepo'
 import { eligible, LEAGUES } from '../dog/contest'
 import type { Puppy } from '../puppies'
 import type { Session } from '../session'
@@ -97,7 +97,20 @@ export function openDogDetail(dog: DogRecord, needs: Needs, bonds: { name: strin
     t.className = 'alt'
     t.textContent = 'Zum Turnier'
     t.addEventListener('click', () => { o.remove(); openContest(dog, onChange) })
-    card.appendChild(t)
+    const lk = document.createElement('button')
+    lk.className = 'alt'
+    lk.textContent = 'Leckerli geben'
+    lk.addEventListener('click', async () => {
+      lk.disabled = true
+      try {
+        const d = await treatDog(dog)
+        onChange(d)
+        lk.textContent = `${dog.name} freut sich über das Leckerli`
+      } catch (e) {
+        lk.textContent = e instanceof Error ? e.message : friendlyError(undefined)
+      }
+    })
+    card.append(lk, t)
   }
   card.appendChild(closeButton(o))
 }

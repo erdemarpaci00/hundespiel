@@ -4,7 +4,7 @@ import type { Personality } from './dog/behavior'
 import type { DogLook } from './dog/look'
 import type { Poop } from './garden/poop'
 import { CONTEST_MIN_ENERGY, runContest, type League, type Result } from './dog/contest'
-import { applyElapsed, feed, groom, pet, play, PLAY_MIN_ENERGY, TRAIN_MIN_ENERGY, train, type Needs } from './dog/needs'
+import { applyElapsed, feed, treat, groom, pet, play, PLAY_MIN_ENERGY, TRAIN_MIN_ENERGY, train, type Needs } from './dog/needs'
 import { NO_TRAINING, STAT_KEYS, statValue, trainGain, type StatKey, type Training } from './dog/stats'
 import { friendlyError } from './errors'
 import type { Puppy } from './puppies'
@@ -282,4 +282,18 @@ export async function cleanPoop(id: string): Promise<number> {
   const { data, error } = await supabase.rpc('clean_poop', { p_id: id })
   fail(error)
   return typeof data === 'number' && data > 0 ? data : 0
+}
+
+// Leckerli aus dem Vorrat geben: etwas Hunger, viel Laune.
+export async function treatDog(dog: DogRecord): Promise<DogRecord> {
+  let current = dog
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const decayed = applyElapsed(current.needs, Date.now() - parseTimestamp(current.needsUpdatedAt), current.personality)
+    const { data, error } = await supabase.rpc('feed_dog', { p_dog_id: current.id, p_expected: current.needsUpdatedAt, p_needs: treat(decayed), p_item: 'leckerli' })
+    if (error && /kein futter/i.test(error.message ?? '')) throw new Error('Ihr habt keine Leckerli mehr, im Laden gibt es neue')
+    fail(error)
+    if (data === true) return loadDog(current.id)
+    current = await loadDog(current.id)
+  }
+  throw new Error('Gerade war jemand schneller, bitte nochmal tippen')
 }

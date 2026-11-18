@@ -45,6 +45,11 @@ export function feed(n: Needs): Needs {
   return { ...n, hunger: clamp(n.hunger + 60), happiness: clamp(n.happiness + 5) }
 }
 
+// Leckerli: etwas Futter, vor allem aber Freude.
+export function treat(n: Needs): Needs {
+  return { ...n, hunger: clamp(n.hunger + 10), happiness: clamp(n.happiness + 12) }
+}
+
 export function pet(n: Needs, p: Personality): Needs {
   return { ...n, happiness: clamp(n.happiness + 5 + 10 * p.affection) }
 }
