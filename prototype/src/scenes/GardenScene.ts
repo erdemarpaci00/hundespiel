@@ -182,6 +182,7 @@ export class GardenScene extends Phaser.Scene {
       const step = Math.hypot(p.x - p.prevPosition.x, p.y - p.prevPosition.y) / this.cameras.main.zoom
       this.swipe += step
       hit.dog.hold(900)
+      hit.dog.bliss(1500)
       this.heartAcc += step
       if (this.heartAcc > 30) { this.heartAcc = 0; this.heartsAt(hit.dog.x + (Math.random() - 0.5) * 24, hit.dog.y - 55 * hit.dog.scale) }
       if (this.swipe > 120) {
@@ -360,6 +361,7 @@ export class GardenScene extends Phaser.Scene {
     for (const e of this.entries.values()) {
       const m = mood(this.currentNeeds(e))
       e.dog.setPersonality(moodPersonality(e.record.personality, m))
+      e.dog.setFeeling(m === 'happy' ? 'happy' : m === 'sad' || m === 'hungry' ? 'sad' : 'ok')
       const w = this.currentWish(e)
       e.dog.setEmote(m === 'hungry' ? 'hungry' : m === 'sad' ? 'sad' : w ? (`wish-${w}` as const) : null)
       e.dog.setResting(this.atmosphere.isNight() && !isRestless(e.record.id, e.record.personality, new Date()))

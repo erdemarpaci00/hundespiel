@@ -1,7 +1,7 @@
 import Phaser from 'phaser'
 import { clampDelta, type Rng } from '../util/rng'
 import { behaviorDuration, pickBehavior, type Behavior, type Personality } from './behavior'
-import { DogSprite, type Pose } from './dogSprite'
+import { DogSprite, type Feeling, type Pose } from './dogSprite'
 import type { DogLook } from './look'
 import { nextTarget, stepToward, type Rect, type Vec } from './wander'
 
@@ -93,6 +93,7 @@ export class LivingDog {
     if (this.remainingMs <= 0) this.next()
     this.sprite.container.setPosition(this.pos.x, this.pos.y).setDepth(this.pos.y)
     this.sprite.update(dt)
+    this.tickBliss(dt)
     this.pulse += dt
     const want = this.loveUntil > Date.now() ? 'love' : this.emote
     if (want !== this.shown) this.drawEmote(want)
@@ -223,6 +224,26 @@ export class LivingDog {
     this.resting = want
     if (want) this.chase = null
     this.next()
+  }
+
+  // Stimmung am Koerper; beim Streicheln kurz genussvoll (Augen zu, wilder Schwanz).
+  private baseFeeling: Feeling = 'ok'
+  private blissMs = 0
+
+  setFeeling(f: Feeling): void {
+    this.baseFeeling = f
+    if (this.blissMs <= 0) this.sprite.setFeeling(f)
+  }
+
+  bliss(ms: number): void {
+    this.blissMs = ms
+    this.sprite.setFeeling('blissful')
+  }
+
+  private tickBliss(dt: number): void {
+    if (this.blissMs <= 0) return
+    this.blissMs -= dt
+    if (this.blissMs <= 0) this.sprite.setFeeling(this.baseFeeling)
   }
 
   setPersonality(p: Personality): void {

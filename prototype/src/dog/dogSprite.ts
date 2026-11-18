@@ -2,6 +2,8 @@ import Phaser from 'phaser'
 import { clampDelta } from '../util/rng'
 import type { DogLook } from './look'
 
+export type Feeling = 'ok' | 'happy' | 'sad' | 'blissful'
+
 export type Pose = 'walk' | 'sit' | 'sleep' | 'sniff'
 
 const LEG_LEN = 26
@@ -109,6 +111,17 @@ export class DogSprite {
     this.layout(0)
   }
 
+  private feeling: Feeling = 'ok'
+
+  // Stimmung am Koerper: froehlich wedelt schnell und weit, traurig haengt Schwanz und Kopf, genussvoll schliesst die Augen.
+  setFeeling(f: Feeling): void {
+    if (f === this.feeling) return
+    this.feeling = f
+    const sleeping = this.pose === 'sleep'
+    this.eyeOpen.setVisible(!sleeping && f !== 'blissful')
+    this.eyeClosed.setVisible(sleeping || f === 'blissful')
+  }
+
   private ageScale = 1
 
   // Altersstufe (Welpe kleiner), bleibt beim Umdrehen erhalten.
@@ -130,7 +143,12 @@ export class DogSprite {
 
   private layout(t: number): void {
     const swing = Math.sin(t * 0.012)
-    const wag = Math.sin(t * 0.02)
+    const f = this.feeling
+    const wagSpeed = f === 'blissful' ? 0.045 : f === 'happy' ? 0.032 : f === 'sad' ? 0.008 : 0.02
+    const wagAmp = f === 'blissful' ? 1.7 : f === 'happy' ? 1.5 : f === 'sad' ? 0.3 : 1
+    const wag = Math.sin(t * wagSpeed) * wagAmp
+    const tailLift = f === 'happy' || f === 'blissful' ? -0.25 : f === 'sad' ? 0.6 : 0
+    const headDrop = f === 'sad' ? 0.18 : f === 'blissful' ? -0.22 : 0
     const [h1, h2, f1, f2] = this.legs
     const setLegs = (a: number, b: number, c: number, d: number, len = LEG_LEN) => {
       for (const [leg, angle] of [[h1, a], [h2, b], [f1, c], [f2, d]] as const) {
@@ -147,14 +165,14 @@ export class DogSprite {
       case 'walk':
         setBody(-36 + Math.sin(t * 0.024) * 1.5, 0)
         setLegs(swing * 0.6, -swing * 0.6, -swing * 0.6, swing * 0.6)
-        this.head.setPosition(34, -52 + Math.sin(t * 0.024) * 1.5).setRotation(0)
-        this.tail.setRotation(-0.5 + wag * 0.35)
+        this.head.setPosition(34, -52 + Math.sin(t * 0.024) * 1.5).setRotation(headDrop)
+        this.tail.setRotation(-0.5 + tailLift + wag * 0.35)
         break
       case 'sit':
         setBody(-30, -0.5)
         setLegs(-1.4, -1.4, 0, 0)
-        this.head.setPosition(28, -60).setRotation(-0.1)
-        this.tail.setPosition(-30, -26).setRotation(-0.2 + wag * 0.3)
+        this.head.setPosition(28, -60).setRotation(-0.1 + headDrop)
+        this.tail.setPosition(-30, -26).setRotation(-0.2 + tailLift + wag * 0.3)
         break
       case 'sleep':
         setBody(-17, 0)
