@@ -23,6 +23,7 @@ export interface DogRecord {
   training: Training
   trophies: Record<string, number>
   createdAt: string
+  contestAt: string | null
 }
 
 interface DogRow {
@@ -37,9 +38,10 @@ interface DogRow {
   training: Training | null
   trophies: Record<string, number> | null
   created_at: string
+  contest_at: string | null
 }
 
-const COLUMNS = 'id, name, picked_by, is_starter, look, personality, needs, needs_updated_at, training, trophies, created_at'
+const COLUMNS = 'id, name, picked_by, is_starter, look, personality, needs, needs_updated_at, training, trophies, created_at, contest_at'
 
 const toRecord = (r: DogRow): DogRecord => ({
   id: r.id,
@@ -53,6 +55,7 @@ const toRecord = (r: DogRow): DogRecord => ({
   training: { ...NO_TRAINING, ...(r.training ?? {}) },
   trophies: r.trophies ?? {},
   createdAt: r.created_at,
+  contestAt: r.contest_at,
 })
 
 function fail(error: { message?: string } | null): void {
@@ -334,4 +337,11 @@ export async function loadAffection(session: Session): Promise<Record<string, Re
     d[who] = (d[who] ?? 0) + 1
   }
   return out
+}
+
+// Server sperrt ein Turnier 10 Minuten nach dem letzten: vorher pruefen statt nach vier Runden abzulehnen.
+export function contestWaitMinutes(d: DogRecord, now = Date.now()): number {
+  if (!d.contestAt) return 0
+  const left = 10 * 60 * 1000 - (now - new Date(d.contestAt).getTime())
+  return left > 0 ? Math.ceil(left / 60000) : 0
 }

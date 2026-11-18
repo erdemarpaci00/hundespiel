@@ -7,7 +7,7 @@ import { ageDays, ageStage } from '../dog/age'
 import { LivingDog } from '../dog/livingDog'
 import { randomLook } from '../dog/look'
 import { applyElapsed, PLAY_MIN_ENERGY, mood, moodPersonality, type Mood, type Needs } from '../dog/needs'
-import { enterContest, cleanPoop, dropPoop, findTreasure, loadPoopsFromDb, loadRelations, recordMeeting, type Relation, careForDog, groomDog, treatDog, playWithDog, loadActivity, loadAffection, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
+import { contestWaitMinutes, enterContest, cleanPoop, dropPoop, findTreasure, loadPoopsFromDb, loadRelations, recordMeeting, type Relation, careForDog, groomDog, treatDog, playWithDog, loadActivity, loadAffection, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
 import { GARDEN_BOUNDS } from '../garden'
 import type { Session } from '../session'
 import { markVisit, readLastVisit, shouldWelcome } from '../garden/welcome'
@@ -582,6 +582,8 @@ export class GardenScene extends Phaser.Scene {
     if (e.dog.sleeping) { this.hud.toast(`${record.name} schläft gerade`); return }
     const needs = this.currentNeeds(e)
     if (needs.energy < CONTEST_MIN_ENERGY) { this.hud.toast(`${record.name} ist zu müde für ein Turnier`); return }
+    const wait = contestWaitMinutes(record)
+    if (wait > 0) { this.hud.toast(`${record.name} verschnauft noch, wieder in ${wait} Min`); return }
     this.contestBusy = true
     this.closeBubble()
     this.cancelModes(false)
