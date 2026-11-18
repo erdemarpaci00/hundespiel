@@ -3,7 +3,7 @@ import { BREEDS, breedById, rollBreedPuppy } from '../dog/breeds'
 import { ageDays, ageStage } from '../dog/age'
 import { parseTimestamp } from '../time'
 import { LivingDog } from '../dog/livingDog'
-import { loadDogs } from '../dogRepo'
+import { findTreasure, loadDogs } from '../dogRepo'
 import type { Session } from '../session'
 import { isRestless } from '../nightlife'
 import { createAtmosphere, type Atmosphere } from './atmosphere'
@@ -81,6 +81,7 @@ export class PlaceScene extends Phaser.Scene {
       })
       this.dogs.push(d)
     })
+    if (this.kind === 'walk' && this.dogs.length > 0) this.spawnSparkles(area, rng)
     const strangers = this.kind === 'walk' ? 4 : this.kind === 'kennel' ? 6 : 0
     for (let i = 0; i < strangers; i++) {
       const breed = BREEDS[Math.floor(rng() * BREEDS.length)]
@@ -99,6 +100,37 @@ export class PlaceScene extends Phaser.Scene {
     if (this.atmosphere.isNight() && this.kind === 'walk' && restless.length > 0) this.hud.toast(`${restless.map((r) => r.name).join(' und ')} wollte unbedingt noch raus`)
     else if (this.atmosphere.isNight() && (this.kind === 'walk' || this.kind === 'training')) this.hud.toast('Es ist spät, die Hunde schlafen. Antippen weckt sie, aber sie sind dann müde.')
     else if (this.kind === 'training') this.hud.toast('Tippe einen Hund an, um mit ihm zu trainieren')
+  }
+
+  // Funkelnde Stellen im Park: Antippen schickt den naechsten eigenen Hund hin, er buddelt dort etwas aus (Server begrenzt die Funde).
+  private spawnSparkles(area: { x: number; y: number; w: number; h: number }, rng: () => number): void {
+    const own = this.dogs.slice()
+    const place = (): void => {
+      const x = area.x + 20 + rng() * (area.w - 40)
+      const y = area.y + 20 + rng() * (area.h - 40)
+      const g = this.add.graphics().setPosition(x, y).setDepth(y)
+      g.fillStyle(0xfff3a0, 1).fillTriangle(0, -7, 2.2, 0, -2.2, 0).fillTriangle(0, 7, 2.2, 0, -2.2, 0).fillTriangle(-7, 0, 0, 2.2, 0, -2.2).fillTriangle(7, 0, 0, 2.2, 0, -2.2)
+      const hit = this.add.zone(x, y, 36, 36).setInteractive().setDepth(5000)
+      this.tweens.add({ targets: g, alpha: 0.35, scale: 0.8, duration: 700, yoyo: true, repeat: -1 })
+      hit.on('pointerdown', () => {
+        if (dialogJustClosed()) return
+        hit.disableInteractive()
+        const dog = own.filter((d) => !d.sleeping).sort((a, b) => Math.hypot(a.x - x, a.y - y) - Math.hypot(b.x - x, b.y - y))[0]
+        if (!dog) { this.hud.toast('Die Hunde sind zu müde zum Buddeln'); hit.setInteractive(); return }
+        dog.goTo({ x, y: y + 6 }, () => {
+          dog.cheer(1500)
+          const id = dog.dogKey
+          void (id ? findTreasure(id) : Promise.resolve(null)).then((f) => {
+            g.destroy(); hit.destroy()
+            this.time.delayedCall(4000, place)
+            if (!f) { this.hud.toast('Hier war nichts. Vielleicht später nochmal'); return }
+            this.hud.toast(`Gefunden: ${f.what}, +${f.coins} Münzen`)
+            this.hud.refresh()
+          }).catch(() => { g.destroy(); hit.destroy(); this.time.delayedCall(4000, place) })
+        })
+      })
+    }
+    for (let i = 0; i < 3; i++) place()
   }
 
   update(_t: number, delta: number): void {

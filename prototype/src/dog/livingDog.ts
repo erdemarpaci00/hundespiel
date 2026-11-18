@@ -210,6 +210,10 @@ export class LivingDog {
     this.applyRest()
   }
 
+  get dogKey(): string | null {
+    return this.key
+  }
+
   setKey(key: string): void {
     this.key = key
   }
