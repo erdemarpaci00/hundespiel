@@ -31,6 +31,8 @@ export class LivingDog {
   private readonly label: Phaser.GameObjects.Text
   private readonly emoteGfx: Phaser.GameObjects.Graphics
   private emote: 'hungry' | 'sad' | null = null
+  private shown: 'hungry' | 'sad' | 'love' | null = null
+  private loveUntil = 0
   private pulse = 0
   private pos: Vec
   private target: Vec
@@ -90,48 +92,46 @@ export class LivingDog {
     this.sprite.container.setPosition(this.pos.x, this.pos.y).setDepth(this.pos.y)
     this.sprite.update(dt)
     this.pulse += dt
-    this.emoteGfx.setPosition(this.pos.x, this.pos.y - 42 - 92 * this.size + Math.sin(this.pulse / 300) * 2).setDepth(1001).setVisible(this.emote !== null && !this.resting)
+    const want = this.loveUntil > Date.now() ? 'love' : this.emote
+    if (want !== this.shown) this.drawEmote(want)
+    this.emoteGfx.setPosition(this.pos.x, this.pos.y - 42 - 92 * this.size + Math.sin(this.pulse / 300) * 2).setDepth(1001).setVisible(want !== null && !this.resting)
     this.label
       .setPosition(this.pos.x, this.pos.y - 92 * this.size)
       .setDepth(1000)
       .setText(this.caption)
   }
 
-  // Denkblase ueber dem Kopf: Knochen bei Hunger, Traene bei Traurigkeit.
+  // Denkblase ueber dem Kopf: Knochen bei Hunger, Traene bei Traurigkeit, Herz bei Begegnung.
   setEmote(kind: 'hungry' | 'sad' | null): void {
-    if (kind === this.emote) return
     this.emote = kind
+  }
+
+  private drawEmote(kind: 'hungry' | 'sad' | 'love' | null): void {
+    this.shown = kind
     const g = this.emoteGfx.clear()
-    g.setVisible(kind !== null)
     if (!kind) return
     g.fillStyle(0xffffff, 0.95).fillRoundedRect(-13, -11, 26, 22, 8).fillCircle(-4, 17, 3).fillCircle(-8, 23, 2)
     if (kind === 'hungry') {
       g.fillStyle(0xb98a5a).fillRect(-7, -2, 14, 4).fillCircle(-8, -2, 3).fillCircle(-8, 2, 3).fillCircle(8, -2, 3).fillCircle(8, 2, 3)
+    } else if (kind === 'love') {
+      g.fillStyle(0xe0527a).fillCircle(-3.5, -2, 4.5).fillCircle(3.5, -2, 4.5).fillTriangle(-8, 0, 8, 0, 0, 8)
     } else {
       g.fillStyle(0x4a90d9).fillTriangle(0, -7, -4, 1, 4, 1).fillCircle(0, 2, 4)
     }
   }
 
-  // Welpen sind kleiner, Name und Denkblase sitzen entsprechend tiefer.
-  setSize(scale: number): void {
-    this.size = scale
-    this.sprite.setAge(scale)
+  // Zwei Hunde sind sich begegnet: kurz stehen bleiben, zueinander schauen, Herz zeigen.
+  meet(otherX: number, ms: number): void {
+    if (this.resting || this.chase) return
+    this.loveUntil = Date.now() + ms
+    this.behavior = 'sit'
+    this.remainingMs = ms
+    this.sprite.setPose('sit')
+    this.sprite.face(otherX >= this.pos.x ? 1 : -1)
   }
 
-  // Zielstrebig zu einem Punkt laufen (z.B. zum geworfenen Futter), am Ziel wird onArrive gerufen.
-  goTo(target: Vec, onArrive: () => void): void {
-    if (this.resting) return
-    this.chase = onArrive
-    this.behavior = 'wander'
-    this.target = { ...target }
-    this.remainingMs = 30000
-    this.sprite.setPose('walk')
-  }
-
-  cancelChase(): void {
-    if (!this.chase) return
-    this.chase = null
-    this.next()
+  get busyMeeting(): boolean {
+    return this.loveUntil > Date.now()
   }
 
   get scale(): number { return this.size }

@@ -407,7 +407,27 @@ export class GardenScene extends Phaser.Scene {
     }
   }
 
+  private meetCooldown = new Map<string, number>()
+
+  // Begegnen sich zwei wache Hunde, bleiben sie kurz stehen (Freundschaft waechst spaeter daraus).
+  private checkMeetings(): void {
+    const now = Date.now()
+    const list = [...this.entries.values()].filter((e) => !e.dog.sleeping && !e.dog.busyMeeting)
+    for (let i = 0; i < list.length; i++) {
+      for (let j = i + 1; j < list.length; j++) {
+        const a = list[i], b = list[j]
+        if (Math.hypot(a.dog.x - b.dog.x, (a.dog.y - b.dog.y) * 1.6) > 48) continue
+        const key = [a.record.id, b.record.id].sort().join('|')
+        if ((this.meetCooldown.get(key) ?? 0) > now) continue
+        this.meetCooldown.set(key, now + 60000)
+        a.dog.meet(b.dog.x, 3500)
+        b.dog.meet(a.dog.x, 3500)
+      }
+    }
+  }
+
   update(_time: number, delta: number): void {
+    if (this.entries.size > 1) this.checkMeetings()
     for (const d of this.poseDogs) d.update(delta)
     for (const e of this.entries.values()) e.dog.update(delta)
     this.atmosphere.update(delta)
