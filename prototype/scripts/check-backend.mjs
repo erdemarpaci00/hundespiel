@@ -123,5 +123,13 @@ check('Fremder kann nicht trainieren', foreignTrain.data === false || !!foreignT
 const directTrain = await A.c.from('dogs').update({ training: { tempo: 100, ausdauer: 100, sprungkraft: 100, gehorsam: 100 } }).eq('id', a1.data.id).select()
 check('Trainingswerte lassen sich nicht direkt ändern', !directTrain.data?.length, JSON.stringify(directTrain.data))
 
+// Adoption
+const freeDog = await A.c.from('dogs').insert({ household_id: A.householdId, picked_by: A.userId, is_starter: false, name: 'Gratis', look: {}, personality: {}, needs: { hunger: 100, energy: 100, happiness: 100 } }).select()
+check('Kein kostenloser Zweit-Hund per Direkt-Insert', !!freeDog.error || !freeDog.data?.length, JSON.stringify(freeDog))
+const poor = await B.c.rpc('adopt_dog', { p_name: 'Rex', p_look: { breed: 'mops' }, p_personality: { energy: 0.5 } })
+check('Adoption ohne genug Münzen wird abgelehnt', !!poor.error, JSON.stringify(poor))
+const badName = await B.c.rpc('adopt_dog', { p_name: '   ', p_look: {}, p_personality: {} })
+check('Adoption mit leerem Namen wird abgelehnt', !!badName.error)
+
 console.log(failed === 0 ? '\nALLES GRUEN' : `\n${failed} FEHLER`)
 process.exit(failed === 0 ? 0 : 1)

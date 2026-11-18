@@ -8,6 +8,7 @@ const RULES: [RegExp, string][] = [
   [/kein futter mehr/i, 'Kein Futter mehr, kauft neues in den Einstellungen'],
   [/zu wenig münzen/i, 'Zu wenig Münzen'],
   [/das habt ihr schon/i, 'Das habt ihr schon'],
+  [/mehr als vier hunde/i, 'Mehr als vier Hunde passen nicht in die Wohnung'],
   [/zu schnell hintereinander/i, 'Nicht so schnell, kurz verschnaufen lassen'],
   [/failed to fetch|load failed|networkerror|network request failed/i, 'Keine Verbindung, bitte Netz prüfen'],
 ]

@@ -2,7 +2,9 @@ import { breedById } from '../dog/breeds'
 import type { Needs } from '../dog/needs'
 import { EXERCISE, STAT_KEYS, STAT_LABEL, statValue } from '../dog/stats'
 import type { DogRecord } from '../dogRepo'
-import { trainDog } from '../dogRepo'
+import { adoptFromKennel, trainDog } from '../dogRepo'
+import type { Puppy } from '../puppies'
+import type { Session } from '../session'
 import { friendlyError } from '../errors'
 
 function overlay(): { overlay: HTMLElement; card: HTMLElement } {
@@ -102,4 +104,38 @@ export function openTraining(dog: DogRecord, toast: (t: string) => void, onChang
   }
   render()
   void toast
+}
+
+export const ADOPT_PRICE = 50
+
+// Hundeheim: einen Hund ansehen und fuer Muenzen mit nach Hause nehmen.
+export function openAdoption(session: Session, pup: Puppy, onDone: (d: DogRecord) => void): void {
+  const { overlay: o, card } = overlay()
+  const breed = pup.look.breed ? breedById(pup.look.breed).name : 'Mischling'
+  const h = document.createElement('h1')
+  h.textContent = `${breed} sucht ein Zuhause`
+  card.appendChild(h)
+  for (const [k, label] of TRAITS) card.appendChild(row(label, pup.personality[k] * 100))
+  const input = document.createElement('input')
+  input.placeholder = 'Name für den Hund'
+  input.maxLength = 20
+  input.style.cssText = 'font-size:16px;padding:10px 12px;border:2px solid #cbd5e0;border-radius:10px'
+  const msg = document.createElement('div')
+  msg.className = 'sub'
+  const go = document.createElement('button')
+  go.className = 'alt'
+  go.textContent = `Adoptieren (${ADOPT_PRICE} Münzen)`
+  go.addEventListener('click', async () => {
+    go.disabled = true
+    try {
+      const dog = await adoptFromKennel(session, pup, input.value)
+      o.remove()
+      onDone(dog)
+    } catch (e) {
+      msg.textContent = friendlyError(e instanceof Error ? e.message : undefined)
+      if (e instanceof Error && /bitte gib/i.test(e.message)) msg.textContent = e.message
+      go.disabled = false
+    }
+  })
+  card.append(input, msg, go, closeButton(o, 'Nicht jetzt'))
 }

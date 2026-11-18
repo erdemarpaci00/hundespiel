@@ -5,7 +5,7 @@ import { loadDogs } from '../dogRepo'
 import type { Session } from '../session'
 import { isRestless } from '../nightlife'
 import { createAtmosphere, type Atmosphere } from './atmosphere'
-import { openTraining } from '../ui/dogPanels'
+import { openAdoption, openTraining } from '../ui/dogPanels'
 import { createHud } from '../ui/hud'
 import { buildShop } from '../ui/shop'
 import { mulberry32 } from '../util/rng'
@@ -84,7 +84,10 @@ export class PlaceScene extends Phaser.Scene {
       const pen = this.kind === 'kennel' ? { x: 40 + i * 100, y: 290, w: 40, h: 20 } : area
       const d = new LivingDog(this, pup.look, pup.personality, pen, this.kind === 'kennel' ? { x: pen.x + 20, y: pen.y + 10 } : { x: 120 + i * 90, y: 230 + (i % 2) * 50 }, Math.random)
       d.setCaption(breed.name)
-      d.onTap(() => this.hud.toast(this.kind === 'kennel' ? `${breed.name} sucht ein Zuhause (bald adoptierbar)` : `Ein fremder ${breed.name}`))
+      d.onTap(() => {
+        if (this.kind === 'kennel') openAdoption(session, pup, (nd) => { this.hud.toast(`${nd.name} ist jetzt bei euch zu Hause`); this.scene.start('garden') })
+        else this.hud.toast(`Ein fremder ${breed.name}`)
+      })
       if (this.kind !== 'kennel') this.nightOwls.add(d)
       this.dogs.push(d)
     }

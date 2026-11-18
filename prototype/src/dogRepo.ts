@@ -81,6 +81,17 @@ export async function adoptPuppy(session: Session, pick: Puppy, name: string): P
   return dog
 }
 
+// Hund aus dem Hundeheim holen: kostet Muenzen, die Datenbank prueft Preis und Platz.
+export async function adoptFromKennel(session: Session, pick: Puppy, name: string): Promise<DogRecord> {
+  const clean = name.trim()
+  if (!clean) throw new Error('Bitte gib dem Hund einen Namen')
+  const { data, error } = await supabase.rpc('adopt_dog', { p_name: clean, p_look: pick.look, p_personality: pick.personality })
+  fail(error)
+  const dog = await loadDog(data as string)
+  await logActivity(session, dog.id, 'adopt')
+  return dog
+}
+
 export async function loadDogs(session: Session): Promise<DogRecord[]> {
   const { data, error } = await supabase
     .from('dogs')
