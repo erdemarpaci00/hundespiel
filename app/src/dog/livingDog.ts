@@ -51,7 +51,7 @@ export class LivingDog {
     scene: Phaser.Scene,
     look: DogLook,
     private personality: Personality,
-    private readonly bounds: Rect,
+    private bounds: Rect,
     start: Vec,
     private readonly rng: Rng,
   ) {
@@ -188,6 +188,9 @@ export class LivingDog {
     this.remainingMs = 30000
     this.sprite.setPose('walk')
   }
+
+  // Bewegungsraum verschieben (z.B. an der Leine um die Hand herum).
+  setBounds(r: Rect): void { this.bounds = r }
 
   cancelChase(): void {
     if (!this.chase) return

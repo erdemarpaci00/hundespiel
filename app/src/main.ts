@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { loadDogs } from './dogRepo'
 import { GardenScene } from './scenes/GardenScene'
+import { WalkScene } from './scenes/WalkScene'
 import { ArenaScene } from './scenes/ArenaScene'
 import { PlaceScene } from './scenes/PlaceScene'
 import { PickerScene } from './scenes/PickerScene'
@@ -21,7 +22,7 @@ async function start(): Promise<void> {
     backgroundColor: '#6bbf59',
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
     // Die erste Szene startet von selbst.
-    scene: [...(hasOwnStarter ? [GardenScene, PickerScene] : [PickerScene, GardenScene]), ...(['walk', 'shop', 'kennel', 'training'] as const).map((k) => new PlaceScene(k)), new ArenaScene()],
+    scene: [...(hasOwnStarter ? [GardenScene, PickerScene] : [PickerScene, GardenScene]), ...(['shop', 'kennel', 'training'] as const).map((k) => new PlaceScene(k)), new ArenaScene(), new WalkScene()],
     callbacks: { preBoot: (g) => g.registry.set('session', session) },
   })
   // Nur zum Testen: mit ?debug in der Adresse ist das Spiel von aussen erreichbar.
