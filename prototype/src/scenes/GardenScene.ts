@@ -4,8 +4,8 @@ import { describeActivity, relativeTime, type ActivityEntry } from '../activity'
 import { DogSprite, type Pose } from '../dog/dogSprite'
 import { LivingDog } from '../dog/livingDog'
 import { randomLook } from '../dog/look'
-import { applyElapsed, mood, moodPersonality, type Mood, type Needs } from '../dog/needs'
-import { careForDog, loadActivity, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
+import { applyElapsed, PLAY_MIN_ENERGY, mood, moodPersonality, type Mood, type Needs } from '../dog/needs'
+import { careForDog, playWithDog, loadActivity, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
 import { GARDEN_BOUNDS } from '../garden'
 import type { Session } from '../session'
 import { openDogDetail } from '../ui/dogPanels'
@@ -16,7 +16,7 @@ import { isRestless, resistsWaking } from '../nightlife'
 import { createAtmosphere, type Atmosphere } from './atmosphere'
 import { drawScenery } from './scenery'
 
-type Action = 'feed' | 'pet' | 'details' | 'wake' | 'walk'
+type Action = 'feed' | 'pet' | 'details' | 'wake' | 'walk' | 'ball'
 
 // Ring aus runden Symbol-Knoepfen um den Hund, ohne Textkasten.
 interface Bubble {
@@ -26,7 +26,7 @@ interface Bubble {
   state: string
 }
 
-const ACTION_COLOR: Record<Action, number> = { feed: 0x2b6cb0, pet: 0xe0527a, details: 0x5a6b7d, wake: 0x8a5cc2, walk: 0xd9822b }
+const ACTION_COLOR: Record<Action, number> = { feed: 0x2b6cb0, pet: 0xe0527a, details: 0x5a6b7d, wake: 0x8a5cc2, walk: 0xd9822b, ball: 0xc9a227 }
 
 const MOOD_PHRASE: Record<Mood, string> = { happy: 'glücklich', ok: 'zufrieden', hungry: 'hungrig', tired: 'müde', sad: 'traurig' }
 const FONT = 'Arial, Helvetica, sans-serif'
@@ -47,6 +47,7 @@ export class GardenScene extends Phaser.Scene {
   private bubble: Bubble | null = null
   private busy = false
   private throwMode = false
+  private ballFor: string | null = null
   private food: Phaser.GameObjects.Graphics | null = null
   private refusals = new Map<string, number>()
   private atmosphere!: Atmosphere
@@ -64,6 +65,7 @@ export class GardenScene extends Phaser.Scene {
     this.selectedId = null
     this.busy = false
     this.throwMode = false
+    this.ballFor = null
     this.food = null
     this.seenActivity = null
     // Welt ist 640x360, gerendert wird 3-fach scharf auf 1920x1080
@@ -87,6 +89,7 @@ export class GardenScene extends Phaser.Scene {
     this.input.on('pointerdown', (p: Phaser.Input.Pointer, over: unknown[]) => {
       if (over.length > 0) return
       if (this.throwMode) { this.throwFood(p.worldX, p.worldY); return }
+      if (this.ballFor) { this.throwBall(p.worldX, p.worldY); return }
       this.closeBubble()
     })
     void this.reload()
@@ -180,6 +183,8 @@ export class GardenScene extends Phaser.Scene {
       g.fillEllipse(0, 2, 15, 7).fillStyle(ACTION_COLOR.feed, 1).fillEllipse(0, 0, 11, 4).fillStyle(0xffffff, 1).fillCircle(-3, -4, 1.6).fillCircle(0, -5, 1.6).fillCircle(3, -4, 1.6)
     } else if (kind === 'pet') {
       g.fillCircle(-3.2, -2, 4).fillCircle(3.2, -2, 4).fillTriangle(-7, 0, 7, 0, 0, 8)
+    } else if (kind === 'ball') {
+      g.fillCircle(0, 0, 7).fillStyle(ACTION_COLOR.ball, 1).fillRect(-7, -1, 14, 2).fillStyle(0xffffff, 1)
     } else if (kind === 'walk') {
       g.fillEllipse(0, 3, 9, 7).fillCircle(-5, -2, 2.3).fillCircle(-1.8, -5, 2.3).fillCircle(1.8, -5, 2.3).fillCircle(5, -2, 2.3)
     } else {
@@ -219,10 +224,10 @@ export class GardenScene extends Phaser.Scene {
     const actions: [Action, () => void][] =
       state === 'asleep' ? [['wake', () => this.tryWake(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e))]]
       : state === 'restless' ? [['walk', () => this.scene.start('walk')], ['details', () => openDogDetail(e.record, this.currentNeeds(e))]]
-      : [['feed', () => this.startThrow()], ['pet', () => void this.care('pet')], ['details', () => openDogDetail(e.record, this.currentNeeds(e))]]
+      : [['feed', () => this.startThrow()], ['pet', () => void this.care('pet')], ['ball', () => void this.startBall(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e))]]
     const n = actions.length
     actions.forEach(([kind, fn], i) => {
-      const a = (-150 + (n === 1 ? 60 : (i * 120) / (n - 1))) * (Math.PI / 180)
+      const a = (-160 + (n === 1 ? 70 : (i * 140) / (n - 1))) * (Math.PI / 180)
       const b = this.iconButton(kind, fn)
       const tx = Math.cos(a) * 46
       const ty = Math.sin(a) * 28
@@ -321,6 +326,40 @@ export class GardenScene extends Phaser.Scene {
       this.food = null
       for (const o of eager) o.dog.cancelChase()
     })
+  }
+
+  // Ball werfen: der gewaehlte Hund holt ihn, das macht froh und müde.
+  private async startBall(dogId: string): Promise<void> {
+    const e = this.entries.get(dogId)
+    if (!e) return
+    this.closeBubble()
+    try {
+      const eco = await loadEconomy()
+      if ((eco.items.ball ?? 0) < 1) { this.hud.toast('Ihr habt noch keinen Ball, im Laden gibt es einen'); return }
+    } catch (err) {
+      this.hud.toast(err instanceof Error ? err.message : 'Keine Verbindung, bitte Netz prüfen')
+      return
+    }
+    if (this.currentNeeds(e).energy < PLAY_MIN_ENERGY) { this.hud.toast(`${e.record.name} ist zu müde zum Spielen`); return }
+    this.throwMode = false
+    this.ballFor = dogId
+    this.hud.toast('Tippe in den Garten, um den Ball zu werfen')
+  }
+
+  private throwBall(wx: number, wy: number): void {
+    const e = this.ballFor ? this.entries.get(this.ballFor) : undefined
+    this.ballFor = null
+    if (!e || e.dog.sleeping) return
+    const x = Math.min(GARDEN_BOUNDS.x + GARDEN_BOUNDS.w, Math.max(GARDEN_BOUNDS.x, wx))
+    const y = Math.min(GARDEN_BOUNDS.y + GARDEN_BOUNDS.h, Math.max(GARDEN_BOUNDS.y, wy))
+    const ball = this.add.graphics().setDepth(y - 1)
+    ball.fillStyle(0xc9a227, 1).fillCircle(x, y, 3.5).fillStyle(0xffffff, 1).fillRect(x - 3.5, y - 0.5, 7, 1)
+    e.dog.goTo({ x, y }, () => {
+      ball.destroy()
+      this.hud.toast(`${e.record.name} bringt den Ball zurück`)
+      void playWithDog(e.record).then(() => this.reload()).catch((err) => this.hud.toast(err instanceof Error ? err.message : 'Etwas ist schiefgelaufen, bitte nochmal versuchen'))
+    })
+    this.time.delayedCall(20000, () => { if (ball.active) { ball.destroy(); e.dog.cancelChase() } })
   }
 
   private async care(action: 'feed' | 'pet', dogId: string | null = this.selectedId): Promise<void> {

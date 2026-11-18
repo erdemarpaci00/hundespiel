@@ -59,3 +59,10 @@ export const TRAIN_MIN_ENERGY = 35
 export function train(n: Needs): Needs {
   return { hunger: clamp(n.hunger - 8), energy: clamp(n.energy - 20), happiness: clamp(n.happiness + 4) }
 }
+
+export const PLAY_MIN_ENERGY = 25
+
+// Ballspiel macht froh, kostet Kraft und etwas Sattheit.
+export function play(n: Needs): Needs {
+  return { hunger: clamp(n.hunger - 4), energy: clamp(n.energy - 12), happiness: clamp(n.happiness + 15) }
+}

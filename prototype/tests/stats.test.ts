@@ -31,3 +31,11 @@ describe('train', () => {
     expect(train({ hunger: 12, energy: 15, happiness: 100 })).toEqual({ hunger: 10, energy: 10, happiness: 100 })
   })
 })
+
+import { play } from '../src/dog/needs'
+describe('play', () => {
+  it('macht froh und müde, bleibt im Rahmen', () => {
+    expect(play({ hunger: 80, energy: 60, happiness: 50 })).toEqual({ hunger: 76, energy: 48, happiness: 65 })
+    expect(play({ hunger: 2, energy: 5, happiness: 95 })).toEqual({ hunger: 10, energy: 10, happiness: 100 })
+  })
+})
