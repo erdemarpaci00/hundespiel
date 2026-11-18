@@ -15,7 +15,7 @@ import { duelScore, MEDAL_COLORS, topLeague, CONTEST_MIN_ENERGY, playRound, riva
 import { STAT_KEYS, STAT_LABEL, statValue } from '../dog/stats'
 import { wishBlock, wishFor, type Wish } from '../dog/wish'
 import { wantsPoop, type Poop } from '../garden/poop'
-import { dialogJustClosed, openDogDetail } from '../ui/dogPanels'
+import { dialogJustClosed, openDogDetail, pickDog } from '../ui/dogPanels'
 import { loadEconomy } from '../economy'
 import { createHud } from '../ui/hud'
 import { mulberry32 } from '../util/rng'
@@ -431,9 +431,9 @@ export class GardenScene extends Phaser.Scene {
     const box = this.bubble.box
     box.removeAll(true)
     const actions: [Action, () => void][] =
-      state === 'asleep' ? [['wake', () => this.tryWake(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id), () => { this.hud.refresh(); void this.reload() }, (d, l) => void this.playFrisbee(d, l), favoriteOf(this.affection[e.record.id] ?? {}), this.entries.size > 1 ? (d) => void this.playDuel(d) : undefined)]]
-      : state === 'restless' ? [['walk', () => this.scene.start('walk')], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id), () => { this.hud.refresh(); void this.reload() }, (d, l) => void this.playFrisbee(d, l), favoriteOf(this.affection[e.record.id] ?? {}), this.entries.size > 1 ? (d) => void this.playDuel(d) : undefined)]]
-      : [['feed', () => this.startThrow()], ['pet', () => void this.care('pet')], ['ball', () => void this.startBall(e.record.id)], ['brush', () => void this.brush(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id), () => { this.hud.refresh(); void this.reload() }, (d, l) => void this.playFrisbee(d, l), favoriteOf(this.affection[e.record.id] ?? {}), this.entries.size > 1 ? (d) => void this.playDuel(d) : undefined)]]
+      state === 'asleep' ? [['wake', () => this.tryWake(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id), () => { this.hud.refresh(); void this.reload() }, (d, l) => void this.playFrisbee(d, l), favoriteOf(this.affection[e.record.id] ?? {}), this.entries.size > 1 ? (d) => this.chooseDuel(d) : undefined)]]
+      : state === 'restless' ? [['walk', () => this.scene.start('walk')], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id), () => { this.hud.refresh(); void this.reload() }, (d, l) => void this.playFrisbee(d, l), favoriteOf(this.affection[e.record.id] ?? {}), this.entries.size > 1 ? (d) => this.chooseDuel(d) : undefined)]]
+      : [['feed', () => this.startThrow()], ['pet', () => void this.care('pet')], ['ball', () => void this.startBall(e.record.id)], ['brush', () => void this.brush(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id), () => { this.hud.refresh(); void this.reload() }, (d, l) => void this.playFrisbee(d, l), favoriteOf(this.affection[e.record.id] ?? {}), this.entries.size > 1 ? (d) => this.chooseDuel(d) : undefined)]]
     const n = actions.length
     actions.forEach(([kind, fn], i) => {
       const u = n === 1 ? 0 : (i / (n - 1)) * 2 - 1
@@ -622,9 +622,15 @@ export class GardenScene extends Phaser.Scene {
   }
 
   // Duell: du wirfst abwechselnd fuer beide Hunde, wer vier Runden besser faengt, gewinnt. Nur zum Spass, ohne Preis.
-  private async playDuel(first: DogRecord): Promise<void> {
+  private chooseDuel(first: DogRecord): void {
+    const others = [...this.entries.values()].filter((e) => e.record.id !== first.id)
+    if (others.length === 1) void this.playDuel(first, others[0].record.id)
+    else pickDog(`Wer tritt gegen ${first.name} an?`, others.map((e) => ({ id: e.record.id, name: e.record.name })), (id) => void this.playDuel(first, id))
+  }
+
+  private async playDuel(first: DogRecord, opponentId: string): Promise<void> {
     const a = this.entries.get(first.id)
-    const b = [...this.entries.values()].find((e) => e.record.id !== first.id)
+    const b = this.entries.get(opponentId)
     if (!a || !b || this.contestBusy) return
     if (a.dog.sleeping || b.dog.sleeping) { this.hud.toast('Einer der beiden schläft gerade'); return }
     this.contestBusy = true

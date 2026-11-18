@@ -63,6 +63,22 @@ function closeButton(o: HTMLElement, label = 'Zurück'): HTMLButtonElement {
   return b
 }
 
+// Auswahl eines Hundes aus einer Liste (z.B. Gegner im Duell).
+export function pickDog(title: string, dogs: { id: string; name: string }[], onPick: (id: string) => void): void {
+  const { overlay: o, card } = overlay()
+  const h = document.createElement('h1')
+  h.textContent = title
+  card.appendChild(h)
+  for (const d of dogs) {
+    const b = document.createElement('button')
+    b.className = 'alt'
+    b.textContent = d.name
+    b.addEventListener('click', () => { o.remove(); onPick(d.id) })
+    card.appendChild(b)
+  }
+  card.appendChild(closeButton(o, 'Abbrechen'))
+}
+
 const TRAITS: [keyof DogRecord['personality'], string][] = [
   ['energy', 'Energie'], ['courage', 'Mut'], ['affection', 'Anhänglichkeit'], ['learning', 'Lernfreude'], ['appetite', 'Appetit'],
 ]
