@@ -144,6 +144,20 @@ export class GardenScene extends Phaser.Scene {
       })
     }
     if (location.search.includes('debug')) (window as unknown as { __dig: typeof dig }).__dig = dig
+    // Ausbauten werden genutzt: auf der Decke ausruhen, im Teich planschen, am Beet schnuppern.
+    const useHome = (): void => {
+      const spots: { x: number; y: number; hold: number; cheer: number }[] = []
+      if (this.homeLevel >= 1) spots.push({ x: 432, y: 264, hold: 9000, cheer: 0 })
+      if (this.homeLevel >= 2) spots.push({ x: 75, y: 190, hold: 3500, cheer: 0 })
+      if (this.homeLevel >= 3) spots.push({ x: 540, y: 285, hold: 0, cheer: 2500 })
+      const pool = [...this.entries.values()].filter((e) => !e.dog.sleeping && !e.dog.busyMeeting)
+      if (spots.length === 0 || pool.length === 0 || this.throwMode || this.ballFor) return
+      const e = pool[Math.floor(Math.random() * pool.length)]
+      const sp = spots[Math.floor(Math.random() * spots.length)]
+      e.dog.goTo({ x: sp.x, y: sp.y }, () => { if (sp.hold) e.dog.hold(sp.hold); if (sp.cheer) { e.dog.cheer(sp.cheer); this.heartsAt(e.dog.x, e.dog.y - 20 * e.dog.scale) } })
+    }
+    if (location.search.includes('debug')) (window as unknown as { __useHome: typeof useHome }).__useHome = useHome
+    this.time.addEvent({ delay: 25000, loop: true, callback: () => { if (Math.random() < 0.4) useHome() } })
     this.time.addEvent({ delay: 60000, loop: true, callback: () => { if (Math.random() < 0.3) dig() } })
     this.input.on('pointerup', () => this.hand.setVisible(false))
     // Wischen ueber einen Hund streichelt ihn (ca. 120 Pixel Weg ueber dem Hund, einmal pro Wisch).
