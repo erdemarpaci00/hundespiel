@@ -121,36 +121,42 @@ export function openDogDetail(dog: DogRecord, needs: Needs, bonds: { name: strin
   age.textContent = ageLabel(ageDays(parseTimestamp(dog.createdAt), Date.now()))
   const actions = document.createElement('div')
   actions.style.cssText = 'display:flex;flex-direction:column;gap:6px;margin:6px 0'
-  card.append(h, age, actions, heading('Werte'))
-  for (const k of STAT_KEYS) card.appendChild(row(STAT_LABEL[k], statValue(dog.look.breed, dog.training, k)))
-  card.appendChild(heading('Charakter'))
-  for (const [k, label] of TRAITS) card.appendChild(row(label, dog.personality[k] * 100))
-  card.appendChild(heading('Befinden'))
-  card.append(row('Sattheit', needs.hunger), row('Kraft', needs.energy), row('Laune', needs.happiness))
+  const cols = document.createElement('div')
+  cols.className = 'cols'
+  const left = document.createElement('div')
+  const right = document.createElement('div')
+  cols.append(left, right)
+  card.append(h, age, actions, cols)
+  left.appendChild(heading('Werte'))
+  for (const k of STAT_KEYS) left.appendChild(row(STAT_LABEL[k], statValue(dog.look.breed, dog.training, k)))
+  left.appendChild(heading('Charakter'))
+  for (const [k, label] of TRAITS) left.appendChild(row(label, dog.personality[k] * 100))
+  right.appendChild(heading('Befinden'))
+  right.append(row('Sattheit', needs.hunger), row('Kraft', needs.energy), row('Laune', needs.happiness))
   const favText = favoriteLine(dog.name, favorite ?? null)
   if (favText) {
     const fl = document.createElement('div')
     fl.textContent = '♥ ' + favText
     fl.style.cssText = 'margin:8px 0;font-size:13px;color:#c2185b'
-    card.appendChild(fl)
+    right.appendChild(fl)
   }
   const shelf = trophyShelf(dog.trophies)
   if (shelf) {
-    card.appendChild(heading('Pokale'))
+    right.appendChild(heading('Pokale'))
     const tl = document.createElement('div')
     tl.textContent = '🏆 ' + shelf
     tl.style.cssText = 'font-size:14px;margin:4px 0'
-    card.appendChild(tl)
+    right.appendChild(tl)
   }
   if (bonds.length > 0) {
-    card.appendChild(heading('Freundschaften'))
+    right.appendChild(heading('Freundschaften'))
     for (const b of bonds) {
       const r = row(b.name, Math.min(100, (b.meetings / 15) * 100))
       r.title = bondLabel(b.meetings)
       const lab = r.lastElementChild as HTMLElement
       lab.textContent = bondLabel(b.meetings)
       lab.style.fontSize = '11px'
-      card.appendChild(r)
+      right.appendChild(r)
     }
   }
   if (onChange) {

@@ -63,6 +63,8 @@
       #settings .verlauf { font-size: 13px; display: flex; flex-direction: column; gap: 2px; max-height: 110px; overflow: auto; }
       #settings .card > * { flex-shrink: 0; }
       @media (max-height: 450px) { #tutorial .card { padding: 10px 16px; gap: 4px; } #tutorial p { font-size: 13px; } #tutorial button { padding: 7px 12px; font-size: 14px; } #settings .card { padding: 10px 16px; gap: 4px; } #settings .card button { padding: 7px 12px; font-size: 14px; } #settings .card h1 { font-size: 18px; margin: 0; } }
+      #settings .cols { display: grid; grid-template-columns: 1fr; gap: 0 18px; } #settings .cols > div { display: flex; flex-direction: column; gap: 4px; }
+      @media (max-height: 450px) { #settings .card:has(.cols) { width: min(640px, 92vw); } #settings .cols { grid-template-columns: 1fr 1fr; align-items: start; } }
       #settings .row { display: grid; grid-template-columns: 110px 1fr 74px; gap: 8px; align-items: center; font-size: 13px; }
       #settings .bar { height: 8px; background: #e3e8ee; border-radius: 4px; overflow: hidden; } #settings .bar > i { display: block; height: 100%; background: #4a9b3a; }
       #settings .shop { max-height: none; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; } #settings .shop > div { grid-column: 1 / -1; } #settings .shop button { font-size: 13px; padding: 7px 6px; } #settings .shop button:disabled { opacity: .45; }
