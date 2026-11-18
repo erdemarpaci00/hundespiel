@@ -68,8 +68,13 @@ export class LivingDog {
 
   private air = 0
 
+  // Im Wettkampf oder Spiel wuerfelt der Hund kein Einschlafen aus.
+  focused = false
+
   private next(): void {
-    this.behavior = this.resting ? 'sleep' : pickBehavior(this.personality, this.rng)
+    let b = this.resting ? 'sleep' : pickBehavior(this.personality, this.rng)
+    for (let i = 0; i < 8 && this.focused && !this.resting && b === 'sleep'; i++) b = pickBehavior(this.personality, this.rng)
+    this.behavior = b
     this.remainingMs = behaviorDuration(this.behavior, this.personality, this.rng)
     this.sprite.setPose(POSE[this.behavior])
     if (this.behavior === 'wander') this.target = nextTarget(this.bounds, this.pos, 140, this.rng)

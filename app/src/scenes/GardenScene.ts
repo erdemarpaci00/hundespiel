@@ -28,6 +28,8 @@ import { drawScenery } from './scenery'
 
 interface BallState { g: Phaser.GameObjects.Graphics; x: number; y: number; flying: boolean; carrier: Entry | null }
 
+const BUCKET_PORTIONS = 4
+
 type Action = 'feed' | 'pet' | 'details' | 'wake' | 'walk' | 'ball' | 'brush' | 'contest'
 
 // Ring aus runden Symbol-Knoepfen um den Hund, ohne Textkasten.
@@ -75,7 +77,7 @@ export class GardenScene extends Phaser.Scene {
   private poops: { data: Poop; obj: Phaser.GameObjects.Container }[] = []
   private hand!: Phaser.GameObjects.Graphics
   private relations: Relation[] = []
-  private food: Phaser.GameObjects.Graphics | null = null
+  private food: { x: number; y: number; left: number; gfx: Phaser.GameObjects.Graphics; label: Phaser.GameObjects.Text } | null = null
   private refusals = new Map<string, number>()
   private atmosphere!: Atmosphere
   private unsubscribe: (() => void) | null = null
@@ -664,6 +666,7 @@ export class GardenScene extends Phaser.Scene {
     this.hud.showHotbar(false)
     const form = rivalForm(Math.random)
     const rounds: Round[] = []
+    e.dog.focused = true
     try {
       for (let i = 0; i < STAT_KEYS.length; i++) {
         const stat = STAT_KEYS[i]
@@ -694,6 +697,7 @@ export class GardenScene extends Phaser.Scene {
     } catch (err) {
       this.hud.toast(err instanceof Error ? err.message : 'Etwas ist schiefgelaufen, bitte nochmal versuchen')
     } finally {
+      e.dog.focused = false
       this.contestBusy = false
       this.hud.showHotbar(true)
     }
@@ -812,33 +816,47 @@ export class GardenScene extends Phaser.Scene {
     }
   }
 
+  // Futtereimer: ein Eimer hat vier Portionen, jeder hungrige Hund frisst eine, der Pegel sinkt. Ist er leer, stellt man einen neuen hin.
+  private drawBucket(b: { x: number; y: number; left: number; gfx: Phaser.GameObjects.Graphics; label: Phaser.GameObjects.Text }): void {
+    const { x, y, left, gfx } = b
+    gfx.clear()
+    gfx.fillStyle(0x000000, 0.18).fillEllipse(x, y + 1, 22, 6)
+    gfx.fillStyle(0x7a4a21, 1)
+    const h = 12 * (left / BUCKET_PORTIONS)
+    if (left > 0) gfx.fillRect(x - 7, y - 3 - h, 14, h)
+    gfx.fillStyle(0x8a95a3, 0.85).fillTriangle(x - 8, y - 15, x - 6, y, x - 8, y)
+    gfx.fillStyle(0x8a95a3, 0.85).fillRect(x - 8, y - 15, 2, 15).fillRect(x + 6, y - 15, 2, 15).fillRect(x - 8, y - 2, 16, 2)
+    gfx.lineStyle(1, 0x5a6b7d, 1).strokeRect(x - 8, y - 15, 16, 15)
+    b.label.setText(`${Math.round((left / BUCKET_PORTIONS) * 100)}%`).setPosition(x, y - 18)
+  }
+
   private throwFood(wx: number, wy: number): void {
-    this.food?.destroy()
+    if (this.food) { this.food.gfx.destroy(); this.food.label.destroy(); this.food = null }
     const x = Math.min(GARDEN_BOUNDS.x + GARDEN_BOUNDS.w, Math.max(GARDEN_BOUNDS.x, wx))
     const y = Math.min(GARDEN_BOUNDS.y + GARDEN_BOUNDS.h, Math.max(GARDEN_BOUNDS.y, wy))
     const eager = [...this.entries.values()].filter((e) => !e.dog.sleeping && this.currentNeeds(e).hunger < 95)
     if (eager.length === 0) { this.hud.toast('Gerade hat niemand Hunger'); return }
-    const g = this.add.graphics().setDepth(y - 1)
-    g.fillStyle(0x7a4a21, 1).fillCircle(x - 4, y, 2.5).fillCircle(x + 3, y - 1, 2.5).fillCircle(x, y + 3, 2.5).fillCircle(x + 6, y + 3, 2)
-    this.food = g
-    let taken = false
+    const gfx = this.add.graphics().setDepth(y - 1)
+    const label = this.add.text(x, y - 18, '', { fontSize: '8px', color: '#ffffff', stroke: '#2b2b2b', strokeThickness: 2, resolution: 3, fontFamily: 'Arial, Helvetica, sans-serif' }).setOrigin(0.5, 1).setDepth(y)
+    const bucket = { x, y, left: BUCKET_PORTIONS, gfx, label }
+    this.food = bucket
+    this.drawBucket(bucket)
+    const gone = (): void => { gfx.destroy(); label.destroy(); if (this.food === bucket) this.food = null }
     for (const e of eager) {
-      e.dog.goTo({ x, y }, () => {
-        if (taken || this.food !== g) return
-        taken = true
-        g.destroy()
-        this.food = null
-        for (const o of eager) if (o !== e) o.dog.cancelChase()
+      e.dog.goTo({ x: x + (Math.random() - 0.5) * 16, y: y + 6 }, () => {
+        if (this.food !== bucket || bucket.left <= 0) return
+        if (this.currentNeeds(e).hunger >= 95) return
+        bucket.left--
+        this.drawBucket(bucket)
+        if (bucket.left <= 0) {
+          this.time.delayedCall(900, gone)
+          this.hud.toast('Der Eimer ist leer, stell einen neuen hin, wenn noch jemand Hunger hat')
+        }
         const feedWhenFree = (n: number): void => { if (this.busy && n < 12) this.time.delayedCall(500, () => feedWhenFree(n + 1)); else void this.care('feed', e.record.id) }
         feedWhenFree(0)
       })
     }
-    this.time.delayedCall(25000, () => {
-      if (this.food !== g) return
-      g.destroy()
-      this.food = null
-      for (const o of eager) o.dog.cancelChase()
-    })
+    this.time.delayedCall(60000, () => { if (this.food === bucket) { gone(); for (const o of eager) o.dog.cancelChase() } })
   }
 
   // Buersten: braucht eine Buerste im Vorrat und macht ein glaenzendes Fell.
