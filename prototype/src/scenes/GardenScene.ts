@@ -48,6 +48,7 @@ export class GardenScene extends Phaser.Scene {
   private bubble: Bubble | null = null
   private busy = false
   private throwMode = false
+  private swipe = 0
   private relations: Relation[] = []
   private ballFor: string | null = null
   private food: Phaser.GameObjects.Graphics | null = null
@@ -70,6 +71,7 @@ export class GardenScene extends Phaser.Scene {
     this.ballFor = null
     this.food = null
     this.seenActivity = null
+    this.swipe = 0
     // Welt ist 640x360, gerendert wird 3-fach scharf auf 1920x1080
     this.cameras.main.setZoom(3).centerOn(320, 180)
     const backdrop = drawScenery(this)
@@ -88,6 +90,19 @@ export class GardenScene extends Phaser.Scene {
     this.session = this.registry.get('session') as Session
     this.hud = createHud({ householdId: this.session.householdId, getActivity: () => this.activityLines(), travel: (k) => this.scene.start(k), current: 'garden' })
     // Ins Leere tippen schliesst die Sprechblase.
+    // Wischen ueber einen Hund streichelt ihn (ca. 120 Pixel Weg ueber dem Hund, einmal pro Wisch).
+    this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
+      for (const e of this.entries.values()) if (Math.hypot(p.worldX - e.dog.x, p.worldY - e.dog.y) < 110) e.dog.lookAt(p.worldX)
+      if (!p.isDown || this.throwMode || this.ballFor || this.busy) { this.swipe = 0; return }
+      const hit = [...this.entries.values()].find((e) => Math.abs(p.worldX - e.dog.x) < 40 * e.dog.scale + 10 && Math.abs(p.worldY - (e.dog.y - 25 * e.dog.scale)) < 35)
+      if (!hit) { this.swipe = 0; return }
+      this.swipe += Math.hypot(p.x - p.prevPosition.x, p.y - p.prevPosition.y) / this.cameras.main.zoom
+      if (this.swipe > 120) {
+        this.swipe = 0
+        this.closeBubble()
+        void this.care('pet', hit.record.id)
+      }
+    })
     this.input.on('pointerdown', (p: Phaser.Input.Pointer, over: unknown[]) => {
       if (over.length > 0) return
       if (this.throwMode) { this.throwFood(p.worldX, p.worldY); return }

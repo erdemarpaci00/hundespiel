@@ -130,6 +130,12 @@ export class LivingDog {
     this.sprite.face(otherX >= this.pos.x ? 1 : -1)
   }
 
+  // Der Hund dreht den Kopf zum Finger, wenn er nicht gerade laeuft oder schlaeft.
+  lookAt(x: number): void {
+    if (this.resting || this.chase || this.behavior === 'wander' || this.behavior === 'sleep') return
+    this.sprite.face(x >= this.pos.x ? 1 : -1)
+  }
+
   get busyMeeting(): boolean {
     return this.loveUntil > Date.now()
   }
