@@ -23,3 +23,9 @@ test('relativeTime: Zukunft und ungültige Eingabe ergeben gerade eben', () => {
   expect(relativeTime(ago(-60_000), NOW)).toBe('gerade eben')
   expect(relativeTime('kaputt', NOW)).toBe('gerade eben')
 })
+
+test('describeActivity: neue Aktionen lesen sich als Satz', () => {
+  expect(describeActivity(entry('train'))).toBe('Anna hat Bello trainiert')
+  expect(describeActivity(entry('play'))).toBe('Anna hat Bello den Ball geworfen')
+  expect(describeActivity(entry('contest'))).toBe('Anna hat Bello zum Turnier gebracht')
+})

@@ -66,6 +66,16 @@ async function logActivity(session: Session, dogId: string, kind: ActivityKind):
   fail(error)
 }
 
+// Verlauf fuer Aktionen ohne Session-Parameter: still, ein Fehler hier darf die Aktion nicht kaputtmachen.
+async function logQuiet(dogId: string, kind: ActivityKind): Promise<void> {
+  try {
+    const { data: u } = await supabase.auth.getUser()
+    const { data: d } = await supabase.from('dogs').select('household_id').eq('id', dogId).single()
+    if (!u.user || !d) return
+    await supabase.from('activity').insert({ household_id: d.household_id, dog_id: dogId, user_id: u.user.id, kind })
+  } catch { /* Verlauf ist nur Beiwerk */ }
+}
+
 export async function adoptPuppy(session: Session, pick: Puppy, name: string): Promise<DogRecord> {
   const clean = name.trim()
   if (!clean) throw new Error('Bitte gib dem Welpen einen Namen')
@@ -145,7 +155,7 @@ export async function playWithDog(dog: DogRecord): Promise<DogRecord> {
     if (decayed.energy < PLAY_MIN_ENERGY) throw new Error(`${current.name} ist zu müde zum Spielen`)
     const { data, error } = await supabase.rpc('update_needs', { p_dog_id: current.id, p_expected: current.needsUpdatedAt, p_needs: play(decayed) })
     fail(error)
-    if (data === true) return loadDog(current.id)
+    if (data === true) { void logQuiet(current.id, 'play'); return loadDog(current.id) }
     current = await loadDog(current.id)
   }
   throw new Error('Gerade war jemand schneller, bitte nochmal tippen')
@@ -158,7 +168,7 @@ export async function groomDog(dog: DogRecord): Promise<DogRecord> {
     const decayed = applyElapsed(current.needs, Date.now() - parseTimestamp(current.needsUpdatedAt), current.personality)
     const { data, error } = await supabase.rpc('update_needs', { p_dog_id: current.id, p_expected: current.needsUpdatedAt, p_needs: groom(decayed) })
     fail(error)
-    if (data === true) return loadDog(current.id)
+    if (data === true) { void logQuiet(current.id, 'groom'); return loadDog(current.id) }
     current = await loadDog(current.id)
   }
   throw new Error('Gerade war jemand schneller, bitte nochmal tippen')
@@ -179,7 +189,7 @@ export async function trainDog(dog: DogRecord, stat: StatKey): Promise<{ dog: Do
       p_gain: gain,
     })
     fail(error)
-    if (data === true) return { dog: await loadDog(current.id), gain }
+    if (data === true) { void logQuiet(current.id, 'train'); return { dog: await loadDog(current.id), gain } }
     current = await loadDog(current.id)
   }
   throw new Error('Gerade war jemand schneller, bitte nochmal tippen')
@@ -260,7 +270,7 @@ export async function enterContest(dog: DogRecord, league: League): Promise<{ do
       p_prize: result.prize,
     })
     fail(error)
-    if (data === true) return { dog: await loadDog(current.id), result }
+    if (data === true) { void logQuiet(current.id, 'contest'); return { dog: await loadDog(current.id), result } }
     current = await loadDog(current.id)
   }
   throw new Error('Gerade war jemand schneller, bitte nochmal tippen')
@@ -292,7 +302,7 @@ export async function treatDog(dog: DogRecord): Promise<DogRecord> {
     const { data, error } = await supabase.rpc('feed_dog', { p_dog_id: current.id, p_expected: current.needsUpdatedAt, p_needs: treat(decayed), p_item: 'leckerli' })
     if (error && /kein futter/i.test(error.message ?? '')) throw new Error('Ihr habt keine Leckerli mehr, im Laden gibt es neue')
     fail(error)
-    if (data === true) return loadDog(current.id)
+    if (data === true) { void logQuiet(current.id, 'treat'); return loadDog(current.id) }
     current = await loadDog(current.id)
   }
   throw new Error('Gerade war jemand schneller, bitte nochmal tippen')
