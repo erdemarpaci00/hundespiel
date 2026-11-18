@@ -9,6 +9,7 @@ import { applyElapsed, PLAY_MIN_ENERGY, mood, moodPersonality, type Mood, type N
 import { cleanPoop, dropPoop, loadPoopsFromDb, loadRelations, recordMeeting, type Relation, careForDog, groomDog, playWithDog, loadActivity, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
 import { GARDEN_BOUNDS } from '../garden'
 import type { Session } from '../session'
+import { markVisit, readLastVisit, shouldWelcome } from '../garden/welcome'
 import { wantsPoop, type Poop } from '../garden/poop'
 import { dialogJustClosed, openDogDetail } from '../ui/dogPanels'
 import { loadEconomy } from '../economy'
@@ -50,6 +51,7 @@ export class GardenScene extends Phaser.Scene {
   private busy = false
   private throwMode = false
   private swipe = 0
+  private welcomed = false
   private heartAcc = 0
   private poops: { data: Poop; obj: Phaser.GameObjects.Container }[] = []
   private hand!: Phaser.GameObjects.Graphics
@@ -76,6 +78,7 @@ export class GardenScene extends Phaser.Scene {
     this.food = null
     this.seenActivity = null
     this.swipe = 0
+    this.welcomed = false
     this.poops = []
     // Welt ist 640x360, gerendert wird 3-fach scharf auf 1920x1080
     this.cameras.main.setZoom(3).centerOn(320, 180)
@@ -95,6 +98,9 @@ export class GardenScene extends Phaser.Scene {
     this.session = this.registry.get('session') as Session
     this.hud = createHud({ householdId: this.session.householdId, getActivity: () => this.activityLines(), travel: (k) => this.scene.start(k), current: 'garden' })
     this.hand = this.makeHand()
+    const welcome = shouldWelcome(readLastVisit(), Date.now())
+    markVisit(Date.now())
+    if (welcome) this.events.once('welcome', () => { let i = 0; for (const e of this.entries.values()) this.time.delayedCall(300 * i++, () => e.dog.cheer(4000)); this.hud.toast('Deine Hunde freuen sich, dass du wieder da bist') })
     if (location.search.includes('debug')) (window as unknown as { __dropPoop: typeof dropPoop }).__dropPoop = dropPoop
     this.time.addEvent({
       delay: 20000,
@@ -155,6 +161,7 @@ export class GardenScene extends Phaser.Scene {
       const [records, activity, relations, poops] = await Promise.all([loadDogs(this.session), loadActivity(this.session, 8), loadRelations().catch(() => this.relations), loadPoopsFromDb().catch(() => null)])
       this.relations = relations
       if (poops) this.syncPoops(poops)
+      if (!this.welcomed) { this.welcomed = true; this.events.emit('welcome') }
       this.announceNew(activity)
       this.activity = activity
       this.syncDogs(records)

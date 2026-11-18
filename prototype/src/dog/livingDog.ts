@@ -136,6 +136,15 @@ export class LivingDog {
     this.sprite.face(x >= this.pos.x ? 1 : -1)
   }
 
+  // Freude zeigen (Herz ueber dem Kopf), z.B. bei der Begruessung nach langer Abwesenheit.
+  cheer(ms: number): void {
+    if (this.resting) return
+    this.loveUntil = Date.now() + ms
+    this.behavior = 'sit'
+    this.remainingMs = ms
+    this.sprite.setPose('sit')
+  }
+
   get busyMeeting(): boolean {
     return this.loveUntil > Date.now()
   }
