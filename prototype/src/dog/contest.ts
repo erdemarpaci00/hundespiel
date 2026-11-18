@@ -124,3 +124,8 @@ export function contestWaitMinutes(d: { contestAt: string | null }, now = Date.n
   const left = 10 * 60 * 1000 - (now - new Date(d.contestAt).getTime())
   return left > 0 ? Math.ceil(left / 60000) : 0
 }
+
+// Pokalleiste fuer das Hundemenue, z.B. "Bronze 2 · Silber 1". Leer ohne Pokal.
+export function trophyShelf(trophies: Partial<Record<string, number>>): string {
+  return LEAGUES.filter((l) => (trophies[l.id] ?? 0) > 0).map((l) => `${l.name.replace('-Liga', '')} ${trophies[l.id]}`).join(' · ')
+}

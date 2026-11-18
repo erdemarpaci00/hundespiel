@@ -7,7 +7,7 @@ import { applyElapsed, type Needs } from '../dog/needs'
 import { EXERCISE, STAT_KEYS, STAT_LABEL, statValue, type StatKey } from '../dog/stats'
 import type { DogRecord } from '../dogRepo'
 import { adoptFromKennel, enterContest, trainDog, treatDog } from '../dogRepo'
-import { cupsMissing, eligible, formBonus, LEAGUES, type League } from '../dog/contest'
+import { cupsMissing, eligible, formBonus, LEAGUES, trophyShelf, type League } from '../dog/contest'
 import type { Puppy } from '../puppies'
 import type { Session } from '../session'
 import { friendlyError } from '../errors'
@@ -131,6 +131,14 @@ export function openDogDetail(dog: DogRecord, needs: Needs, bonds: { name: strin
     fl.textContent = '♥ ' + favText
     fl.style.cssText = 'margin:8px 0;font-size:13px;color:#c2185b'
     card.appendChild(fl)
+  }
+  const shelf = trophyShelf(dog.trophies)
+  if (shelf) {
+    card.appendChild(heading('Pokale'))
+    const tl = document.createElement('div')
+    tl.textContent = '🏆 ' + shelf
+    tl.style.cssText = 'font-size:14px;margin:4px 0'
+    card.appendChild(tl)
   }
   if (bonds.length > 0) {
     card.appendChild(heading('Freundschaften'))

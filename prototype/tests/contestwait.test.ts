@@ -15,3 +15,9 @@ describe('Turnier-Sperre', () => {
     expect(contestWaitMinutes(dog('2026-11-18T11:50:00Z'), now)).toBe(0)
   })
 })
+
+test('trophyShelf listet Pokale je Liga', async () => {
+  const { trophyShelf } = await import('../src/dog/contest')
+  expect(trophyShelf({})).toBe('')
+  expect(trophyShelf({ bronze: 2, gold: 1, silber: 0 })).toBe('Bronze 2 · Gold 1')
+})
