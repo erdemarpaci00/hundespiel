@@ -129,3 +129,23 @@ export function contestWaitMinutes(d: { contestAt: string | null }, now = Date.n
 export function trophyShelf(trophies: Partial<Record<string, number>>): string {
   return LEAGUES.filter((l) => (trophies[l.id] ?? 0) > 0).map((l) => `${l.name.replace('-Liga', '')} ${trophies[l.id]}`).join(' · ')
 }
+
+export type Mood = 'bereit' | 'launisch' | 'lustlos'
+
+// Ungehorsam und schlechte Laune: ein lustloser Hund bleibt oefter einfach sitzen.
+export function moodOf(i: { gehorsam: number; happiness: number }): Mood {
+  if (i.gehorsam < 25 && i.happiness < 35) return 'lustlos'
+  if (i.happiness < 30 || i.gehorsam < 15) return 'launisch'
+  return 'bereit'
+}
+
+// Wahrscheinlichkeit, dass der Hund den Wurf wirklich faengt (0.1 bis 0.97).
+export function catchChance(i: { value: number; gehorsam: number; happiness: number; q: number }): number {
+  const mood = i.happiness < 30 ? -0.15 : i.happiness >= 70 ? 0.05 : 0
+  return Math.min(0.97, Math.max(0.1, 0.15 + i.value / 200 + i.gehorsam / 250 + i.q * 0.3 + mood))
+}
+
+// Chance, dass der Hund bei diesem Wurf gar nicht erst losrennt.
+export function refuseChance(mood: Mood): number {
+  return mood === 'lustlos' ? 0.4 : mood === 'launisch' ? 0.18 : 0
+}

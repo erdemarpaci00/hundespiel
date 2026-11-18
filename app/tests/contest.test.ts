@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { duelScore, FAVORITE_BONUS, topLeague, average, cupsMissing, fitBonus, playRound, summarize, throwBonus, eligible, formBonus, LEAGUES, runContest } from '../src/dog/contest'
+import { duelScore, FAVORITE_BONUS, topLeague, average, cupsMissing, fitBonus, playRound, summarize, throwBonus, eligible, formBonus, LEAGUES, runContest, catchChance, moodOf } from '../src/dog/contest'
 
 const stats = (v: number) => ({ tempo: v, ausdauer: v, sprungkraft: v, gehorsam: v })
 const fixed = (x: number) => () => x
@@ -89,4 +89,21 @@ it('Duell: besserer Wurf und mehr Wert zaehlen', () => {
   const s = { value: 50, happiness: 50, affection: 0.5, throwQuality: 0.5 }
   expect(duelScore({ ...s, throwQuality: 1 }, () => 0.5)).toBeGreaterThan(duelScore(s, () => 0.5))
   expect(duelScore({ ...s, value: 60 }, () => 0.5) - duelScore(s, () => 0.5)).toBe(10)
+})
+
+describe('catchChance und Laune', () => {
+  it('guter Hund mit gutem Wurf faengt fast immer', () => {
+    expect(catchChance({ value: 80, gehorsam: 80, happiness: 80, q: 0.9 })).toBeGreaterThan(0.9)
+  })
+  it('schwacher, ungehorsamer Hund faengt selten', () => {
+    expect(catchChance({ value: 5, gehorsam: 5, happiness: 50, q: 0.3 })).toBeLessThan(0.45)
+  })
+  it('schlechte Laune senkt die Chance', () => {
+    const base = { value: 40, gehorsam: 40, q: 0.6 }
+    expect(catchChance({ ...base, happiness: 15 })).toBeLessThan(catchChance({ ...base, happiness: 80 }))
+  })
+  it('Laune: lustlos bei schwachen Werten und Unlust, sonst normal', () => {
+    expect(moodOf({ gehorsam: 5, happiness: 20 })).toBe('lustlos')
+    expect(moodOf({ gehorsam: 70, happiness: 80 })).toBe('bereit')
+  })
 })

@@ -2,7 +2,7 @@ import Phaser from 'phaser'
 import { DogSprite } from '../dog/dogSprite'
 import { STAT_KEYS, STAT_LABEL, statValue, type StatKey } from '../dog/stats'
 import { applyElapsed } from '../dog/needs'
-import { playRound, rivalForm, summarize, type League, type Round } from '../dog/contest'
+import { catchChance, moodOf, refuseChance, playRound, rivalForm, summarize, type League, type Round } from '../dog/contest'
 import { enterContest, type DogRecord } from '../dogRepo'
 import { parseTimestamp } from '../time'
 import { cue } from '../feedback'
@@ -143,6 +143,21 @@ export class ArenaScene extends Phaser.Scene {
     this.dog.setPose('sit')
   }
 
+  // Der Hund bleibt sitzen, schaut dem Frisbee nach und waehlt lieber ein Nickerchen.
+  private async refuse(land: { x: number; y: number }): Promise<void> {
+    const disc = this.add.graphics().setDepth(4000)
+    disc.fillStyle(0xe8453c, 1).fillEllipse(0, 0, 14, 5.5).fillStyle(0xffffff, 1).fillEllipse(0, -0.8, 8, 2.4)
+    this.dog.face(land.x > this.dog.container.x ? 1 : -1)
+    await new Promise<void>((res) => this.tweens.addCounter({ from: 0, to: 1, duration: 1500, onUpdate: (tw) => {
+      const v = tw.getValue() ?? 0
+      disc.setPosition(40 + (land.x - 40) * v, 320 + (land.y - 320) * v - Math.sin(v * Math.PI) * 110).setAngle(v * 1080)
+    }, onComplete: () => res() }))
+    this.dog.setPose('sleep')
+    await this.wait(900)
+    disc.destroy()
+    this.dog.setPose('sit')
+  }
+
   private async run(): Promise<void> {
     const rec = this.record
     const needs = applyElapsed(rec.needs, Date.now() - parseTimestamp(rec.needsUpdatedAt), rec.personality)
@@ -170,17 +185,21 @@ export class ArenaScene extends Phaser.Scene {
         }
         const round = playRound({ stat, value, league: this.league, form, happiness: needs.happiness, affection: rec.personality.affection, throwQuality: q }, Math.random)
         round.rival = top
-        // Ungeuebte Hunde fangen nicht jeden Wurf: Wert und Wurfqualitaet entscheiden.
-        const caught = Math.random() < Math.min(0.97, Math.max(0.2, 0.3 + value / 140 + q * 0.35))
-        if (!caught) round.dog = Math.max(0, round.dog - 18)
+        // Ungeuebte oder lustlose Hunde fangen nicht jeden Wurf; manchmal rennen sie gar nicht erst los.
+        const gehorsam = statValue(rec.look.breed, rec.training, 'gehorsam')
+        const mood = moodOf({ gehorsam, happiness: needs.happiness })
+        const refuses = Math.random() < refuseChance(mood)
+        const caught = !refuses && Math.random() < catchChance({ value, gehorsam, happiness: needs.happiness, q })
+        if (!caught) round.dog = Math.max(0, round.dog - (refuses ? 30 : 18))
         round.won = round.dog > round.rival
         rounds.push(round)
-        await this.flight(land, caught)
+        if (refuses) await this.refuse(land)
+        else await this.flight(land, caught)
         this.mine.push(String(Math.round(round.dog)))
         this.myTotal += round.dog
         this.refreshBoard()
         cue(round.won ? 'good' : 'bad')
-        this.say(caught ? (q > 0.8 ? 'Perfekter Wurf!' : 'Gefangen!') : 'Daneben, nicht gefangen', caught ? '#8dff8d' : '#ffb3b3')
+        this.say(refuses ? `${this.record.name} hat keine Lust` : caught ? (q > 0.8 ? 'Perfekter Wurf!' : 'Gefangen!') : 'Daneben, nicht gefangen', caught ? '#8dff8d' : '#ffb3b3')
         await this.wait(1500)
       }
       const result = summarize(this.league, rounds)
