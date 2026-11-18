@@ -189,6 +189,7 @@ export class LivingDog {
   }
 
   get scale(): number { return this.size }
+  get facing(): -1 | 1 { return this.sprite.getDir() }
   get x(): number { return this.pos.x }
   get y(): number { return this.pos.y }
 
