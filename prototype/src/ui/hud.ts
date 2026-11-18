@@ -127,16 +127,26 @@ export function createHud(actions: HudActions): { toast(text: string): void; ref
   const poll = window.setInterval(() => { refresh(); refreshBook() }, 15000)
   const stop = new MutationObserver(() => { if (!document.body.contains(statsEl)) { window.clearInterval(poll); stop.disconnect() } })
   stop.observe(document.body, { childList: true, subtree: true })
-  let timer: number | undefined
+  // Meldungen laufen nacheinander (mindestens 2 s je Meldung), damit keine verschluckt wird.
+  const queue: string[] = []
+  let busy = false
+  const next = (): void => {
+    const text = queue.shift()
+    if (text === undefined) { busy = false; toastEl.style.opacity = '0'; return }
+    busy = true
+    toastEl.textContent = text
+    toastEl.style.opacity = '1'
+    window.setTimeout(next, queue.length > 0 ? 2000 : 4000)
+  }
   return {
     refresh,
     setTool,
     showHotbar(v: boolean): void { hotbar.style.display = v ? 'flex' : 'none' },
     toast(text: string): void {
-      toastEl.textContent = text
-      toastEl.style.opacity = '1'
-      window.clearTimeout(timer)
-      timer = window.setTimeout(() => { toastEl.style.opacity = '0' }, 4000)
+      if (queue[queue.length - 1] === text || (!busy && toastEl.textContent === text && toastEl.style.opacity === '1')) return
+      queue.push(text)
+      if (queue.length > 4) queue.shift()
+      if (!busy) next()
     },
   }
 }
