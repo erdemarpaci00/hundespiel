@@ -39,3 +39,11 @@ describe('play', () => {
     expect(play({ hunger: 2, energy: 5, happiness: 95 })).toEqual({ hunger: 10, energy: 10, happiness: 100 })
   })
 })
+
+import { groom } from '../src/dog/needs'
+describe('groom', () => {
+  it('hebt nur die Laune', () => {
+    expect(groom({ hunger: 80, energy: 60, happiness: 50 })).toEqual({ hunger: 80, energy: 60, happiness: 62 })
+    expect(groom({ hunger: 80, energy: 60, happiness: 98 }).happiness).toBe(100)
+  })
+})

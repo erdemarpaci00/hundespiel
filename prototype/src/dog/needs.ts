@@ -66,3 +66,8 @@ export const PLAY_MIN_ENERGY = 25
 export function play(n: Needs): Needs {
   return { hunger: clamp(n.hunger - 4), energy: clamp(n.energy - 12), happiness: clamp(n.happiness + 15) }
 }
+
+// Buersten entspannt: Laune steigt, sonst bleibt alles gleich.
+export function groom(n: Needs): Needs {
+  return { ...n, happiness: clamp(n.happiness + 12) }
+}
