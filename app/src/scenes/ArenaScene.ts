@@ -43,7 +43,7 @@ export class ArenaScene extends Phaser.Scene {
     this.dog = new DogSprite(this, this.record.look, 140, 285)
     this.dog.setPose('sit')
     this.dog.container.setDepth(285)
-    this.board = this.add.text(14, 12, '', { fontSize: '9px', color: '#ffffff', backgroundColor: 'rgba(20,30,50,0.85)', padding: { x: 7, y: 5 }, lineSpacing: 3, resolution: 3, fontFamily: FONT }).setDepth(4000)
+    this.board = this.add.text(112, 10, '', { fontSize: '9px', color: '#ffffff', backgroundColor: 'rgba(20,30,50,0.85)', padding: { x: 7, y: 5 }, lineSpacing: 3, resolution: 3, fontFamily: FONT }).setDepth(4000)
     this.banner = this.add.text(320, 140, '', { fontSize: '14px', color: '#ffffff', stroke: '#1d2b44', strokeThickness: 4, resolution: 3, fontFamily: FONT, align: 'center' }).setOrigin(0.5).setDepth(4000)
     this.refreshBoard()
     void this.run()

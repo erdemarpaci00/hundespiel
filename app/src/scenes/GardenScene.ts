@@ -706,6 +706,7 @@ export class GardenScene extends Phaser.Scene {
     if (needs.energy < CONTEST_MIN_ENERGY) { this.hud.toast(`${record.name} ist zu müde für ein Turnier`); return }
     const wait = contestWaitMinutes(record)
     if (wait > 0) { this.hud.toast(`${record.name} verschnauft noch, wieder in ${wait} Min`); return }
+    this.hud.showHotbar(false)
     this.scene.start('arena', { record, league })
   }
 
