@@ -9,6 +9,7 @@ import { applyElapsed, PLAY_MIN_ENERGY, mood, moodPersonality, type Mood, type N
 import { loadRelations, recordMeeting, type Relation, careForDog, groomDog, playWithDog, loadActivity, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
 import { GARDEN_BOUNDS } from '../garden'
 import type { Session } from '../session'
+import { loadPoops, savePoops, wantsPoop, type Poop } from '../garden/poop'
 import { openDogDetail } from '../ui/dogPanels'
 import { loadEconomy } from '../economy'
 import { createHud } from '../ui/hud'
@@ -49,6 +50,9 @@ export class GardenScene extends Phaser.Scene {
   private busy = false
   private throwMode = false
   private swipe = 0
+  private heartAcc = 0
+  private poops: { data: Poop; obj: Phaser.GameObjects.Container }[] = []
+  private hand!: Phaser.GameObjects.Graphics
   private relations: Relation[] = []
   private ballFor: string | null = null
   private food: Phaser.GameObjects.Graphics | null = null
@@ -72,6 +76,7 @@ export class GardenScene extends Phaser.Scene {
     this.food = null
     this.seenActivity = null
     this.swipe = 0
+    this.poops = []
     // Welt ist 640x360, gerendert wird 3-fach scharf auf 1920x1080
     this.cameras.main.setZoom(3).centerOn(320, 180)
     const backdrop = drawScenery(this)
@@ -89,14 +94,31 @@ export class GardenScene extends Phaser.Scene {
 
     this.session = this.registry.get('session') as Session
     this.hud = createHud({ householdId: this.session.householdId, getActivity: () => this.activityLines(), travel: (k) => this.scene.start(k), current: 'garden' })
-    // Ins Leere tippen schliesst die Sprechblase.
+    this.hand = this.makeHand()
+    for (const p of loadPoops(this.session.householdId)) this.addPoop(p.x, p.y, false)
+    this.time.addEvent({
+      delay: 20000,
+      loop: true,
+      callback: () => {
+        for (const e of this.entries.values()) {
+          if (!e.dog.sleeping && wantsPoop(Math.random, true, this.poops.length)) { this.addPoop(e.dog.x - 14, e.dog.y + 2, true); break }
+        }
+      },
+    })
+    this.input.on('pointerup', () => this.hand.setVisible(false))
     // Wischen ueber einen Hund streichelt ihn (ca. 120 Pixel Weg ueber dem Hund, einmal pro Wisch).
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
       for (const e of this.entries.values()) if (Math.hypot(p.worldX - e.dog.x, p.worldY - e.dog.y) < 110) e.dog.lookAt(p.worldX)
+      this.hand.setVisible(false)
       if (!p.isDown || this.throwMode || this.ballFor || this.busy) { this.swipe = 0; return }
       const hit = [...this.entries.values()].find((e) => Math.abs(p.worldX - e.dog.x) < 40 * e.dog.scale + 10 && Math.abs(p.worldY - (e.dog.y - 25 * e.dog.scale)) < 35)
       if (!hit) { this.swipe = 0; return }
-      this.swipe += Math.hypot(p.x - p.prevPosition.x, p.y - p.prevPosition.y) / this.cameras.main.zoom
+      // Die Hand folgt dem Finger, solange er ueber dem Hund wischt.
+      this.hand.setPosition(p.worldX, p.worldY).setAngle(Math.sin(this.time.now / 90) * 14).setVisible(true)
+      const step = Math.hypot(p.x - p.prevPosition.x, p.y - p.prevPosition.y) / this.cameras.main.zoom
+      this.swipe += step
+      this.heartAcc += step
+      if (this.heartAcc > 30) { this.heartAcc = 0; this.heartsAt(hit.dog.x + (Math.random() - 0.5) * 24, hit.dog.y - 55 * hit.dog.scale) }
       if (this.swipe > 120) {
         this.swipe = 0
         this.closeBubble()
@@ -174,6 +196,42 @@ export class GardenScene extends Phaser.Scene {
       dog.onTap(() => this.openBubble(record.id))
       this.entries.set(record.id, { record, dog })
     })
+  }
+
+  // Weisser Handschuh als Streichel-Symbol: Handflaeche plus vier Finger und Daumen.
+  private makeHand(): Phaser.GameObjects.Graphics {
+    const g = this.add.graphics().setDepth(3000).setVisible(false)
+    g.fillStyle(0xffffff, 0.95).lineStyle(1, 0x2b2b2b, 0.8)
+    g.fillRoundedRect(-7, -4, 14, 12, 4).strokeRoundedRect(-7, -4, 14, 12, 4)
+    for (let i = 0; i < 4; i++) g.fillRoundedRect(-7 + i * 3.6, -13, 3.2, 11, 1.5).strokeRoundedRect(-7 + i * 3.6, -13, 3.2, 11, 1.5)
+    g.fillRoundedRect(-11, -2, 5, 8, 2.5).strokeRoundedRect(-11, -2, 5, 8, 2.5)
+    return g
+  }
+
+  private heartsAt(x: number, y: number): void {
+    for (let i = 0; i < 3; i++) {
+      const h = this.add.text(x + (i - 1) * 9, y, '♥', { fontSize: '12px', color: '#e0527a', resolution: 3 }).setOrigin(0.5).setDepth(3001)
+      this.tweens.add({ targets: h, y: y - 24 - i * 5, alpha: 0, duration: 900, delay: i * 120, onComplete: () => h.destroy() })
+    }
+  }
+
+  // Haeufchen: braune Wirbel, antippen raeumt auf.
+  private addPoop(x: number, y: number, persist: boolean): void {
+    const c = this.add.container(x, y).setDepth(y).setSize(22, 22)
+    const g = this.add.graphics()
+    g.fillStyle(0x6b4423).fillEllipse(0, 3, 14, 6).fillEllipse(0, -1, 10, 5).fillEllipse(0, -5, 6, 4)
+    g.fillStyle(0xffffff, 0.35).fillEllipse(-2, -6, 2, 1)
+    c.add(g)
+    c.setInteractive(new Phaser.Geom.Circle(11, 11, 14), Phaser.Geom.Circle.Contains)
+    const entry = { data: { x, y }, obj: c }
+    c.on('pointerdown', () => {
+      this.poops = this.poops.filter((p) => p !== entry)
+      savePoops(this.session.householdId, this.poops.map((p) => p.data))
+      this.tweens.add({ targets: c, scale: 0, alpha: 0, duration: 200, onComplete: () => c.destroy() })
+      this.hud.toast('Aufgeräumt')
+    })
+    this.poops.push(entry)
+    if (persist) savePoops(this.session.householdId, this.poops.map((p) => p.data))
   }
 
   private bondsOf(id: string): { name: string; meetings: number }[] {
@@ -425,6 +483,8 @@ export class GardenScene extends Phaser.Scene {
     this.updateBubbleText()
     try {
       await careForDog(this.session, sel.record, action)
+      const dogE = this.entries.get(sel.record.id)
+      if (action === 'pet' && dogE) this.heartsAt(dogE.dog.x, dogE.dog.y - 60 * dogE.dog.scale)
       this.hud.toast(action === 'feed' ? `${sel.record.name} frisst und ist satt` : `${sel.record.name} genießt das Streicheln`)
       await this.reload()
       this.hud.refresh()
