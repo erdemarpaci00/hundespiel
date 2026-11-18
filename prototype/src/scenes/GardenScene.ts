@@ -542,22 +542,69 @@ export class GardenScene extends Phaser.Scene {
     })
   }
 
-  // Frisbee fliegt im Bogen vom Spieler (unten Mitte) zum Landepunkt.
-  private flyFrisbee(to: { x: number; y: number }): Promise<Phaser.GameObjects.Graphics> {
+  // Frisbee im hohen Bogen: der Hund rennt unter die Flugbahn, springt und faengt ihn in der Luft (oder springt daneben).
+  private async airCatch(e: Entry, land: { x: number; y: number }, caught: boolean): Promise<void> {
     const from = { x: 320, y: 292 }
-    const g = this.add.graphics().setDepth(2999)
+    const PEAK = 105
+    const CATCH = 0.78
+    const catchPt = { x: from.x + (land.x - from.x) * CATCH, y: from.y + (land.y - from.y) * CATCH }
+    const dist = Math.hypot(catchPt.x - e.dog.x, catchPt.y - e.dog.y)
+    const dur = Math.min(3000, Math.max(1500, (dist / 0.11) * 0.9 + 500))
+    const g = this.add.graphics().setDepth(3000)
     g.fillStyle(0xe8453c, 1).fillEllipse(0, 0, 9, 3.5).fillStyle(0xffffff, 1).fillEllipse(0, -0.5, 5, 1.6)
-    g.setPosition(from.x, from.y)
-    return new Promise((resolve) => {
-      this.tweens.addCounter({
-        from: 0, to: 1, duration: 700,
-        onUpdate: (tw) => {
-          const v = tw.getValue() ?? 0
-          g.setPosition(from.x + (to.x - from.x) * v, from.y + (to.y - from.y) * v - Math.sin(v * Math.PI) * 70).setAngle(v * 720)
-        },
-        onComplete: () => { g.setPosition(to.x, to.y).setAngle(0).setDepth(to.y - 1); resolve(g) },
-      })
+    const shadow = this.add.ellipse(from.x, from.y, 8, 3, 0x000000, 0.25).setDepth(1)
+    const place = (v: number): void => {
+      const x = from.x + (land.x - from.x) * v
+      const y = from.y + (land.y - from.y) * v
+      g.setPosition(x, y - Math.sin(v * Math.PI) * PEAK).setAngle(v * 1080)
+      shadow.setPosition(x, y)
+    }
+    place(0)
+    const flight = new Promise<void>((resolve) => {
+      this.tweens.addCounter({ from: 0, to: CATCH, duration: dur * CATCH, onUpdate: (tw) => place(tw.getValue() ?? 0), onComplete: () => resolve() })
     })
+    const run = this.dogRunsTo(e, catchPt)
+    await Promise.all([flight, run])
+    const k = e.record.look.size * e.dog.scale
+    const A = Math.max(14, Math.sin(CATCH * Math.PI) * PEAK - 40 * k)
+    const jumpMs = 620
+    cue('soft')
+    if (caught) {
+      // Sprung: Hund und Frisbee treffen sich auf Maulhoehe, danach traegt er ihn im Maul.
+      await new Promise<void>((resolve) => {
+        this.tweens.addCounter({
+          from: 0, to: 1, duration: jumpMs,
+          onUpdate: (tw) => {
+            const v = tw.getValue() ?? 0
+            e.dog.setAir(Math.sin(v * Math.PI) * A)
+            const m = this.mouth(e)
+            g.setPosition(m.x, m.y - e.dog.airNow).setAngle(0).setDepth(e.dog.y + 1)
+            shadow.setPosition(e.dog.x, e.dog.y)
+          },
+          onComplete: () => { e.dog.setAir(0); resolve() },
+        })
+      })
+      const m = this.mouth(e)
+      g.setPosition(m.x, m.y)
+      await new Promise((r) => this.time.delayedCall(450, () => r(null)))
+    } else {
+      // Zu frueh oder zu spaet abgesprungen: der Frisbee segelt darueber und landet im Gras.
+      this.tweens.addCounter({
+        from: CATCH, to: 1, duration: dur * (1 - CATCH),
+        onUpdate: (tw) => place(tw.getValue() ?? 0),
+        onComplete: () => { g.setPosition(land.x, land.y).setAngle(0).setDepth(land.y - 1); shadow.setPosition(land.x, land.y) },
+      })
+      await new Promise<void>((resolve) => {
+        this.tweens.addCounter({
+          from: 0, to: 1, duration: jumpMs,
+          onUpdate: (tw) => e.dog.setAir(Math.sin((tw.getValue() ?? 0) * Math.PI) * A * 0.8),
+          onComplete: () => { e.dog.setAir(0); resolve() },
+        })
+      })
+      await new Promise((r) => this.time.delayedCall(dur * (1 - CATCH) + 200, () => r(null)))
+    }
+    g.destroy()
+    shadow.destroy()
   }
 
   private dogRunsTo(e: { dog: LivingDog }, to: { x: number; y: number }): Promise<void> {
@@ -602,11 +649,9 @@ export class GardenScene extends Phaser.Scene {
           x: Math.min(GARDEN_BOUNDS.x + GARDEN_BOUNDS.w, Math.max(GARDEN_BOUNDS.x, tx + Math.cos(ang) * miss)),
           y: Math.min(GARDEN_BOUNDS.y + GARDEN_BOUNDS.h, Math.max(GARDEN_BOUNDS.y, ty + Math.sin(ang) * miss * 0.5)),
         }
-        const disc = await this.flyFrisbee(land)
-        await this.dogRunsTo(e, land)
         const round = playRound({ stat, value: statValue(record.look.breed, record.training, stat), league, form, happiness: needs.happiness, affection: record.personality.affection, throwQuality: q, favorite: favoriteOf(this.affection[record.id] ?? {}) === this.session.displayName }, Math.random)
         rounds.push(round)
-        disc.destroy()
+        await this.airCatch(e, land, round.won)
         cue(round.won ? 'good' : 'bad')
         if (round.won) { e.dog.cheer(1400); this.heartsAt(e.dog.x, e.dog.y - 60 * e.dog.scale); this.floatText(e.dog.x, e.dog.y - 70 * e.dog.scale, q > 0.8 ? 'Perfekt gefangen!' : 'Gefangen!', '#8dff8d') }
         else this.floatText(e.dog.x, e.dog.y - 70 * e.dog.scale, q < 0.4 ? 'Zu weit geworfen' : 'Daneben', '#ffb3b3')
@@ -658,9 +703,7 @@ export class GardenScene extends Phaser.Scene {
             x: Math.min(GARDEN_BOUNDS.x + GARDEN_BOUNDS.w, Math.max(GARDEN_BOUNDS.x, tx + Math.cos(ang) * miss)),
             y: Math.min(GARDEN_BOUNDS.y + GARDEN_BOUNDS.h, Math.max(GARDEN_BOUNDS.y, ty + Math.sin(ang) * miss * 0.5)),
           }
-          const disc = await this.flyFrisbee(land)
-          await this.dogRunsTo(e, land)
-          disc.destroy()
+          await this.airCatch(e, land, q >= 0.4)
           const sc = duelScore({ value: statValue(e.record.look.breed, e.record.training, stat), happiness: this.currentNeeds(e).happiness, affection: e.record.personality.affection, throwQuality: q, favorite: favoriteOf(this.affection[e.record.id] ?? {}) === this.session.displayName }, Math.random)
           scores.push(sc)
           cue(q < 0.4 ? 'bad' : 'good')

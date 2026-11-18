@@ -66,6 +66,8 @@ export class LivingDog {
     this.next()
   }
 
+  private air = 0
+
   private next(): void {
     this.behavior = this.resting ? 'sleep' : pickBehavior(this.personality, this.rng)
     this.remainingMs = behaviorDuration(this.behavior, this.personality, this.rng)
@@ -91,7 +93,7 @@ export class LivingDog {
       } else if (arrived && this.remainingMs > 0) this.target = nextTarget(this.bounds, this.pos, 140, this.rng)
     }
     if (this.remainingMs <= 0) this.next()
-    this.sprite.container.setPosition(this.pos.x, this.pos.y).setDepth(this.pos.y)
+    this.sprite.container.setPosition(this.pos.x, this.pos.y - this.air).setDepth(this.pos.y)
     this.sprite.update(dt)
     this.tickBliss(dt)
     this.pulse += dt
@@ -187,6 +189,10 @@ export class LivingDog {
     this.chase = null
     this.next()
   }
+
+  // Hoehe ueber dem Boden in Welt-Einheiten (Sprung), nur die Zeichnung hebt ab.
+  setAir(h: number): void { this.air = h }
+  get airNow(): number { return this.air }
 
   get scale(): number { return this.size }
   get facing(): -1 | 1 { return this.sprite.getDir() }
