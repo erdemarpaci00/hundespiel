@@ -144,3 +144,13 @@ Das Datenmodell ist von Schritt 1 an für mehrere Hunde und Persönlichkeiten au
 - Tageszeit nach Ortszeit des Handys: nachts (22 bis 6 Uhr) dunkel mit Mond und Sternen, die Hunde schlafen. Morgens und abends getönt.
 - Wetter (Sonne, Wolken, Regen) hängt nur von der Weltzeit in 3-Stunden-Blöcken ab, beide Handys sehen dasselbe.
 - Zum Testen: Adresse mit `?debug&hour=23&weather=rain`.
+
+## Nachtleben, Training, Adoption, Spielen (umgesetzt)
+
+- Nachts schlafen die Hunde und lassen sich wecken (nur kurz, dann sind sie müde). Manche wehren sich, unruhige Hunde verlangen von selbst einen Nachtspaziergang. Fremde Hunde im Park sind auch nachts wach, im Hundeheim schlafen sie.
+- Jeder Hund hat vier Werte (Tempo, Ausdauer, Sprungkraft, Gehorsam). Startwert aus der Rasse (bis 60), Training addiert bis 100. Eine Übung gibt 1 bis 3 Punkte je nach Lernfreude, kostet 20 Kraft und höchstens alle 20 Sekunden pro Hund (`train_dog`, Datenbank prüft).
+- Antippen zeigt einen Ring runder Symbole um den Hund (Futter werfen, Streicheln, Ball, Details). Die Stimmung steht kurz im Namen, hungrige und traurige Hunde zeigen eine Denkblase.
+- Futter werfen: Tippen in den Garten, der erste hungrige Hund, der ankommt, frisst (Vorrat sinkt per `feed_dog`). Der Wurf gilt nur auf dem Handy des Werfenden, der andere sieht das Ergebnis über den Live-Abgleich.
+- Ball: braucht den Ball aus dem Laden, der Hund holt ihn, Laune steigt, Kraft sinkt.
+- Adoption im Hundeheim: 50 Münzen, höchstens vier Hunde pro Haushalt (`adopt_dog`). Direktes Einfügen weiterer Hunde ist per Regel gesperrt.
+- Noch offen: Streicheln per Wischen, Bürste, echtes Altern, Beziehungen zwischen Hunden, Wettkämpfe.
