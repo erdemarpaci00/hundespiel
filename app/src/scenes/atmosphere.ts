@@ -15,6 +15,7 @@ export function createAtmosphere(scene: Phaser.Scene, outdoor: boolean, backdrop
   const sky = scene.add.graphics().setDepth(1)
   const rain = scene.add.graphics().setDepth(901)
   const drops = Array.from({ length: 70 }, (_, i) => ({ x: (i * 97) % 640, y: (i * 53) % 360, v: 0.35 + (i % 5) * 0.05 }))
+  const SIDE: Record<string, string> = { day: '#6fc45a', dusk: '#4f8a45', dawn: '#5fa850', night: '#1f3a2a' }
   let phase: Phase = 'day'
   let weather: Weather = 'sun'
   let sinceCheck = 99999
@@ -57,6 +58,7 @@ export function createAtmosphere(scene: Phaser.Scene, outdoor: boolean, backdrop
           drawn = true
           phase = p
           weather = w
+          try { document.body.style.background = SIDE[phase] ?? SIDE.day } catch { /* egal */ }
           redraw()
         }
       }
