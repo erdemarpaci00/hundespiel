@@ -316,3 +316,22 @@ export async function findTreasure(dogId: string): Promise<{ coins: number; what
   const d = data as { coins?: number; what?: string } | null
   return d && typeof d.coins === 'number' ? { coins: d.coins, what: String(d.what ?? 'etwas') } : null
 }
+
+// Zuwendungen (ohne Aufnahme) der letzten 7 Tage: Hund-Id -> Name -> Anzahl.
+export async function loadAffection(session: Session): Promise<Record<string, Record<string, number>>> {
+  const since = new Date(Date.now() - 7 * 86400_000).toISOString()
+  const [acts, members] = await Promise.all([
+    supabase.from('activity').select('dog_id, user_id, kind').eq('household_id', session.householdId).gte('created_at', since).neq('kind', 'adopt').limit(1000),
+    supabase.from('members').select('user_id, display_name').eq('household_id', session.householdId),
+  ])
+  fail(acts.error)
+  fail(members.error)
+  const names = new Map((members.data ?? []).map((m) => [m.user_id as string, m.display_name as string]))
+  const out: Record<string, Record<string, number>> = {}
+  for (const a of acts.data ?? []) {
+    const who = names.get(a.user_id as string) ?? 'Jemand'
+    const d = (out[a.dog_id as string] ??= {})
+    d[who] = (d[who] ?? 0) + 1
+  }
+  return out
+}

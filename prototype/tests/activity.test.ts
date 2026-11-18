@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { describeActivity, relativeTime, type ActivityEntry } from '../src/activity'
+import { describeActivity, favoriteOf, favoriteLine, relativeTime, type ActivityEntry } from '../src/activity'
 
 const entry = (kind: ActivityEntry['kind']): ActivityEntry => ({ id: '1', kind, userName: 'Anna', dogName: 'Bello', at: '2026-11-17T10:00:00Z' })
 
@@ -28,4 +28,13 @@ test('describeActivity: neue Aktionen lesen sich als Satz', () => {
   expect(describeActivity(entry('train'))).toBe('Anna hat Bello trainiert')
   expect(describeActivity(entry('play'))).toBe('Anna hat Bello den Ball geworfen')
   expect(describeActivity(entry('contest'))).toBe('Anna hat Bello zum Turnier gebracht')
+})
+
+test('Lieblingsmensch: klar, knapp und leer', () => {
+  expect(favoriteOf({})).toBeNull()
+  expect(favoriteOf({ Erdem: 6, Frau: 2 })).toBe('Erdem')
+  expect(favoriteOf({ Erdem: 4, Frau: 3 })).toBe('beide')
+  expect(favoriteLine('Bello', 'Erdem')).toBe('Bello hängt gerade mehr an Erdem')
+  expect(favoriteLine('Bello', 'beide')).toContain('beide')
+  expect(favoriteLine('Bello', null)).toBeNull()
 })

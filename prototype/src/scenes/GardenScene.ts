@@ -1,12 +1,12 @@
 import { parseTimestamp } from '../time'
 import Phaser from 'phaser'
-import { describeActivity, relativeTime, type ActivityEntry } from '../activity'
+import { describeActivity, favoriteOf, relativeTime, type ActivityEntry } from '../activity'
 import { DogSprite, type Pose } from '../dog/dogSprite'
 import { ageDays, ageStage } from '../dog/age'
 import { LivingDog } from '../dog/livingDog'
 import { randomLook } from '../dog/look'
 import { applyElapsed, PLAY_MIN_ENERGY, mood, moodPersonality, type Mood, type Needs } from '../dog/needs'
-import { enterContest, cleanPoop, dropPoop, findTreasure, loadPoopsFromDb, loadRelations, recordMeeting, type Relation, careForDog, groomDog, playWithDog, loadActivity, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
+import { enterContest, cleanPoop, dropPoop, findTreasure, loadPoopsFromDb, loadRelations, recordMeeting, type Relation, careForDog, groomDog, playWithDog, loadActivity, loadAffection, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
 import { GARDEN_BOUNDS } from '../garden'
 import type { Session } from '../session'
 import { markVisit, readLastVisit, shouldWelcome } from '../garden/welcome'
@@ -49,6 +49,7 @@ export class GardenScene extends Phaser.Scene {
   private hud!: ReturnType<typeof createHud>
   private selectedId: string | null = null
   private activity: ActivityEntry[] = []
+  private affection: Record<string, Record<string, number>> = {}
   private seenActivity: Set<string> | null = null
   private bubble: Bubble | null = null
   private busy = false
@@ -221,6 +222,7 @@ export class GardenScene extends Phaser.Scene {
   private async reload(): Promise<void> {
     try {
       const [records, activity, relations, poops] = await Promise.all([loadDogs(this.session), loadActivity(this.session, 8), loadRelations().catch(() => this.relations), loadPoopsFromDb().catch(() => null)])
+      this.affection = await loadAffection(this.session).catch(() => this.affection)
       this.relations = relations
       if (poops) this.syncPoops(poops)
       if (!this.welcomed) { this.welcomed = true; this.events.emit('welcome') }
@@ -361,7 +363,7 @@ export class GardenScene extends Phaser.Scene {
     for (const e of this.entries.values()) {
       const m = mood(this.currentNeeds(e))
       e.dog.setPersonality(moodPersonality(e.record.personality, m))
-      e.dog.setFeeling(m === 'happy' ? 'happy' : m === 'sad' || m === 'hungry' ? 'sad' : 'ok')
+      e.dog.setFeeling(m === 'happy' || (m === 'ok' && favoriteOf(this.affection[e.record.id] ?? {}) === this.session.displayName) ? 'happy' : m === 'sad' || m === 'hungry' ? 'sad' : 'ok')
       const w = this.currentWish(e)
       e.dog.setEmote(m === 'hungry' ? 'hungry' : m === 'sad' ? 'sad' : w ? (`wish-${w}` as const) : null)
       e.dog.setResting(this.atmosphere.isNight() && !isRestless(e.record.id, e.record.personality, new Date()))
@@ -424,9 +426,9 @@ export class GardenScene extends Phaser.Scene {
     const box = this.bubble.box
     box.removeAll(true)
     const actions: [Action, () => void][] =
-      state === 'asleep' ? [['wake', () => this.tryWake(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id), () => { this.hud.refresh(); void this.reload() }, (d, l) => void this.playFrisbee(d, l))]]
-      : state === 'restless' ? [['walk', () => this.scene.start('walk')], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id), () => { this.hud.refresh(); void this.reload() }, (d, l) => void this.playFrisbee(d, l))]]
-      : [['feed', () => this.startThrow()], ['pet', () => void this.care('pet')], ['ball', () => void this.startBall(e.record.id)], ['brush', () => void this.brush(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id), () => { this.hud.refresh(); void this.reload() }, (d, l) => void this.playFrisbee(d, l))]]
+      state === 'asleep' ? [['wake', () => this.tryWake(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id), () => { this.hud.refresh(); void this.reload() }, (d, l) => void this.playFrisbee(d, l), favoriteOf(this.affection[e.record.id] ?? {}))]]
+      : state === 'restless' ? [['walk', () => this.scene.start('walk')], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id), () => { this.hud.refresh(); void this.reload() }, (d, l) => void this.playFrisbee(d, l), favoriteOf(this.affection[e.record.id] ?? {}))]]
+      : [['feed', () => this.startThrow()], ['pet', () => void this.care('pet')], ['ball', () => void this.startBall(e.record.id)], ['brush', () => void this.brush(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id), () => { this.hud.refresh(); void this.reload() }, (d, l) => void this.playFrisbee(d, l), favoriteOf(this.affection[e.record.id] ?? {}))]]
     const n = actions.length
     actions.forEach(([kind, fn], i) => {
       const u = n === 1 ? 0 : (i / (n - 1)) * 2 - 1

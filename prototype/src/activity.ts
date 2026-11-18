@@ -36,3 +36,16 @@ export function relativeTime(iso: string, nowMs: number): string {
   const days = Math.floor(hours / 24)
   return `vor ${days} ${days === 1 ? 'Tag' : 'Tagen'}`
 }
+
+// Wem der Hund gerade mehr anhaengt: Zuwendungen der letzten 7 Tage je Person. Knapp (Differenz unter 2) = gleich.
+export function favoriteOf(counts: Record<string, number>): string | null {
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1])
+  if (sorted.length === 0 || sorted[0][1] === 0) return null
+  if (sorted.length > 1 && sorted[0][1] - sorted[1][1] < 2) return 'beide'
+  return sorted[0][0]
+}
+
+export function favoriteLine(dogName: string, fav: string | null): string | null {
+  if (!fav) return null
+  return fav === 'beide' ? `${dogName} mag euch beide gleich gern` : `${dogName} hängt gerade mehr an ${fav}`
+}

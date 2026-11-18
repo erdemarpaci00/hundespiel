@@ -1,3 +1,4 @@
+import { favoriteLine } from '../activity'
 import { bondLabel } from '../dog/bond'
 import { ageDays, ageLabel } from '../dog/age'
 import { parseTimestamp } from '../time'
@@ -67,7 +68,7 @@ const TRAITS: [keyof DogRecord['personality'], string][] = [
 ]
 
 // Alles ueber einen Hund: Rasse, Charakter, Befinden, Werte. Nur auf Wunsch sichtbar.
-export function openDogDetail(dog: DogRecord, needs: Needs, bonds: { name: string; meetings: number }[] = [], onChange?: (d: DogRecord) => void, playContest?: PlayContest): void {
+export function openDogDetail(dog: DogRecord, needs: Needs, bonds: { name: string; meetings: number }[] = [], onChange?: (d: DogRecord) => void, playContest?: PlayContest, favorite?: string | null): void {
   const { overlay: o, card } = overlay()
   const h = document.createElement('h1')
   const breed = dog.look.breed ? breedById(dog.look.breed).name : 'Mischling'
@@ -81,6 +82,13 @@ export function openDogDetail(dog: DogRecord, needs: Needs, bonds: { name: strin
   for (const [k, label] of TRAITS) card.appendChild(row(label, dog.personality[k] * 100))
   card.appendChild(heading('Befinden'))
   card.append(row('Sattheit', needs.hunger), row('Kraft', needs.energy), row('Laune', needs.happiness))
+  const favText = favoriteLine(dog.name, favorite ?? null)
+  if (favText) {
+    const fl = document.createElement('div')
+    fl.textContent = '♥ ' + favText
+    fl.style.cssText = 'margin:8px 0;font-size:13px;color:#c2185b'
+    card.appendChild(fl)
+  }
   if (bonds.length > 0) {
     card.appendChild(heading('Freundschaften'))
     for (const b of bonds) {
