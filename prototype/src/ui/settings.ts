@@ -1,4 +1,5 @@
 import { buildShop } from './shop'
+import { isMuted, setMuted, cue } from '../feedback'
 import { loadInviteCode, signOut } from '../session'
 
 export interface SettingsOptions {
@@ -46,6 +47,12 @@ export function openSettings(opts: SettingsOptions): void {
     }
     card.append(title, list)
   }
+
+  const snd = document.createElement('button')
+  const label = (): string => (isMuted() ? 'Ton und Vibration: aus' : 'Ton und Vibration: an')
+  snd.textContent = label()
+  snd.addEventListener('click', () => { setMuted(!isMuted()); snd.textContent = label(); cue('good') })
+  card.appendChild(snd)
 
   if (document.fullscreenEnabled) {
     const fs = document.createElement('button')

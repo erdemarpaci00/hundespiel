@@ -1,3 +1,4 @@
+import { cue } from '../feedback'
 import { parseTimestamp } from '../time'
 import Phaser from 'phaser'
 import { describeActivity, favoriteOf, relativeTime, type ActivityEntry } from '../activity'
@@ -147,6 +148,7 @@ export class GardenScene extends Phaser.Scene {
         e.dog.cheer(1800)
         void findTreasure(e.record.id).then((f) => {
           if (!f) return
+          cue('coin')
           this.heartsAt(e.dog.x, e.dog.y - 20 * e.dog.scale)
           this.hud.toast(`${e.record.name} hat ${f.what} ausgebuddelt: +${f.coins} Münzen`)
           this.hud.refresh()
@@ -188,6 +190,7 @@ export class GardenScene extends Phaser.Scene {
       if (this.heartAcc > 30) { this.heartAcc = 0; this.heartsAt(hit.dog.x + (Math.random() - 0.5) * 24, hit.dog.y - 55 * hit.dog.scale) }
       if (this.swipe > 120) {
         this.swipe = 0
+        cue('soft')
         this.closeBubble()
         // Herzen sofort, gespeichert wird hoechstens alle 5 Minuten pro Hund (sonst Verlaufsspam und Dauerladen).
         const last = this.lastPetSave.get(hit.record.id) ?? 0
@@ -599,12 +602,14 @@ export class GardenScene extends Phaser.Scene {
         const round = playRound({ stat, value: statValue(record.look.breed, record.training, stat), league, form, happiness: needs.happiness, affection: record.personality.affection, throwQuality: q, favorite: favoriteOf(this.affection[record.id] ?? {}) === this.session.displayName }, Math.random)
         rounds.push(round)
         disc.destroy()
+        cue(round.won ? 'good' : 'bad')
         if (round.won) { e.dog.cheer(1400); this.heartsAt(e.dog.x, e.dog.y - 60 * e.dog.scale); this.floatText(e.dog.x, e.dog.y - 70 * e.dog.scale, q > 0.8 ? 'Perfekt gefangen!' : 'Gefangen!', '#8dff8d') }
         else this.floatText(e.dog.x, e.dog.y - 70 * e.dog.scale, q < 0.4 ? 'Zu weit geworfen' : 'Daneben', '#ffb3b3')
         await new Promise((r) => this.time.delayedCall(1100, () => r(null)))
       }
       const result = summarize(league, rounds)
       const r = await enterContest(record, league, result)
+      cue(result.won ? 'win' : 'soft')
       this.hud.toast(result.won ? `Sieg in der ${league.name}! +${r.result.prize} Münzen` : `Nicht gewonnen, Trostpreis +${r.result.prize} Münzen`)
       if (result.won) { e.dog.cheer(3000); this.heartsAt(e.dog.x - 10, e.dog.y - 70 * e.dog.scale); this.heartsAt(e.dog.x + 10, e.dog.y - 60 * e.dog.scale) }
       this.hud.refresh()
@@ -645,6 +650,7 @@ export class GardenScene extends Phaser.Scene {
           disc.destroy()
           const sc = duelScore({ value: statValue(e.record.look.breed, e.record.training, stat), happiness: this.currentNeeds(e).happiness, affection: e.record.personality.affection, throwQuality: q, favorite: favoriteOf(this.affection[e.record.id] ?? {}) === this.session.displayName }, Math.random)
           scores.push(sc)
+          cue(q < 0.4 ? 'bad' : 'good')
           this.floatText(e.dog.x, e.dog.y - 70 * e.dog.scale, q > 0.8 ? 'Perfekt!' : q < 0.4 ? 'Daneben' : 'Gefangen', q < 0.4 ? '#ffb3b3' : '#8dff8d')
           await new Promise((r) => this.time.delayedCall(700, () => r(null)))
         }
@@ -657,7 +663,7 @@ export class GardenScene extends Phaser.Scene {
       }
       const champ = winsA === winsB ? null : winsA > winsB ? a : b
       this.hud.toast(champ ? `${champ.record.name} gewinnt das Duell ${Math.max(winsA, winsB)}:${Math.min(winsA, winsB)}` : `Unentschieden ${winsA}:${winsB}`)
-      if (champ) champ.dog.cheer(3000)
+      if (champ) { champ.dog.cheer(3000); cue('win') }
     } catch (err) {
       this.hud.toast(err instanceof Error ? err.message : 'Etwas ist schiefgelaufen')
     } finally {
