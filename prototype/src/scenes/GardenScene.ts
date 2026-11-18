@@ -196,7 +196,8 @@ export class GardenScene extends Phaser.Scene {
       parts.push(t)
     }
     const c = this.add.container(0, 0, parts)
-    c.setSize(30, 30).setInteractive(new Phaser.Geom.Circle(0, 0, 18), Phaser.Geom.Circle.Contains)
+    // Bei Containern liegt der Ursprung der Klickflaeche in der Ecke der Groesse, daher Mitte (15, 15).
+    c.setSize(30, 30).setInteractive(new Phaser.Geom.Circle(15, 15, 19), Phaser.Geom.Circle.Contains)
     c.on('pointerdown', onTap)
     return c
   }
@@ -210,6 +211,7 @@ export class GardenScene extends Phaser.Scene {
 
   // Antippen zeigt Symbole rund um den Hund. Die Stimmung steht kurz im Namen.
   private openBubble(dogId: string): void {
+    if (this.bubble?.dogId === dogId) { this.closeBubble(); return }
     this.closeBubble()
     const e = this.entries.get(dogId)
     if (!e) return
@@ -379,7 +381,7 @@ export class GardenScene extends Phaser.Scene {
     e.dog.goTo({ x, y }, () => {
       ball.destroy()
       this.hud.toast(`${e.record.name} bringt den Ball zurück`)
-      void playWithDog(e.record).then(() => this.reload()).catch((err) => this.hud.toast(err instanceof Error ? err.message : 'Etwas ist schiefgelaufen, bitte nochmal versuchen'))
+      void playWithDog(e.record).then(() => { this.hud.refresh(); return this.reload() }).catch((err) => this.hud.toast(err instanceof Error ? err.message : 'Etwas ist schiefgelaufen, bitte nochmal versuchen'))
     })
     this.time.delayedCall(20000, () => { if (ball.active) { ball.destroy(); e.dog.cancelChase() } })
   }
@@ -398,6 +400,7 @@ export class GardenScene extends Phaser.Scene {
       await careForDog(this.session, sel.record, action)
       this.hud.toast(action === 'feed' ? `${sel.record.name} frisst und ist satt` : `${sel.record.name} genießt das Streicheln`)
       await this.reload()
+      this.hud.refresh()
       this.bubble?.timer.reset({ delay: 8000, callback: () => this.closeBubble() })
     } catch (e) {
       this.hud.toast(e instanceof Error ? e.message : 'Etwas ist schiefgelaufen, bitte nochmal versuchen')
