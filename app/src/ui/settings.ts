@@ -52,7 +52,9 @@ export function openSettings(opts: SettingsOptions): void {
   const label = (): string => (isMuted() ? 'Ton und Vibration: aus' : 'Ton und Vibration: an')
   snd.textContent = label()
   snd.addEventListener('click', () => { setMuted(!isMuted()); snd.textContent = label(); cue('good') })
-  card.appendChild(snd)
+  const btnrow = document.createElement('div')
+  btnrow.className = 'btnrow'
+  btnrow.appendChild(snd)
 
   if (document.fullscreenEnabled) {
     const fs = document.createElement('button')
@@ -61,7 +63,7 @@ export function openSettings(opts: SettingsOptions): void {
       try { if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen() } catch { /* nicht erlaubt */ }
       overlay.remove()
     })
-    card.appendChild(fs)
+    btnrow.appendChild(fs)
   }
 
   const out = document.createElement('button')
@@ -72,7 +74,8 @@ export function openSettings(opts: SettingsOptions): void {
   close.className = 'tab'
   close.textContent = 'Zurück'
   close.addEventListener('click', () => overlay.remove())
-  card.append(out, close)
+  btnrow.append(out, close)
+  card.appendChild(btnrow)
   overlay.appendChild(card)
   document.body.appendChild(overlay)
 }
