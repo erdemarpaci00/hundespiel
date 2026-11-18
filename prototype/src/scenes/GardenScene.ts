@@ -7,7 +7,7 @@ import { ageDays, ageStage } from '../dog/age'
 import { LivingDog } from '../dog/livingDog'
 import { randomLook } from '../dog/look'
 import { applyElapsed, energyDots, PLAY_MIN_ENERGY, mood, moodPersonality, type Mood, type Needs } from '../dog/needs'
-import { wishReward, enterContest, cleanPoop, dropPoop, findTreasure, loadPoopsFromDb, loadRelations, recordMeeting, type Relation, careForDog, groomDog, treatDog, playWithDog, loadActivity, loadAffection, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
+import { loadPartnerSince, wishReward, enterContest, cleanPoop, dropPoop, findTreasure, loadPoopsFromDb, loadRelations, recordMeeting, type Relation, careForDog, groomDog, treatDog, playWithDog, loadActivity, loadAffection, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
 import { GARDEN_BOUNDS } from '../garden'
 import type { Session } from '../session'
 import { markVisit, readLastVisit, shouldWelcome } from '../garden/welcome'
@@ -19,6 +19,7 @@ import { dialogJustClosed, openDogDetail, pickDog } from '../ui/dogPanels'
 import { loadEconomy } from '../economy'
 import { createHud, type Tool } from '../ui/hud'
 import { showTutorial } from '../ui/tutorial'
+import { awayMessage } from '../away'
 import { mulberry32 } from '../util/rng'
 import { isRestless, resistsWaking } from '../nightlife'
 import { createAtmosphere, type Atmosphere } from './atmosphere'
@@ -127,6 +128,7 @@ export class GardenScene extends Phaser.Scene {
     this.hand = this.makeHand()
     this.time.addEvent({ delay: 7000, loop: true, callback: () => this.ambientBall() })
     this.time.delayedCall(1500, () => showTutorial())
+    this.time.delayedCall(2500, () => void this.showAway())
     const welcome = shouldWelcome(readLastVisit(), Date.now())
     markVisit(Date.now())
     if (welcome) this.events.once('welcome', () => { let i = 0; for (const e of this.entries.values()) this.time.delayedCall(300 * i++, () => e.dog.cheer(4000)); this.hud.toast('Deine Hunde freuen sich, dass du wieder da bist') })
@@ -365,6 +367,19 @@ export class GardenScene extends Phaser.Scene {
     this.hud.toast(`Genau das wollte ${e.record.name}!`)
     this.refreshNeeds()
     void wishReward().then((c) => { if (c > 0) { this.hud.toast(`Genau das wollte ${e.record.name}! +${c} Münzen`); this.hud.refresh() } }).catch(() => { /* Belohnung ist nur ein Extra */ })
+  }
+
+  // Beim Oeffnen: was hat der Partner seit dem letzten Besuch getan (nur wenn mind. 30 Minuten vergangen sind).
+  private async showAway(): Promise<void> {
+    const key = `hundespiel-seen:${this.session.householdId}`
+    let since = 0
+    try { since = Number(localStorage.getItem(key) ?? 0); localStorage.setItem(key, String(Date.now())) } catch { return }
+    if (!since || Date.now() - since < 30 * 60_000) return
+    try {
+      const partner = await loadPartnerSince(this.session, new Date(since).toISOString())
+      const msg = awayMessage(partner?.acts ?? 0, this.poops.length, partner?.name ?? 'Dein Partner')
+      if (msg) this.hud.toast(msg)
+    } catch { /* ohne Netz entfaellt der Hinweis */ }
   }
 
   private refreshNeeds(): void {

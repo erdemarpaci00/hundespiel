@@ -345,3 +345,15 @@ export async function wishReward(): Promise<number> {
   fail(error)
   return typeof data === 'number' ? data : 0
 }
+
+// Taten des Partners seit einem Zeitpunkt (ohne Aufnahme) und dessen Name. Null, wenn kein Partner da ist.
+export async function loadPartnerSince(session: Session, sinceIso: string): Promise<{ name: string; acts: number } | null> {
+  const [acts, members] = await Promise.all([
+    supabase.from('activity').select('user_id').eq('household_id', session.householdId).neq('user_id', session.userId).neq('kind', 'adopt').gte('created_at', sinceIso).limit(500),
+    supabase.from('members').select('user_id, display_name').eq('household_id', session.householdId).neq('user_id', session.userId).limit(1),
+  ])
+  fail(acts.error)
+  fail(members.error)
+  const m = members.data?.[0]
+  return m ? { name: String(m.display_name), acts: (acts.data ?? []).length } : null
+}
