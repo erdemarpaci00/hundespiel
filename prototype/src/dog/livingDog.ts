@@ -5,6 +5,8 @@ import { DogSprite, type Pose } from './dogSprite'
 import type { DogLook } from './look'
 import { nextTarget, stepToward, type Rect, type Vec } from './wander'
 
+export type Emote = 'hungry' | 'sad' | 'wish-ball' | 'wish-brush' | 'wish-pet'
+
 const POSE: Record<Behavior, Pose> = { wander: 'walk', sniff: 'sniff', sit: 'sit', sleep: 'sleep' }
 const TRAITS: [keyof Personality, string, string][] = [
   ['energy', 'aufgeweckt', 'träge'],
@@ -30,8 +32,8 @@ export class LivingDog {
   private readonly sprite: DogSprite
   private readonly label: Phaser.GameObjects.Text
   private readonly emoteGfx: Phaser.GameObjects.Graphics
-  private emote: 'hungry' | 'sad' | null = null
-  private shown: 'hungry' | 'sad' | 'love' | null = null
+  private emote: Emote | null = null
+  private shown: Emote | 'love' | null = null
   private loveUntil = 0
   private pulse = 0
   private pos: Vec
@@ -102,17 +104,23 @@ export class LivingDog {
   }
 
   // Denkblase ueber dem Kopf: Knochen bei Hunger, Traene bei Traurigkeit, Herz bei Begegnung.
-  setEmote(kind: 'hungry' | 'sad' | null): void {
+  setEmote(kind: Emote | null): void {
     this.emote = kind
   }
 
-  private drawEmote(kind: 'hungry' | 'sad' | 'love' | null): void {
+  private drawEmote(kind: Emote | 'love' | null): void {
     this.shown = kind
     const g = this.emoteGfx.clear()
     if (!kind) return
     g.fillStyle(0xffffff, 0.95).fillRoundedRect(-13, -11, 26, 22, 8).fillCircle(-4, 17, 3).fillCircle(-8, 23, 2)
     if (kind === 'hungry') {
       g.fillStyle(0xb98a5a).fillRect(-7, -2, 14, 4).fillCircle(-8, -2, 3).fillCircle(-8, 2, 3).fillCircle(8, -2, 3).fillCircle(8, 2, 3)
+    } else if (kind === 'wish-ball') {
+      g.fillStyle(0xc9a227).fillCircle(0, -1, 6).fillStyle(0xffffff).fillRect(-6, -1.5, 12, 1.5)
+    } else if (kind === 'wish-brush') {
+      g.fillStyle(0x8a5a2b).fillRoundedRect(-7, -4, 14, 5, 2).fillStyle(0xe8c07a).fillRect(-6, 1, 2, 4).fillRect(-2, 1, 2, 4).fillRect(2, 1, 2, 4).fillRect(5, 1, 2, 4)
+    } else if (kind === 'wish-pet') {
+      g.lineStyle(2, 0xe0527a).strokeCircle(-3.5, -2, 4).strokeCircle(3.5, -2, 4).fillStyle(0xffd0dc).fillCircle(-3.5, -2, 3).fillCircle(3.5, -2, 3).fillTriangle(-7, 0, 7, 0, 0, 7)
     } else if (kind === 'love') {
       g.fillStyle(0xe0527a).fillCircle(-3.5, -2, 4.5).fillCircle(3.5, -2, 4.5).fillTriangle(-8, 0, 8, 0, 0, 8)
     } else {

@@ -10,6 +10,7 @@ import { cleanPoop, dropPoop, findTreasure, loadPoopsFromDb, loadRelations, reco
 import { GARDEN_BOUNDS } from '../garden'
 import type { Session } from '../session'
 import { markVisit, readLastVisit, shouldWelcome } from '../garden/welcome'
+import { wishBlock, wishFor, type Wish } from '../dog/wish'
 import { wantsPoop, type Poop } from '../garden/poop'
 import { dialogJustClosed, openDogDetail } from '../ui/dogPanels'
 import { loadEconomy } from '../economy'
@@ -51,6 +52,8 @@ export class GardenScene extends Phaser.Scene {
   private busy = false
   private throwMode = false
   private swipe = 0
+  private owned: Wish[] = ['pet']
+  private wishDone = new Set<string>()
   private homeLevel = -1
   private homeGfx: Phaser.GameObjects.Graphics | null = null
   private modeHint: Phaser.GameObjects.Text | null = null
@@ -96,7 +99,9 @@ export class GardenScene extends Phaser.Scene {
     this.atmosphere = createAtmosphere(this, true, backdrop)
     this.homeLevel = -1
     this.homeGfx = null
-    const syncHome = (): void => { void loadEconomy().then((e) => this.drawHome(e.home ?? 0)).catch(() => undefined) }
+    this.owned = ['pet']
+    this.wishDone = new Set()
+    const syncHome = (): void => { void loadEconomy().then((e) => { this.owned = ['pet', ...((e.items.ball ?? 0) > 0 ? ['ball' as const] : []), ...((e.items.buerste ?? 0) > 0 ? ['brush' as const] : [])]; this.drawHome(e.home ?? 0); this.refreshNeeds() }).catch(() => undefined) }
     syncHome()
     this.time.addEvent({ delay: 20000, loop: true, callback: syncHome })
 
@@ -180,6 +185,7 @@ export class GardenScene extends Phaser.Scene {
         this.closeBubble()
         // Herzen sofort, gespeichert wird hoechstens alle 5 Minuten pro Hund (sonst Verlaufsspam und Dauerladen).
         const last = this.lastPetSave.get(hit.record.id) ?? 0
+        this.fulfill(hit.record.id, 'pet')
         if (Date.now() - last > 5 * 60 * 1000) { this.lastPetSave.set(hit.record.id, Date.now()); void this.care('pet', hit.record.id) }
       }
     })
@@ -327,11 +333,32 @@ export class GardenScene extends Phaser.Scene {
     return applyElapsed(e.record.needs, Date.now() - parseTimestamp(e.record.needsUpdatedAt), e.record.personality)
   }
 
+  // Aktueller Wunsch des Hundes, solange er noch nicht erfuellt ist.
+  private currentWish(e: { record: DogRecord; dog: LivingDog }): Wish | null {
+    if (e.dog.sleeping) return null
+    const now = Date.now()
+    if (this.wishDone.has(`${e.record.id}|${wishBlock(now)}`)) return null
+    return wishFor(e.record.id, e.record.personality, now, this.owned)
+  }
+
+  // Passt die Handlung zum Wunsch, freut sich der Hund besonders.
+  private fulfill(dogId: string, kind: Wish): void {
+    const e = this.entries.get(dogId)
+    if (!e || this.currentWish(e) !== kind) return
+    this.wishDone.add(`${dogId}|${wishBlock(Date.now())}`)
+    this.heartsAt(e.dog.x - 8, e.dog.y - 70 * e.dog.scale)
+    this.heartsAt(e.dog.x + 8, e.dog.y - 60 * e.dog.scale)
+    e.dog.cheer(2500)
+    this.hud.toast(`Genau das wollte ${e.record.name}!`)
+    this.refreshNeeds()
+  }
+
   private refreshNeeds(): void {
     for (const e of this.entries.values()) {
       const m = mood(this.currentNeeds(e))
       e.dog.setPersonality(moodPersonality(e.record.personality, m))
-      e.dog.setEmote(m === 'hungry' ? 'hungry' : m === 'sad' ? 'sad' : null)
+      const w = this.currentWish(e)
+      e.dog.setEmote(m === 'hungry' ? 'hungry' : m === 'sad' ? 'sad' : w ? (`wish-${w}` as const) : null)
       e.dog.setResting(this.atmosphere.isNight() && !isRestless(e.record.id, e.record.personality, new Date()))
     }
     this.updateBubbleText()
@@ -550,6 +577,7 @@ export class GardenScene extends Phaser.Scene {
       this.busy = true
       await groomDog(e.record)
       this.hud.toast(`${e.record.name} hat jetzt ein glänzendes Fell`)
+      this.fulfill(e.record.id, 'brush')
       await this.reload()
     } catch (err) {
       this.hud.toast(err instanceof Error ? err.message : 'Etwas ist schiefgelaufen, bitte nochmal versuchen')
@@ -589,6 +617,7 @@ export class GardenScene extends Phaser.Scene {
     e.dog.goTo({ x, y }, () => {
       ball.destroy()
       this.hud.toast(`${e.record.name} bringt den Ball zurück`)
+      this.fulfill(e.record.id, 'ball')
       void playWithDog(e.record).then(() => { this.hud.refresh(); return this.reload() }).catch((err) => this.hud.toast(err instanceof Error ? err.message : 'Etwas ist schiefgelaufen, bitte nochmal versuchen'))
     })
     this.time.delayedCall(20000, () => { if (ball.active) { ball.destroy(); e.dog.cancelChase() } })
@@ -608,6 +637,7 @@ export class GardenScene extends Phaser.Scene {
       await careForDog(this.session, sel.record, action)
       const dogE = this.entries.get(sel.record.id)
       if (action === 'pet' && dogE) this.heartsAt(dogE.dog.x, dogE.dog.y - 60 * dogE.dog.scale)
+      if (action === 'pet') this.fulfill(sel.record.id, 'pet')
       this.hud.toast(action === 'feed' ? `${sel.record.name} frisst und ist satt` : `${sel.record.name} genießt das Streicheln`)
       await this.reload()
       this.hud.refresh()
