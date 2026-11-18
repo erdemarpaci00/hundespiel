@@ -19,6 +19,7 @@ export interface DogRecord {
   needs: Needs
   needsUpdatedAt: string
   training: Training
+  createdAt: string
 }
 
 interface DogRow {
@@ -31,9 +32,10 @@ interface DogRow {
   needs: Needs
   needs_updated_at: string
   training: Training | null
+  created_at: string
 }
 
-const COLUMNS = 'id, name, picked_by, is_starter, look, personality, needs, needs_updated_at, training'
+const COLUMNS = 'id, name, picked_by, is_starter, look, personality, needs, needs_updated_at, training, created_at'
 
 const toRecord = (r: DogRow): DogRecord => ({
   id: r.id,
@@ -45,6 +47,7 @@ const toRecord = (r: DogRow): DogRecord => ({
   needs: r.needs,
   needsUpdatedAt: r.needs_updated_at,
   training: { ...NO_TRAINING, ...(r.training ?? {}) },
+  createdAt: r.created_at,
 })
 
 function fail(error: { message?: string } | null): void {

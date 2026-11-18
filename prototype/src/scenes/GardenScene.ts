@@ -2,6 +2,7 @@ import { parseTimestamp } from '../time'
 import Phaser from 'phaser'
 import { describeActivity, relativeTime, type ActivityEntry } from '../activity'
 import { DogSprite, type Pose } from '../dog/dogSprite'
+import { ageDays, ageStage } from '../dog/age'
 import { LivingDog } from '../dog/livingDog'
 import { randomLook } from '../dog/look'
 import { applyElapsed, PLAY_MIN_ENERGY, mood, moodPersonality, type Mood, type Needs } from '../dog/needs'
@@ -151,6 +152,7 @@ export class GardenScene extends Phaser.Scene {
       const start = { x: 160 + (i % 4) * 110, y: 250 + (i % 2) * 50 }
       const dog = new LivingDog(this, record.look, record.personality, GARDEN_BOUNDS, start, Math.random)
       dog.setCaption(record.name)
+      dog.setSize(ageStage(ageDays(parseTimestamp(record.createdAt), Date.now())).scale)
       dog.setKey(record.id)
       dog.onTap(() => this.openBubble(record.id))
       this.entries.set(record.id, { record, dog })

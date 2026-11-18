@@ -1,5 +1,7 @@
 import Phaser from 'phaser'
 import { BREEDS, breedById, rollBreedPuppy } from '../dog/breeds'
+import { ageDays, ageStage } from '../dog/age'
+import { parseTimestamp } from '../time'
 import { LivingDog } from '../dog/livingDog'
 import { loadDogs } from '../dogRepo'
 import type { Session } from '../session'
@@ -68,6 +70,7 @@ export class PlaceScene extends Phaser.Scene {
       if (this.kind === 'kennel') return
       const d = new LivingDog(this, r.look, r.personality, area, { x: 100 + i * 70, y: 270 }, Math.random)
       d.setCaption(r.name)
+      d.setSize(ageStage(ageDays(parseTimestamp(r.createdAt), Date.now())).scale)
       d.setKey(r.id)
       if (isRestless(r.id, r.personality, new Date())) d.wake(30 * 60 * 1000)
       d.onTap(() => {

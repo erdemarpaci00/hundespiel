@@ -109,9 +109,18 @@ export class DogSprite {
     this.layout(0)
   }
 
+  private ageScale = 1
+
+  // Altersstufe (Welpe kleiner), bleibt beim Umdrehen erhalten.
+  setAge(scale: number): void {
+    this.ageScale = scale
+    this.face(this.dir)
+  }
+
   face(dir: -1 | 1): void {
     this.dir = dir
-    this.container.setScale(this.look.size * dir, this.look.size)
+    const k = this.look.size * this.ageScale
+    this.container.setScale(k * dir, k)
   }
 
   update(dtMs: number): void {

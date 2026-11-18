@@ -1,3 +1,5 @@
+import { ageDays, ageLabel } from '../dog/age'
+import { parseTimestamp } from '../time'
 import { breedById } from '../dog/breeds'
 import type { Needs } from '../dog/needs'
 import { EXERCISE, STAT_KEYS, STAT_LABEL, statValue } from '../dog/stats'
@@ -59,7 +61,10 @@ export function openDogDetail(dog: DogRecord, needs: Needs): void {
   const h = document.createElement('h1')
   const breed = dog.look.breed ? breedById(dog.look.breed).name : 'Mischling'
   h.textContent = `${dog.name} (${breed})`
-  card.append(h, heading('Werte'))
+  const age = document.createElement('div')
+  age.className = 'sub'
+  age.textContent = ageLabel(ageDays(parseTimestamp(dog.createdAt), Date.now()))
+  card.append(h, age, heading('Werte'))
   for (const k of STAT_KEYS) card.appendChild(row(STAT_LABEL[k], statValue(dog.look.breed, dog.training, k)))
   card.appendChild(heading('Charakter'))
   for (const [k, label] of TRAITS) card.appendChild(row(label, dog.personality[k] * 100))

@@ -41,6 +41,7 @@ export class LivingDog {
   private nightWanted = false
   private key: string | null = null
   private chase: (() => void) | null = null
+  private size = 1
 
   constructor(
     scene: Phaser.Scene,
@@ -89,9 +90,9 @@ export class LivingDog {
     this.sprite.container.setPosition(this.pos.x, this.pos.y).setDepth(this.pos.y)
     this.sprite.update(dt)
     this.pulse += dt
-    this.emoteGfx.setPosition(this.pos.x, this.pos.y - 134 + Math.sin(this.pulse / 300) * 2).setDepth(1001).setVisible(this.emote !== null && !this.resting)
+    this.emoteGfx.setPosition(this.pos.x, this.pos.y - 42 - 92 * this.size + Math.sin(this.pulse / 300) * 2).setDepth(1001).setVisible(this.emote !== null && !this.resting)
     this.label
-      .setPosition(this.pos.x, this.pos.y - 92)
+      .setPosition(this.pos.x, this.pos.y - 92 * this.size)
       .setDepth(1000)
       .setText(this.caption)
   }
@@ -109,6 +110,12 @@ export class LivingDog {
     } else {
       g.fillStyle(0x4a90d9).fillTriangle(0, -7, -4, 1, 4, 1).fillCircle(0, 2, 4)
     }
+  }
+
+  // Welpen sind kleiner, Name und Denkblase sitzen entsprechend tiefer.
+  setSize(scale: number): void {
+    this.size = scale
+    this.sprite.setAge(scale)
   }
 
   // Zielstrebig zu einem Punkt laufen (z.B. zum geworfenen Futter), am Ziel wird onArrive gerufen.
