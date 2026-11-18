@@ -154,3 +154,17 @@ Das Datenmodell ist von Schritt 1 an für mehrere Hunde und Persönlichkeiten au
 - Ball: braucht den Ball aus dem Laden, der Hund holt ihn, Laune steigt, Kraft sinkt.
 - Adoption im Hundeheim: 50 Münzen, höchstens vier Hunde pro Haushalt (`adopt_dog`). Direktes Einfügen weiterer Hunde ist per Regel gesperrt.
 - Noch offen: Streicheln per Wischen, Bürste, echtes Altern, Beziehungen zwischen Hunden, Wettkämpfe.
+
+## Altern, Freundschaft, Turniere, Pflege (umgesetzt)
+
+- Altern in Echtzeit: Welpe unter 3 Tagen, Junghund unter 10, Erwachsen bis 100 Tage, danach Senior. Welpen sind kleiner gezeichnet.
+- Begegnungen: Kommen sich zwei wache Hunde nahe, bleiben beide kurz stehen und zeigen ein Herz. Pro Paar zählt höchstens eine Begegnung alle 10 Minuten (Tabelle `dog_relations`, 005-relations.sql). Stufen: Fremde, Bekannte (2), Freunde (5), beste Freunde (15), sichtbar im Detailfenster.
+- Streicheln durch Wischen: Hand folgt dem Finger, Herzen steigen auf, nach etwa 120 Pixel Weg zählt es als Streicheln.
+- Hunde schauen zum Finger, wenn er in der Nähe ist und sie nicht laufen oder schlafen.
+- Nachtschlaf: zwischen 22 und 6 Uhr steigt die Energie um 10 pro Stunde, tagsüber sinkt sie um 6.
+- Turniere: Bronze, Silber, Gold, Olympia, vier Runden (Tempo, Ausdauer, Sprungkraft, Gehorsam), Preisgeld bei Sieg, Trostpreis sonst, Pokale pro Liga (006-contest.sql). Das Ergebnis wird im Client gewürfelt, die Datenbank prüft nur die Obergrenze.
+- Haufen: wache Hunde machen sie zufällig (höchstens 6), Antippen räumt auf, nach 5 Minuten gibt es 1 Münze (Tabelle `poops`, 007-poops.sql, gemeinsam im Haushalt).
+- Begrüßung: nach mindestens 2 Stunden Pause freuen sich die Hunde (Zeitpunkt im Browser-Speicher).
+- Obere Leiste: Münzen, Futter, Leckerli, Ball, Bürste.
+
+Offen: Wohnung, Zufallsereignisse, Folgen für liegen gelassene Haufen, Umbenennung `prototype` zu `app`, Test auf echten Geräten.
