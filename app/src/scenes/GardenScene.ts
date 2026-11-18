@@ -836,8 +836,8 @@ export class GardenScene extends Phaser.Scene {
     const y = Math.min(GARDEN_BOUNDS.y + GARDEN_BOUNDS.h, Math.max(GARDEN_BOUNDS.y, wy))
     const eager = [...this.entries.values()].filter((e) => !e.dog.sleeping && this.currentNeeds(e).hunger < 95)
     if (eager.length === 0) { this.hud.toast('Gerade hat niemand Hunger'); return }
-    const gfx = this.add.graphics().setDepth(y - 1)
-    const label = this.add.text(x, y - 18, '', { fontSize: '8px', color: '#ffffff', stroke: '#2b2b2b', strokeThickness: 2, resolution: 3, fontFamily: 'Arial, Helvetica, sans-serif' }).setOrigin(0.5, 1).setDepth(y)
+    const gfx = this.add.graphics().setDepth(y + 12)
+    const label = this.add.text(x, y - 18, '', { fontSize: '8px', color: '#ffffff', stroke: '#2b2b2b', strokeThickness: 2, resolution: 3, fontFamily: 'Arial, Helvetica, sans-serif' }).setOrigin(0.5, 1).setDepth(5000)
     const bucket = { x, y, left: BUCKET_PORTIONS, gfx, label }
     this.food = bucket
     this.drawBucket(bucket)
