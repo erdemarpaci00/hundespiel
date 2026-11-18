@@ -6,7 +6,7 @@ import { breedById } from '../dog/breeds'
 import { applyElapsed, type Needs } from '../dog/needs'
 import { EXERCISE, STAT_KEYS, STAT_LABEL, statValue, type StatKey } from '../dog/stats'
 import type { DogRecord } from '../dogRepo'
-import { adoptFromKennel, enterContest, trainDog, treatDog } from '../dogRepo'
+import { adoptFromKennel, enterContest, trainDog } from '../dogRepo'
 import { cupsMissing, eligible, formBonus, LEAGUES, trophyShelf, type League } from '../dog/contest'
 import type { Puppy } from '../puppies'
 import type { Session } from '../session'
@@ -119,7 +119,9 @@ export function openDogDetail(dog: DogRecord, needs: Needs, bonds: { name: strin
   const age = document.createElement('div')
   age.className = 'sub'
   age.textContent = ageLabel(ageDays(parseTimestamp(dog.createdAt), Date.now()))
-  card.append(h, age, heading('Werte'))
+  const actions = document.createElement('div')
+  actions.style.cssText = 'display:flex;flex-direction:column;gap:6px;margin:6px 0'
+  card.append(h, age, actions, heading('Werte'))
   for (const k of STAT_KEYS) card.appendChild(row(STAT_LABEL[k], statValue(dog.look.breed, dog.training, k)))
   card.appendChild(heading('Charakter'))
   for (const [k, label] of TRAITS) card.appendChild(row(label, dog.personality[k] * 100))
@@ -156,26 +158,13 @@ export function openDogDetail(dog: DogRecord, needs: Needs, bonds: { name: strin
     t.className = 'alt'
     t.textContent = 'Zum Turnier'
     t.addEventListener('click', () => { o.remove(); openContest(dog, onChange, playContest) })
-    const lk = document.createElement('button')
-    lk.className = 'alt'
-    lk.textContent = 'Leckerli geben'
-    lk.addEventListener('click', async () => {
-      lk.disabled = true
-      try {
-        const d = await treatDog(dog)
-        onChange(d)
-        lk.textContent = `${dog.name} freut sich über das Leckerli`
-      } catch (e) {
-        lk.textContent = e instanceof Error ? e.message : friendlyError(undefined)
-      }
-    })
-    card.append(lk, t)
+    actions.appendChild(t)
     if (duel) {
       const dl = document.createElement('button')
       dl.className = 'alt'
       dl.textContent = 'Duell mit einem anderen Hund'
       dl.addEventListener('click', () => { o.remove(); duel(dog) })
-      card.appendChild(dl)
+      actions.appendChild(dl)
     }
   }
   card.appendChild(closeButton(o))
