@@ -78,7 +78,7 @@ export function createHud(actions: HudActions): { toast(text: string): void; ref
       text.innerHTML = `${t.label}<br><small>${Math.min(d.have[i] ?? 0, t.need)} von ${t.need}</small>`
       row.appendChild(text)
       const b = document.createElement('button')
-      b.textContent = st === 'done' ? '✓' : st === 'ready' ? '+5 holen' : '…'
+      b.textContent = st === 'done' ? '✓' : st === 'ready' ? '+5 holen' : 'offen'
       b.disabled = st !== 'ready'
       b.addEventListener('click', () => {
         b.disabled = true
