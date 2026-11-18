@@ -134,6 +134,7 @@ export class LivingDog {
     this.next()
   }
 
+  get scale(): number { return this.size }
   get x(): number { return this.pos.x }
   get y(): number { return this.pos.y }
 
