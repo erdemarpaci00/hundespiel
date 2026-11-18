@@ -1,5 +1,7 @@
 import { PLACES } from '../scenes/places'
-import { loadEconomy } from '../economy'
+import { claimDaily, loadDaily, loadEconomy } from '../economy'
+import { DAILY_TASKS, readyCount, taskStatus } from '../daily'
+import { friendlyError } from '../errors'
 import { openSettings } from './settings'
 
 export type Tool = 'hand' | 'futter' | 'leckerli' | 'ball' | 'buerste'
@@ -19,7 +21,7 @@ const SLOTS: [Tool, string, string][] = [['hand', '✋', 'Hand'], ['futter', '�
 export function createHud(actions: HudActions): { toast(text: string): void; refresh(): void; setTool(t: Tool): void; showHotbar(v: boolean): void } {
   const root = document.getElementById('hud') as HTMLElement
   root.style.display = 'block'
-  root.innerHTML = '<button id="gear" aria-label="Einstellungen">⚙</button><button id="map" aria-label="Karte">🗺</button><div id="stats"></div><div id="toast"></div><div id="hotbar">' + SLOTS.map(([t, icon, label]) => `<button data-tool="${t}" aria-label="${label}"><b>${icon}</b><small>${label}</small><i></i></button>`).join('') + '</div>'
+  root.innerHTML = '<button id="gear" aria-label="Einstellungen">⚙</button><button id="map" aria-label="Karte">🗺</button><button id="book" aria-label="Tagesbuch">📖</button><div id="stats"></div><div id="toast"></div><div id="hotbar">' + SLOTS.map(([t, icon, label]) => `<button data-tool="${t}" aria-label="${label}"><b>${icon}</b><small>${label}</small><i></i></button>`).join('') + '</div>'
   const toastEl = root.querySelector('#toast') as HTMLElement
   root.querySelector('#gear')!.addEventListener('click', () => openSettings({ householdId: actions.householdId, getActivity: actions.getActivity }))
   root.querySelector('#map')!.addEventListener('click', () => {
@@ -46,6 +48,57 @@ export function createHud(actions: HudActions): { toast(text: string): void; ref
     overlay.appendChild(card)
     document.body.appendChild(overlay)
   })
+  const bookBtn = root.querySelector('#book') as HTMLElement
+  const refreshBook = (): void => {
+    void loadDaily().then((d) => bookBtn.classList.toggle('ready', readyCount(d) > 0)).catch(() => { /* ohne Netz bleibt es */ })
+  }
+  bookBtn.addEventListener('click', () => void openBook())
+  const openBook = async (): Promise<void> => {
+    document.getElementById('settings')?.remove()
+    let d
+    try { d = await loadDaily() } catch (e) { toastEl.textContent = e instanceof Error ? e.message : 'Das Tagesbuch lässt sich gerade nicht laden'; toastEl.style.opacity = '1'; return }
+    const overlay = document.createElement('div')
+    overlay.id = 'settings'
+    const card = document.createElement('div')
+    card.className = 'card'
+    const h = document.createElement('h1')
+    h.textContent = 'Tagesbuch'
+    card.appendChild(h)
+    const sub = document.createElement('div')
+    sub.className = 'task'
+    sub.innerHTML = `<small>Gilt für euch beide. Serie: ${d.streak} ${d.streak === 1 ? 'Tag' : 'Tage'} in Folge. Alle drei: +10 Münzen, an Tag 3 und 7 mehr.</small>`
+    card.appendChild(sub)
+    DAILY_TASKS.forEach((t, i) => {
+      const st = taskStatus(d, i)
+      const row = document.createElement('div')
+      row.className = 'task' + (st === 'done' ? ' done' : '')
+      const text = document.createElement('div')
+      text.innerHTML = `${t.label}<br><small>${Math.min(d.have[i] ?? 0, t.need)} von ${t.need}</small>`
+      row.appendChild(text)
+      const b = document.createElement('button')
+      b.textContent = st === 'done' ? '✓' : st === 'ready' ? '+5 holen' : '…'
+      b.disabled = st !== 'ready'
+      b.addEventListener('click', () => {
+        b.disabled = true
+        void claimDaily(i + 1).then((r) => {
+          overlay.remove()
+          toastEl.textContent = r.bonus > 0 ? `+${r.reward} Münzen und ${r.bonus} Bonus für das ganze Tagesbuch` : `+${r.reward} Münzen`
+          toastEl.style.opacity = '1'
+          refresh()
+          refreshBook()
+        }).catch((e) => { toastEl.textContent = friendlyError(e instanceof Error ? e.message : String(e)); toastEl.style.opacity = '1'; b.disabled = false })
+      })
+      row.appendChild(b)
+      card.appendChild(row)
+    })
+    const close = document.createElement('button')
+    close.className = 'tab'
+    close.textContent = 'Zurück'
+    close.addEventListener('click', () => overlay.remove())
+    card.appendChild(close)
+    overlay.appendChild(card)
+    document.body.appendChild(overlay)
+  }
   const statsEl = root.querySelector('#stats') as HTMLElement
   const hotbar = root.querySelector('#hotbar') as HTMLElement
   const slotOf = (t: Tool): HTMLElement => hotbar.querySelector(`[data-tool="${t}"]`) as HTMLElement
@@ -70,7 +123,8 @@ export function createHud(actions: HudActions): { toast(text: string): void; ref
     }).catch(() => { /* ohne Netz bleibt die letzte Anzeige */ })
   }
   refresh()
-  const poll = window.setInterval(refresh, 15000)
+  refreshBook()
+  const poll = window.setInterval(() => { refresh(); refreshBook() }, 15000)
   const stop = new MutationObserver(() => { if (!document.body.contains(statsEl)) { window.clearInterval(poll); stop.disconnect() } })
   stop.observe(document.body, { childList: true, subtree: true })
   let timer: number | undefined

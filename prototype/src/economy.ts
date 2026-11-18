@@ -1,3 +1,4 @@
+import type { DailyState } from './daily'
 import { friendlyError } from './errors'
 import { supabase } from './supabase'
 
@@ -39,4 +40,16 @@ export async function upgradeHome(): Promise<Economy> {
 export async function buyItem(item: Item): Promise<Economy> {
   const { data, error } = await supabase.rpc('buy_item', { p_item: item, p_qty: 1 })
   return unwrap(data, error)
+}
+
+export async function loadDaily(): Promise<DailyState> {
+  const { data, error } = await supabase.rpc('daily_state')
+  if (error) throw new Error(friendlyError(error.message))
+  return data as DailyState
+}
+
+export async function claimDaily(task: number): Promise<{ reward: number; bonus: number }> {
+  const { data, error } = await supabase.rpc('claim_daily', { p_task: task })
+  if (error) throw new Error(friendlyError(error.message))
+  return data as { reward: number; bonus: number }
 }
