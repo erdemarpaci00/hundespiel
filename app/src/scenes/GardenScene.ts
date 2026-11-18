@@ -76,6 +76,7 @@ export class GardenScene extends Phaser.Scene {
   private heartAcc = 0
   private poops: { data: Poop; obj: Phaser.GameObjects.Container }[] = []
   private hand!: Phaser.GameObjects.Graphics
+  private brushGfx!: Phaser.GameObjects.Graphics
   private relations: Relation[] = []
   private food: { x: number; y: number; left: number; gfx: Phaser.GameObjects.Graphics; label: Phaser.GameObjects.Text } | null = null
   private refusals = new Map<string, number>()
@@ -129,6 +130,7 @@ export class GardenScene extends Phaser.Scene {
     this.session = this.registry.get('session') as Session
     this.hud = createHud({ householdId: this.session.householdId, getActivity: () => this.activityLines(), getBreeds: () => [...this.entries.values()].map((e) => e.record.look.breed), travel: (k) => this.scene.start(k), current: 'garden', onEconomy: (items) => this.onEconomy(items), onTool: (t) => this.pick(t) })
     this.hand = this.makeHand()
+    this.brushGfx = this.makeBrush()
     this.time.addEvent({ delay: 7000, loop: true, callback: () => this.ambientBall() })
     this.time.delayedCall(1500, () => showTutorial())
     this.time.delayedCall(2500, () => void this.showAway())
@@ -179,12 +181,27 @@ export class GardenScene extends Phaser.Scene {
     if (location.search.includes('debug')) (window as unknown as { __useHome: typeof useHome }).__useHome = useHome
     this.time.addEvent({ delay: 25000, loop: true, callback: () => { if (Math.random() < 0.4) useHome() } })
     this.time.addEvent({ delay: 60000, loop: true, callback: () => { if (Math.random() < 0.3) dig() } })
-    this.input.on('pointerup', () => this.hand.setVisible(false))
+    this.input.on('pointerup', () => { this.hand.setVisible(false); this.brushGfx.setVisible(false) })
     // Wischen ueber einen Hund streichelt ihn (ca. 120 Pixel Weg ueber dem Hund, einmal pro Wisch).
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
       for (const e of this.entries.values()) if (Math.hypot(p.worldX - e.dog.x, p.worldY - e.dog.y) < 110) e.dog.lookAt(p.worldX)
       this.hand.setVisible(false)
       if (p.isDown) this.tapDist += Math.hypot(p.x - p.prevPosition.x, p.y - p.prevPosition.y) / this.cameras.main.zoom
+      if (p.isDown && this.tool === 'buerste' && !this.busy && !this.contestBusy) {
+        const bh = [...this.entries.values()].find((e) => Math.abs(p.worldX - e.dog.x) < 40 * e.dog.scale + 10 && Math.abs(p.worldY - (e.dog.y - 25 * e.dog.scale)) < 35)
+        if (bh) {
+          this.brushGfx.setPosition(p.worldX, p.worldY).setAngle(Math.sin(this.time.now / 70) * 10).setVisible(true)
+          const st = Math.hypot(p.x - p.prevPosition.x, p.y - p.prevPosition.y) / this.cameras.main.zoom
+          this.swipe += st
+          bh.dog.hold(900)
+          bh.dog.bliss(1500)
+          this.heartAcc += st
+          if (this.heartAcc > 16) { this.heartAcc = 0; this.shineAt(p.worldX, p.worldY) }
+          if (this.swipe > 150) { this.swipe = 0; this.brushGfx.setVisible(false); void this.brush(bh.record.id, true) }
+          return
+        }
+        this.brushGfx.setVisible(false)
+      }
       if (!p.isDown || this.tool !== 'hand' || this.busy || this.contestBusy) { this.swipe = 0; return }
       const hit = [...this.entries.values()].find((e) => Math.abs(p.worldX - e.dog.x) < 40 * e.dog.scale + 10 && Math.abs(p.worldY - (e.dog.y - 25 * e.dog.scale)) < 35)
       if (!hit) { this.swipe = 0; return }
@@ -298,6 +315,35 @@ export class GardenScene extends Phaser.Scene {
     for (let i = 0; i < 4; i++) g.fillRoundedRect(-7 + i * 3.6, -13, 3.2, 11, 1.5).strokeRoundedRect(-7 + i * 3.6, -13, 3.2, 11, 1.5)
     g.fillRoundedRect(-11, -2, 5, 8, 2.5).strokeRoundedRect(-11, -2, 5, 8, 2.5)
     return g
+  }
+
+  private makeBrush(): Phaser.GameObjects.Graphics {
+    const g = this.add.graphics().setDepth(3000).setVisible(false)
+    g.fillStyle(0xb5793c, 1).lineStyle(1, 0x2b2b2b, 0.8)
+    g.fillRoundedRect(-12, -5, 24, 8, 3).strokeRoundedRect(-12, -5, 24, 8, 3)
+    g.fillStyle(0x3a9ea5, 1)
+    for (let i = 0; i < 6; i++) g.fillRect(-10 + i * 4, 3, 2, 5)
+    return g
+  }
+
+  private shineAt(x: number, y: number): void {
+    for (let i = 0; i < 2; i++) {
+      const t = this.add.text(x + (Math.random() - 0.5) * 20, y + (Math.random() - 0.5) * 10, '✦', { fontSize: '10px', color: '#fff6a8', resolution: 3 }).setOrigin(0.5).setDepth(3001)
+      this.tweens.add({ targets: t, y: t.y - 14, alpha: 0, scale: 1.6, duration: 600, onComplete: () => t.destroy() })
+    }
+  }
+
+  // Sichtbares Buersten: Buerste faehrt ueber das Fell, Glanzfunken steigen auf.
+  private async brushStrokes(e: Entry): Promise<void> {
+    const cx = e.dog.x
+    const cy = e.dog.y - 22 * e.dog.scale
+    e.dog.hold(1800)
+    e.dog.bliss(2200)
+    this.brushGfx.setVisible(true).setPosition(cx - 18, cy)
+    for (let i = 0; i < 6; i++) {
+      await new Promise<void>((res) => this.tweens.add({ targets: this.brushGfx, x: i % 2 === 0 ? cx + 18 : cx - 18, duration: 230, ease: 'Sine.easeInOut', onUpdate: () => this.shineAt(this.brushGfx.x, cy), onComplete: () => res() }))
+    }
+    this.brushGfx.setVisible(false)
   }
 
   private heartsAt(x: number, y: number): void {
@@ -860,13 +906,14 @@ export class GardenScene extends Phaser.Scene {
   }
 
   // Buersten: braucht eine Buerste im Vorrat und macht ein glaenzendes Fell.
-  private async brush(dogId: string): Promise<void> {
+  private async brush(dogId: string, animated = false): Promise<void> {
     const e = this.entries.get(dogId)
     if (!e || this.busy) return
     try {
       const eco = await loadEconomy()
       if ((eco.items.buerste ?? 0) < 1) { this.hud.toast('Ihr habt noch keine Bürste, im Laden gibt es eine'); return }
       this.busy = true
+      if (!animated) await this.brushStrokes(e)
       await groomDog(e.record)
       this.hud.refresh()
       this.hud.toast(`${e.record.name} hat jetzt ein glänzendes Fell`)
