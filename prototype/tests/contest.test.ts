@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { FAVORITE_BONUS, topLeague, average, cupsMissing, fitBonus, playRound, summarize, throwBonus, eligible, formBonus, LEAGUES, runContest } from '../src/dog/contest'
+import { duelScore, FAVORITE_BONUS, topLeague, average, cupsMissing, fitBonus, playRound, summarize, throwBonus, eligible, formBonus, LEAGUES, runContest } from '../src/dog/contest'
 
 const stats = (v: number) => ({ tempo: v, ausdauer: v, sprungkraft: v, gehorsam: v })
 const fixed = (x: number) => () => x
@@ -83,4 +83,10 @@ it('Medaille richtet sich nach der hoechsten Liga mit Pokal', () => {
 it('Lieblingsmensch als Werfer gibt einen kleinen Bonus', () => {
   const b = { stat: 'tempo' as const, value: 50, league: LEAGUES[1], form: 0, happiness: 50, affection: 0.5, throwQuality: 0.5 }
   expect(playRound({ ...b, favorite: true }, () => 0.5).dog - playRound(b, () => 0.5).dog).toBe(FAVORITE_BONUS)
+})
+
+it('Duell: besserer Wurf und mehr Wert zaehlen', () => {
+  const s = { value: 50, happiness: 50, affection: 0.5, throwQuality: 0.5 }
+  expect(duelScore({ ...s, throwQuality: 1 }, () => 0.5)).toBeGreaterThan(duelScore(s, () => 0.5))
+  expect(duelScore({ ...s, value: 60 }, () => 0.5) - duelScore(s, () => 0.5)).toBe(10)
 })

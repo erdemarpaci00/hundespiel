@@ -104,3 +104,16 @@ export function topLeague(trophies: Partial<Record<string, number>>): number {
 }
 
 export const MEDAL_COLORS = [0xcd7f32, 0xc0c0c0, 0xffd700, 0x66e0ff]
+
+export interface DuelSide {
+  value: number
+  happiness: number
+  affection: number
+  throwQuality: number
+  favorite?: boolean
+}
+
+// Duell zweier eigener Hunde: gleiche Zutaten wie im Turnier, aber gegeneinander.
+export function duelScore(s: DuelSide, rng: () => number): number {
+  return s.value + rng() * 30 + formBonus(s.happiness) + fitBonus(s.affection) + throwBonus(s.throwQuality) + (s.favorite ? FAVORITE_BONUS : 0)
+}

@@ -68,7 +68,7 @@ const TRAITS: [keyof DogRecord['personality'], string][] = [
 ]
 
 // Alles ueber einen Hund: Rasse, Charakter, Befinden, Werte. Nur auf Wunsch sichtbar.
-export function openDogDetail(dog: DogRecord, needs: Needs, bonds: { name: string; meetings: number }[] = [], onChange?: (d: DogRecord) => void, playContest?: PlayContest, favorite?: string | null): void {
+export function openDogDetail(dog: DogRecord, needs: Needs, bonds: { name: string; meetings: number }[] = [], onChange?: (d: DogRecord) => void, playContest?: PlayContest, favorite?: string | null, duel?: (d: DogRecord) => void): void {
   const { overlay: o, card } = overlay()
   const h = document.createElement('h1')
   const breed = dog.look.breed ? breedById(dog.look.breed).name : 'Mischling'
@@ -119,6 +119,13 @@ export function openDogDetail(dog: DogRecord, needs: Needs, bonds: { name: strin
       }
     })
     card.append(lk, t)
+    if (duel) {
+      const dl = document.createElement('button')
+      dl.className = 'alt'
+      dl.textContent = 'Duell mit einem anderen Hund'
+      dl.addEventListener('click', () => { o.remove(); duel(dog) })
+      card.appendChild(dl)
+    }
   }
   card.appendChild(closeButton(o))
 }

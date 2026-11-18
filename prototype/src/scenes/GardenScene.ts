@@ -10,7 +10,7 @@ import { enterContest, cleanPoop, dropPoop, findTreasure, loadPoopsFromDb, loadR
 import { GARDEN_BOUNDS } from '../garden'
 import type { Session } from '../session'
 import { markVisit, readLastVisit, shouldWelcome } from '../garden/welcome'
-import { MEDAL_COLORS, topLeague, CONTEST_MIN_ENERGY, playRound, rivalForm, summarize, type League, type Round } from '../dog/contest'
+import { duelScore, MEDAL_COLORS, topLeague, CONTEST_MIN_ENERGY, playRound, rivalForm, summarize, type League, type Round } from '../dog/contest'
 import { STAT_KEYS, STAT_LABEL, statValue } from '../dog/stats'
 import { wishBlock, wishFor, type Wish } from '../dog/wish'
 import { wantsPoop, type Poop } from '../garden/poop'
@@ -428,9 +428,9 @@ export class GardenScene extends Phaser.Scene {
     const box = this.bubble.box
     box.removeAll(true)
     const actions: [Action, () => void][] =
-      state === 'asleep' ? [['wake', () => this.tryWake(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id), () => { this.hud.refresh(); void this.reload() }, (d, l) => void this.playFrisbee(d, l), favoriteOf(this.affection[e.record.id] ?? {}))]]
-      : state === 'restless' ? [['walk', () => this.scene.start('walk')], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id), () => { this.hud.refresh(); void this.reload() }, (d, l) => void this.playFrisbee(d, l), favoriteOf(this.affection[e.record.id] ?? {}))]]
-      : [['feed', () => this.startThrow()], ['pet', () => void this.care('pet')], ['ball', () => void this.startBall(e.record.id)], ['brush', () => void this.brush(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id), () => { this.hud.refresh(); void this.reload() }, (d, l) => void this.playFrisbee(d, l), favoriteOf(this.affection[e.record.id] ?? {}))]]
+      state === 'asleep' ? [['wake', () => this.tryWake(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id), () => { this.hud.refresh(); void this.reload() }, (d, l) => void this.playFrisbee(d, l), favoriteOf(this.affection[e.record.id] ?? {}), this.entries.size > 1 ? (d) => void this.playDuel(d) : undefined)]]
+      : state === 'restless' ? [['walk', () => this.scene.start('walk')], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id), () => { this.hud.refresh(); void this.reload() }, (d, l) => void this.playFrisbee(d, l), favoriteOf(this.affection[e.record.id] ?? {}), this.entries.size > 1 ? (d) => void this.playDuel(d) : undefined)]]
+      : [['feed', () => this.startThrow()], ['pet', () => void this.care('pet')], ['ball', () => void this.startBall(e.record.id)], ['brush', () => void this.brush(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e), this.bondsOf(e.record.id), () => { this.hud.refresh(); void this.reload() }, (d, l) => void this.playFrisbee(d, l), favoriteOf(this.affection[e.record.id] ?? {}), this.entries.size > 1 ? (d) => void this.playDuel(d) : undefined)]]
     const n = actions.length
     actions.forEach(([kind, fn], i) => {
       const u = n === 1 ? 0 : (i / (n - 1)) * 2 - 1
@@ -611,6 +611,55 @@ export class GardenScene extends Phaser.Scene {
       await this.reload()
     } catch (err) {
       this.hud.toast(err instanceof Error ? err.message : 'Etwas ist schiefgelaufen, bitte nochmal versuchen')
+    } finally {
+      this.contestBusy = false
+    }
+  }
+
+  // Duell: du wirfst abwechselnd fuer beide Hunde, wer vier Runden besser faengt, gewinnt. Nur zum Spass, ohne Preis.
+  private async playDuel(first: DogRecord): Promise<void> {
+    const a = this.entries.get(first.id)
+    const b = [...this.entries.values()].find((e) => e.record.id !== first.id)
+    if (!a || !b || this.contestBusy) return
+    if (a.dog.sleeping || b.dog.sleeping) { this.hud.toast('Einer der beiden schläft gerade'); return }
+    this.contestBusy = true
+    this.closeBubble()
+    this.cancelModes(false)
+    let winsA = 0, winsB = 0
+    try {
+      for (let i = 0; i < STAT_KEYS.length; i++) {
+        const stat = STAT_KEYS[i]
+        const scores: number[] = []
+        for (const e of [a, b]) {
+          const q = await this.timingThrow(`Duell, Runde ${i + 1} von ${STAT_KEYS.length}: ${STAT_LABEL[stat]} - Wurf für ${e.record.name}`)
+          const tx = GARDEN_BOUNDS.x + 40 + Math.random() * (GARDEN_BOUNDS.w - 80)
+          const ty = GARDEN_BOUNDS.y + 30 + Math.random() * (GARDEN_BOUNDS.h - 60)
+          const miss = (1 - q) * 70
+          const ang = Math.random() * Math.PI * 2
+          const land = {
+            x: Math.min(GARDEN_BOUNDS.x + GARDEN_BOUNDS.w, Math.max(GARDEN_BOUNDS.x, tx + Math.cos(ang) * miss)),
+            y: Math.min(GARDEN_BOUNDS.y + GARDEN_BOUNDS.h, Math.max(GARDEN_BOUNDS.y, ty + Math.sin(ang) * miss * 0.5)),
+          }
+          const disc = await this.flyFrisbee(land)
+          await this.dogRunsTo(e, land)
+          disc.destroy()
+          const sc = duelScore({ value: statValue(e.record.look.breed, e.record.training, stat), happiness: this.currentNeeds(e).happiness, affection: e.record.personality.affection, throwQuality: q, favorite: favoriteOf(this.affection[e.record.id] ?? {}) === this.session.displayName }, Math.random)
+          scores.push(sc)
+          this.floatText(e.dog.x, e.dog.y - 70 * e.dog.scale, q > 0.8 ? 'Perfekt!' : q < 0.4 ? 'Daneben' : 'Gefangen', q < 0.4 ? '#ffb3b3' : '#8dff8d')
+          await new Promise((r) => this.time.delayedCall(700, () => r(null)))
+        }
+        const win: Entry = scores[0] >= scores[1] ? a : b
+        if (win === a) winsA++; else winsB++
+        win.dog.cheer(1200)
+        this.heartsAt(win.dog.x, win.dog.y - 60 * win.dog.scale)
+        this.floatText(win.dog.x, win.dog.y - 85 * win.dog.scale, `${win.record.name} gewinnt die Runde`, '#ffffff')
+        await new Promise((r) => this.time.delayedCall(1000, () => r(null)))
+      }
+      const champ = winsA === winsB ? null : winsA > winsB ? a : b
+      this.hud.toast(champ ? `${champ.record.name} gewinnt das Duell ${Math.max(winsA, winsB)}:${Math.min(winsA, winsB)}` : `Unentschieden ${winsA}:${winsB}`)
+      if (champ) champ.dog.cheer(3000)
+    } catch (err) {
+      this.hud.toast(err instanceof Error ? err.message : 'Etwas ist schiefgelaufen')
     } finally {
       this.contestBusy = false
     }
