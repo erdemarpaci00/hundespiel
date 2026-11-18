@@ -66,7 +66,7 @@ export function createHud(actions: HudActions): { toast(text: string): void; ref
     card.appendChild(h)
     const sub = document.createElement('div')
     sub.className = 'task'
-    sub.innerHTML = `<small>Gilt für euch beide. Serie: ${d.streak} ${d.streak === 1 ? 'Tag' : 'Tage'} in Folge. Alle drei: +10 Münzen, an Tag 3 und 7 mehr.</small>`
+    sub.innerHTML = `<small>Gilt für euch beide. Serie: ${d.streak} ${d.streak === 1 ? 'Tag' : 'Tage'} in Folge. Alle drei: +10 Münzen, an Tag 3 und an jedem 7. Tag mehr.</small>`
     card.appendChild(sub)
     DAILY_TASKS.forEach((t, i) => {
       const st = taskStatus(d, i)
