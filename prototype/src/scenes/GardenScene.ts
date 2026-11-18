@@ -54,6 +54,13 @@ export class GardenScene extends Phaser.Scene {
   }
 
   create(): void {
+    // Die Szene wird beim Zurueckkehren wiederverwendet: alter Stand verweist auf zerstoerte Objekte.
+    this.entries = new Map()
+    this.poseDogs = []
+    this.bubble = null
+    this.selectedId = null
+    this.busy = false
+    this.seenActivity = null
     // Welt ist 640x360, gerendert wird 3-fach scharf auf 1920x1080
     this.cameras.main.setZoom(3).centerOn(320, 180)
     const backdrop = drawScenery(this)
