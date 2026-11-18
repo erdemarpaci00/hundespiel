@@ -18,6 +18,7 @@ import { wantsPoop, type Poop } from '../garden/poop'
 import { dialogJustClosed, openContest, openDogDetail, pickDog } from '../ui/dogPanels'
 import { loadEconomy } from '../economy'
 import { createHud, type Tool } from '../ui/hud'
+import { collarColor } from '../dog/collar'
 import { showTutorial } from '../ui/tutorial'
 import { awayMessage } from '../away'
 import { mulberry32 } from '../util/rng'
@@ -389,6 +390,7 @@ export class GardenScene extends Phaser.Scene {
       e.dog.setPersonality(moodPersonality(e.record.personality, m))
       const top = topLeague(e.record.trophies)
       e.dog.setMedal(top >= 0 ? MEDAL_COLORS[top] : null)
+      e.dog.setCollar(collarColor(e.record.collar))
       e.dog.setFeeling(m === 'happy' || (m === 'ok' && favoriteOf(this.affection[e.record.id] ?? {}) === this.session.displayName) ? 'happy' : m === 'sad' || m === 'hungry' ? 'sad' : 'ok')
       const w = this.currentWish(e)
       e.dog.setEmote(m === 'hungry' ? 'hungry' : m === 'sad' ? 'sad' : w ? (`wish-${w}` as const) : null)

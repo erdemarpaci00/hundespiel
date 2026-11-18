@@ -24,6 +24,7 @@ export interface DogRecord {
   trophies: Record<string, number>
   createdAt: string
   contestAt: string | null
+  collar?: string | null
 }
 
 interface DogRow {
@@ -39,9 +40,10 @@ interface DogRow {
   trophies: Record<string, number> | null
   created_at: string
   contest_at: string | null
+  collar: string | null
 }
 
-const COLUMNS = 'id, name, picked_by, is_starter, look, personality, needs, needs_updated_at, training, trophies, created_at, contest_at'
+const COLUMNS = 'id, name, picked_by, is_starter, look, personality, needs, needs_updated_at, training, trophies, created_at, contest_at, collar'
 
 const toRecord = (r: DogRow): DogRecord => ({
   id: r.id,
@@ -56,6 +58,7 @@ const toRecord = (r: DogRow): DogRecord => ({
   trophies: r.trophies ?? {},
   createdAt: r.created_at,
   contestAt: r.contest_at,
+  collar: r.collar,
 })
 
 function fail(error: { message?: string } | null): void {
@@ -363,4 +366,11 @@ export async function loadPartnerSince(session: Session, sinceIso: string): Prom
   fail(members.error)
   const m = members.data?.[0]
   return m ? { name: String(m.display_name), acts: (acts.data ?? []).length } : null
+}
+
+// Kauft ein Halsband fuer einen Hund (Preis COLLAR_PRICE). Liefert den neuen Muenzstand.
+export async function buyCollar(dogId: string, color: string): Promise<number> {
+  const { data, error } = await supabase.rpc('buy_collar', { p_dog: dogId, p_color: color })
+  fail(error)
+  return typeof data === 'number' ? data : 0
 }

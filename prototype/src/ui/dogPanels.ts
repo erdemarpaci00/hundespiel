@@ -6,7 +6,8 @@ import { breedById } from '../dog/breeds'
 import { applyElapsed, type Needs } from '../dog/needs'
 import { EXERCISE, STAT_KEYS, STAT_LABEL, statValue, type StatKey } from '../dog/stats'
 import type { DogRecord } from '../dogRepo'
-import { adoptFromKennel, enterContest, trainDog } from '../dogRepo'
+import { adoptFromKennel, buyCollar, enterContest, trainDog } from '../dogRepo'
+import { COLLARS, COLLAR_PRICE } from '../dog/collar'
 import { cupsMissing, eligible, formBonus, LEAGUES, trophyShelf, type League } from '../dog/contest'
 import type { Puppy } from '../puppies'
 import type { Session } from '../session'
@@ -139,6 +140,32 @@ export function openDogDetail(dog: DogRecord, needs: Needs, bonds: { name: strin
     fl.textContent = '♥ ' + favText
     fl.style.cssText = 'margin:8px 0;font-size:13px;color:#c2185b'
     right.appendChild(fl)
+  }
+  if (onChange) {
+    right.appendChild(heading(`Halsband (${COLLAR_PRICE} Münzen)`))
+    const sw = document.createElement('div')
+    sw.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;margin:4px 0'
+    for (const c of COLLARS) {
+      const b = document.createElement('button')
+      b.setAttribute('aria-label', `Halsband ${c.name}`)
+      b.style.cssText = `width:34px;height:34px;padding:0;border-radius:50%;background:#${c.color.toString(16).padStart(6, '0')};border:${dog.collar === c.id ? '3px solid #222' : '2px solid #fff'};box-shadow:0 0 0 1px #999`
+      b.addEventListener('click', async () => {
+        if (dog.collar === c.id) return
+        sw.querySelectorAll('button').forEach((x) => { x.disabled = true })
+        try {
+          await buyCollar(dog.id, c.id)
+          o.remove()
+          onChange({ ...dog, collar: c.id })
+        } catch (e) {
+          note.textContent = e instanceof Error ? e.message : friendlyError(undefined)
+          sw.querySelectorAll('button').forEach((x) => { x.disabled = false })
+        }
+      })
+      sw.appendChild(b)
+    }
+    const note = document.createElement('div')
+    note.style.cssText = 'font-size:12px;color:#c53030'
+    right.append(sw, note)
   }
   const shelf = trophyShelf(dog.trophies)
   if (shelf) {

@@ -242,6 +242,10 @@ export class LivingDog {
     if (this.blissMs <= 0) this.sprite.setFeeling(f)
   }
 
+  setCollar(color: number | null): void {
+    this.sprite.setCollar(color)
+  }
+
   setMedal(color: number | null): void {
     this.sprite.setMedal(color)
   }

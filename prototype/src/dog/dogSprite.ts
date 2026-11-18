@@ -111,6 +111,18 @@ export class DogSprite {
     this.layout(0)
   }
 
+  private collar: Phaser.GameObjects.Rectangle | null = null
+
+  // Halsband in der gekauften Farbe, null entfernt es.
+  setCollar(color: number | null): void {
+    this.collar?.destroy()
+    this.collar = null
+    if (color === null) return
+    const c = this.container.scene.add.rectangle(23, -33, 8, 15, color).setStrokeStyle(1, 0x000000, 0.35).setAngle(-12)
+    this.container.add(c)
+    this.collar = c
+  }
+
   private medal: Phaser.GameObjects.Container | null = null
 
   // Medaille am Halsband (Farbe der hoechsten gewonnenen Liga), null entfernt sie.
