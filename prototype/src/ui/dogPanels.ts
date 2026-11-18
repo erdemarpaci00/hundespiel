@@ -188,10 +188,16 @@ export function openContest(dog: DogRecord, onChange: (d: DogRecord) => void): v
           const r = await enterContest(current, league)
           current = r.dog
           onChange(current)
-          render({
-            text: r.result.won ? `Sieg! +${r.result.prize} Münzen` : `Nicht gewonnen, Trostpreis +${r.result.prize} Münzen`,
-            lines: r.result.rounds.map((x) => `${STAT_LABEL[x.stat]}: ${Math.round(x.dog)} gegen ${Math.round(x.rival)} ${x.won ? '✔' : '✘'}`),
-          })
+          // Runden nacheinander zeigen, damit es spannend bleibt.
+          const lines = r.result.rounds.map((x) => `${STAT_LABEL[x.stat]}: ${Math.round(x.dog)} gegen ${Math.round(x.rival)} ${x.won ? '✔' : '✘'}`)
+          const final = r.result.won ? `Sieg! +${r.result.prize} Münzen` : `Nicht gewonnen, Trostpreis +${r.result.prize} Münzen`
+          for (let i = 0; i <= lines.length; i++) {
+            render({ text: i < lines.length ? `${current.name} tritt an ...` : final, lines: lines.slice(0, i) })
+            if (i < lines.length) {
+              card.querySelectorAll('button').forEach((x) => { x.disabled = true })
+              await new Promise((res) => setTimeout(res, 900))
+            }
+          }
         } catch (e) {
           render({ text: e instanceof Error ? e.message : friendlyError(undefined), lines: [] })
         }

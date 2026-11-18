@@ -76,9 +76,9 @@ describe('Nachtschlaf', () => {
     const r = applyElapsed(tired, 8 * H, p(0.5), at(30))
     expect(r.energy).toBeGreaterThan(90)
   })
-  it('Energie erholt sich tagsueber langsam', () => {
+  it('Energie erholt sich tagsueber', () => {
     const r = applyElapsed({ hunger: 80, energy: 50, happiness: 80 }, 4 * H, p(0.5), noon + 4 * H)
-    expect(r.energy).toBeCloseTo(66, 0)
+    expect(r.energy).toBeCloseTo(82, 0)
   })
   it('Hunger sinkt nachts nur zu einem Drittel', () => {
     const day = applyElapsed({ hunger: 100, energy: 50, happiness: 80 }, 6 * H, p(0.5), at(18))

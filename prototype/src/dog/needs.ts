@@ -27,7 +27,7 @@ function overTime(n: Needs, elapsedMs: number, endMs: number, p: Personality): P
   for (let t = endMs - elapsedMs; t < endMs; t += step) {
     const len = Math.min(step, endMs - t) / HOUR_MS
     const night = isSleepHour(t + step / 2)
-    energy = Math.min(MAX_NEED, Math.max(MIN_NEED, energy + (night ? 12 : 4) * len))
+    energy = Math.min(MAX_NEED, Math.max(MIN_NEED, energy + (night ? 12 : 8) * len))
     hunger = clamp(hunger - len * 12.5 * (0.7 + 0.6 * p.appetite) * (night ? 1 / 3 : 1))
   }
   return { hunger, energy }
