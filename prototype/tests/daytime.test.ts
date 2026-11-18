@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { dayPhase, weatherAt } from '../src/daytime'
 
 describe('dayPhase', () => {
-  it.each([[23, 'night'], [3, 'night'], [6, 'dawn'], [7, 'dawn'], [8, 'day'], [18, 'day'], [19, 'dusk'], [21, 'dusk'], [22, 'night']])('%i Uhr ist %s', (h, p) => {
+  it.each([[0, 'night'], [3, 'night'], [6, 'night'], [7, 'dawn'], [8, 'day'], [18, 'day'], [19, 'dusk'], [22, 'dusk'], [23, 'night']])('%i Uhr ist %s', (h, p) => {
     expect(dayPhase(new Date(2026, 5, 1, h, 30))).toBe(p)
   })
 })

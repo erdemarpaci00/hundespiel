@@ -16,10 +16,10 @@ const HOUR_MS = 3600 * 1000
 const clamp = (v: number): number => Math.min(MAX_NEED, Math.max(MIN_NEED, v))
 
 // Verfall pro Stunde. Hunger haengt vom Appetit ab, die anderen sind fest.
-// Nachts (22 bis 6 Uhr Ortszeit) schlaeft der Hund und erholt sich: Energie steigt, tagsueber sinkt sie.
-const isSleepHour = (ms: number): boolean => { const h = new Date(ms).getHours(); return h >= 22 || h < 6 }
+// Nachts (23 bis 7 Uhr Ortszeit) schlaeft der Hund und erholt sich: Energie steigt, tagsueber sinkt sie.
+const isSleepHour = (ms: number): boolean => { const h = new Date(ms).getHours(); return h >= 23 || h < 7 }
 
-// Tagsueber erholt sich die Energie langsam (+4 pro Stunde), nachts schnell (+12). Verbraucht wird sie nur durch Aktionen.
+// Tagsueber erholt sich die Energie langsam (+8 pro Stunde), nachts schnell (+12). Verbraucht wird sie nur durch Aktionen.
 // Hunger sinkt nachts nur zu einem Drittel, damit morgens nicht jeder Hund bei null steht.
 function overTime(n: Needs, elapsedMs: number, endMs: number, p: Personality): Pick<Needs, 'hunger' | 'energy'> {
   let { hunger, energy } = n
@@ -28,7 +28,7 @@ function overTime(n: Needs, elapsedMs: number, endMs: number, p: Personality): P
     const len = Math.min(step, endMs - t) / HOUR_MS
     const night = isSleepHour(t + step / 2)
     energy = Math.min(MAX_NEED, Math.max(MIN_NEED, energy + (night ? 12 : 8) * len))
-    hunger = clamp(hunger - len * 12.5 * (0.7 + 0.6 * p.appetite) * (night ? 1 / 3 : 1))
+    hunger = clamp(hunger - len * 8 * (0.7 + 0.6 * p.appetite) * (night ? 1 / 3 : 1))
   }
   return { hunger, energy }
 }

@@ -7,8 +7,8 @@ const DAY = 24 * H
 const p = (appetite: number, affection = 0.5): Personality => ({ energy: 0.5, courage: 0.5, affection, learning: 0.5, appetite })
 const full: Needs = { hunger: 100, energy: 100, happiness: 100 }
 
-test('nach 8 Stunden ist ein Hund mit appetite 0.5 hungrig, aber nie unter MIN_NEED', () => {
-  const n = applyElapsed(full, 8 * H, p(0.5), new Date(2026, 0, 10, 20).getTime())
+test('nach 10 Stunden ist ein Hund mit appetite 0.5 hungrig, aber nie unter MIN_NEED', () => {
+  const n = applyElapsed(full, 10 * H, p(0.5), new Date(2026, 0, 10, 19).getTime())
   expect(n.hunger).toBeLessThanOrEqual(30)
   expect(n.hunger).toBeGreaterThanOrEqual(MIN_NEED)
 })
@@ -82,7 +82,7 @@ describe('Nachtschlaf', () => {
   })
   it('Hunger sinkt nachts nur zu einem Drittel', () => {
     const day = applyElapsed({ hunger: 100, energy: 50, happiness: 80 }, 6 * H, p(0.5), at(18))
-    const night = applyElapsed({ hunger: 100, energy: 50, happiness: 80 }, 6 * H, p(0.5), at(28))
+    const night = applyElapsed({ hunger: 100, energy: 50, happiness: 80 }, 6 * H, p(0.5), at(30))
     expect(100 - night.hunger).toBeCloseTo((100 - day.hunger) / 3, 0)
   })
 })

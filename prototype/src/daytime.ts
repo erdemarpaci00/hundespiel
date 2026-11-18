@@ -1,10 +1,10 @@
 export type Phase = 'night' | 'dawn' | 'day' | 'dusk'
 export type Weather = 'sun' | 'cloud' | 'rain'
 
-// Ortszeit des Handys: 22-6 Nacht, 6-8 Morgen, 8-19 Tag, 19-22 Abend.
+// Ortszeit des Handys: 23-7 Nacht, 7-8 Morgen, 8-19 Tag, 19-23 Abend.
 export function dayPhase(d: Date): Phase {
   const h = d.getHours()
-  if (h >= 22 || h < 6) return 'night'
+  if (h >= 23 || h < 7) return 'night'
   if (h < 8) return 'dawn'
   if (h < 19) return 'day'
   return 'dusk'
