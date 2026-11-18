@@ -2,6 +2,7 @@ import { parseTimestamp } from './time'
 import type { ActivityEntry, ActivityKind } from './activity'
 import type { Personality } from './dog/behavior'
 import type { DogLook } from './dog/look'
+import type { Poop } from './garden/poop'
 import { CONTEST_MIN_ENERGY, runContest, type League, type Result } from './dog/contest'
 import { applyElapsed, feed, groom, pet, play, PLAY_MIN_ENERGY, TRAIN_MIN_ENERGY, train, type Needs } from './dog/needs'
 import { NO_TRAINING, STAT_KEYS, statValue, trainGain, type StatKey, type Training } from './dog/stats'
@@ -190,6 +191,7 @@ export function subscribeToHousehold(session: Session, onChange: () => void): ()
     .channel(`household-${session.householdId}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'dogs', filter: `household_id=eq.${session.householdId}` }, onChange)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'activity', filter: `household_id=eq.${session.householdId}` }, onChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'poops', filter: `household_id=eq.${session.householdId}` }, onChange)
     .subscribe((status) => {
       // Nach einem Verbindungsabbruch (Handy gesperrt, App im Hintergrund) werden verpasste Aenderungen nicht nachgeliefert: neu laden.
       if (status === 'SUBSCRIBED') {
@@ -262,4 +264,22 @@ export async function enterContest(dog: DogRecord, league: League): Promise<{ do
     current = await loadDog(current.id)
   }
   throw new Error('Gerade war jemand schneller, bitte nochmal tippen')
+}
+
+export async function loadPoopsFromDb(): Promise<Poop[]> {
+  const { data, error } = await supabase.from('poops').select('id, x, y')
+  fail(error)
+  return (data ?? []) as Poop[]
+}
+
+export async function dropPoop(x: number, y: number): Promise<void> {
+  const { error } = await supabase.rpc('drop_poop', { p_x: Math.round(x), p_y: Math.round(y) })
+  fail(error)
+}
+
+// Liefert die Belohnung in Muenzen (0 oder 1).
+export async function cleanPoop(id: string): Promise<number> {
+  const { data, error } = await supabase.rpc('clean_poop', { p_id: id })
+  fail(error)
+  return typeof data === 'number' && data > 0 ? data : 0
 }

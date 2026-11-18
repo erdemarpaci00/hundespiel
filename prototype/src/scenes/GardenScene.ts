@@ -6,10 +6,10 @@ import { ageDays, ageStage } from '../dog/age'
 import { LivingDog } from '../dog/livingDog'
 import { randomLook } from '../dog/look'
 import { applyElapsed, PLAY_MIN_ENERGY, mood, moodPersonality, type Mood, type Needs } from '../dog/needs'
-import { loadRelations, recordMeeting, type Relation, careForDog, groomDog, playWithDog, loadActivity, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
+import { cleanPoop, dropPoop, loadPoopsFromDb, loadRelations, recordMeeting, type Relation, careForDog, groomDog, playWithDog, loadActivity, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
 import { GARDEN_BOUNDS } from '../garden'
 import type { Session } from '../session'
-import { loadPoops, savePoops, wantsPoop, type Poop } from '../garden/poop'
+import { wantsPoop, type Poop } from '../garden/poop'
 import { openDogDetail } from '../ui/dogPanels'
 import { loadEconomy } from '../economy'
 import { createHud } from '../ui/hud'
@@ -95,13 +95,13 @@ export class GardenScene extends Phaser.Scene {
     this.session = this.registry.get('session') as Session
     this.hud = createHud({ householdId: this.session.householdId, getActivity: () => this.activityLines(), travel: (k) => this.scene.start(k), current: 'garden' })
     this.hand = this.makeHand()
-    for (const p of loadPoops(this.session.householdId)) this.addPoop(p.x, p.y, false)
+    if (location.search.includes('debug')) (window as unknown as { __dropPoop: typeof dropPoop }).__dropPoop = dropPoop
     this.time.addEvent({
       delay: 20000,
       loop: true,
       callback: () => {
         for (const e of this.entries.values()) {
-          if (!e.dog.sleeping && wantsPoop(Math.random, true, this.poops.length)) { this.addPoop(e.dog.x - 14, e.dog.y + 2, true); break }
+          if (!e.dog.sleeping && wantsPoop(Math.random, true, this.poops.length)) { void dropPoop(e.dog.x - 14, e.dog.y + 2).catch(() => undefined); break }
         }
       },
     })
@@ -152,8 +152,9 @@ export class GardenScene extends Phaser.Scene {
 
   private async reload(): Promise<void> {
     try {
-      const [records, activity, relations] = await Promise.all([loadDogs(this.session), loadActivity(this.session, 8), loadRelations().catch(() => this.relations)])
+      const [records, activity, relations, poops] = await Promise.all([loadDogs(this.session), loadActivity(this.session, 8), loadRelations().catch(() => this.relations), loadPoopsFromDb().catch(() => null)])
       this.relations = relations
+      if (poops) this.syncPoops(poops)
       this.announceNew(activity)
       this.activity = activity
       this.syncDogs(records)
@@ -215,23 +216,35 @@ export class GardenScene extends Phaser.Scene {
     }
   }
 
-  // Haeufchen: braune Wirbel, antippen raeumt auf.
-  private addPoop(x: number, y: number, persist: boolean): void {
-    const c = this.add.container(x, y).setDepth(y).setSize(22, 22)
+  // Haeufchen: braune Wirbel, antippen raeumt auf (fuer alle im Haushalt).
+  private addPoop(data: Poop): void {
+    const c = this.add.container(data.x, data.y).setDepth(data.y).setSize(22, 22)
     const g = this.add.graphics()
     g.fillStyle(0x6b4423).fillEllipse(0, 3, 14, 6).fillEllipse(0, -1, 10, 5).fillEllipse(0, -5, 6, 4)
     g.fillStyle(0xffffff, 0.35).fillEllipse(-2, -6, 2, 1)
     c.add(g)
     c.setInteractive(new Phaser.Geom.Circle(11, 11, 14), Phaser.Geom.Circle.Contains)
-    const entry = { data: { x, y }, obj: c }
+    const entry = { data, obj: c }
     c.on('pointerdown', () => {
-      this.poops = this.poops.filter((p) => p !== entry)
-      savePoops(this.session.householdId, this.poops.map((p) => p.data))
-      this.tweens.add({ targets: c, scale: 0, alpha: 0, duration: 200, onComplete: () => c.destroy() })
-      this.hud.toast('Aufgeräumt')
+      this.removePoopObject(entry)
+      void cleanPoop(data.id)
+        .then((coins) => { this.hud.toast(coins > 0 ? 'Aufgeräumt, +1 Münze' : 'Aufgeräumt'); if (coins > 0) this.hud.refresh() })
+        .catch(() => this.hud.toast('Aufräumen hat nicht geklappt'))
     })
     this.poops.push(entry)
-    if (persist) savePoops(this.session.householdId, this.poops.map((p) => p.data))
+  }
+
+  private removePoopObject(entry: { data: Poop; obj: Phaser.GameObjects.Container }): void {
+    this.poops = this.poops.filter((p) => p !== entry)
+    this.tweens.add({ targets: entry.obj, scale: 0, alpha: 0, duration: 200, onComplete: () => entry.obj.destroy() })
+  }
+
+  // Abgleich mit dem gemeinsamen Stand aus der Datenbank.
+  private syncPoops(list: Poop[]): void {
+    const ids = new Set(list.map((p) => p.id))
+    for (const entry of [...this.poops]) if (!ids.has(entry.data.id)) this.removePoopObject(entry)
+    const have = new Set(this.poops.map((p) => p.data.id))
+    for (const p of list) if (!have.has(p.id)) this.addPoop(p)
   }
 
   private bondsOf(id: string): { name: string; meetings: number }[] {
