@@ -185,8 +185,7 @@ export class GardenScene extends Phaser.Scene {
         this.closeBubble()
         // Herzen sofort, gespeichert wird hoechstens alle 5 Minuten pro Hund (sonst Verlaufsspam und Dauerladen).
         const last = this.lastPetSave.get(hit.record.id) ?? 0
-        this.fulfill(hit.record.id, 'pet')
-        if (Date.now() - last > 5 * 60 * 1000) { this.lastPetSave.set(hit.record.id, Date.now()); void this.care('pet', hit.record.id) }
+        if (Date.now() - last > 5 * 60 * 1000) { this.lastPetSave.set(hit.record.id, Date.now()); void this.care('pet', hit.record.id) } else this.fulfill(hit.record.id, 'pet')
       }
     })
     this.input.on('pointerdown', (p: Phaser.Input.Pointer, over: unknown[]) => {
@@ -637,8 +636,8 @@ export class GardenScene extends Phaser.Scene {
       await careForDog(this.session, sel.record, action)
       const dogE = this.entries.get(sel.record.id)
       if (action === 'pet' && dogE) this.heartsAt(dogE.dog.x, dogE.dog.y - 60 * dogE.dog.scale)
-      if (action === 'pet') this.fulfill(sel.record.id, 'pet')
       this.hud.toast(action === 'feed' ? `${sel.record.name} frisst und ist satt` : `${sel.record.name} genießt das Streicheln`)
+      if (action === 'pet') this.fulfill(sel.record.id, 'pet')
       await this.reload()
       this.hud.refresh()
       this.bubble?.timer.reset({ delay: 8000, callback: () => this.closeBubble() })
