@@ -117,3 +117,10 @@ export interface DuelSide {
 export function duelScore(s: DuelSide, rng: () => number): number {
   return s.value + rng() * 30 + formBonus(s.happiness) + fitBonus(s.affection) + throwBonus(s.throwQuality) + (s.favorite ? FAVORITE_BONUS : 0)
 }
+
+// Server sperrt ein Turnier 10 Minuten nach dem letzten: vorher pruefen statt nach vier Runden abzulehnen.
+export function contestWaitMinutes(d: { contestAt: string | null }, now = Date.now()): number {
+  if (!d.contestAt) return 0
+  const left = 10 * 60 * 1000 - (now - new Date(d.contestAt).getTime())
+  return left > 0 ? Math.ceil(left / 60000) : 0
+}

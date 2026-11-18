@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { contestWaitMinutes, type DogRecord } from '../src/dogRepo'
+import { contestWaitMinutes } from '../src/dog/contest'
 
-const dog = (contestAt: string | null): DogRecord => ({ contestAt } as DogRecord)
+const dog = (contestAt: string | null): { contestAt: string | null } => ({ contestAt })
 const now = Date.parse('2026-11-18T12:00:00Z')
 
 describe('Turnier-Sperre', () => {

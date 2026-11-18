@@ -338,10 +338,3 @@ export async function loadAffection(session: Session): Promise<Record<string, Re
   }
   return out
 }
-
-// Server sperrt ein Turnier 10 Minuten nach dem letzten: vorher pruefen statt nach vier Runden abzulehnen.
-export function contestWaitMinutes(d: DogRecord, now = Date.now()): number {
-  if (!d.contestAt) return 0
-  const left = 10 * 60 * 1000 - (now - new Date(d.contestAt).getTime())
-  return left > 0 ? Math.ceil(left / 60000) : 0
-}
