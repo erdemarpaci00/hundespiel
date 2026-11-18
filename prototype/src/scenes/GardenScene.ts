@@ -229,10 +229,10 @@ export class GardenScene extends Phaser.Scene {
       : [['feed', () => this.startThrow()], ['pet', () => void this.care('pet')], ['ball', () => void this.startBall(e.record.id)], ['brush', () => void this.brush(e.record.id)], ['details', () => openDogDetail(e.record, this.currentNeeds(e))]]
     const n = actions.length
     actions.forEach(([kind, fn], i) => {
-      const a = (-(n > 3 ? 172 : 160) + (n === 1 ? 70 : (i * (n > 3 ? 164 : 140)) / (n - 1))) * (Math.PI / 180)
+      const u = n === 1 ? 0 : (i / (n - 1)) * 2 - 1
       const b = this.iconButton(kind, fn)
-      const tx = Math.cos(a) * (n > 3 ? 74 : 46)
-      const ty = Math.sin(a) * 22
+      const tx = u * (n - 1) * 19
+      const ty = -(1 - u * u) * 14
       b.setPosition(0, 0).setScale(0.3).setAlpha(0)
       this.tweens.add({ targets: b, x: tx, y: ty, scale: 1, alpha: 1, duration: 160, ease: 'Back.easeOut', delay: i * 30 })
       box.add(b)
