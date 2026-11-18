@@ -19,29 +19,30 @@ const clamp = (v: number): number => Math.min(MAX_NEED, Math.max(MIN_NEED, v))
 // Nachts (22 bis 6 Uhr Ortszeit) schlaeft der Hund und erholt sich: Energie steigt, tagsueber sinkt sie.
 const isSleepHour = (ms: number): boolean => { const h = new Date(ms).getHours(); return h >= 22 || h < 6 }
 
-function energyOver(start: number, elapsedMs: number, endMs: number): number {
-  let e = start
+// Tagsueber erholt sich die Energie langsam (+4 pro Stunde), nachts schnell (+12). Verbraucht wird sie nur durch Aktionen.
+// Hunger sinkt nachts nur zu einem Drittel, damit morgens nicht jeder Hund bei null steht.
+function overTime(n: Needs, elapsedMs: number, endMs: number, p: Personality): Pick<Needs, 'hunger' | 'energy'> {
+  let { hunger, energy } = n
   const step = 15 * 60 * 1000
   for (let t = endMs - elapsedMs; t < endMs; t += step) {
     const len = Math.min(step, endMs - t) / HOUR_MS
-    e = Math.min(MAX_NEED, Math.max(MIN_NEED, e + (isSleepHour(t + step / 2) ? 10 : -6) * len))
+    const night = isSleepHour(t + step / 2)
+    energy = Math.min(MAX_NEED, Math.max(MIN_NEED, energy + (night ? 12 : 4) * len))
+    hunger = clamp(hunger - len * 12.5 * (0.7 + 0.6 * p.appetite) * (night ? 1 / 3 : 1))
   }
-  return e
+  return { hunger, energy }
 }
 
 export function applyElapsed(n: Needs, elapsedMs: number, p: Personality, endMs: number = Date.now()): Needs {
   if (!Number.isFinite(elapsedMs) || elapsedMs <= 0) return { ...n }
   const capped = Math.min(elapsedMs, MAX_ELAPSED_MS)
   const hours = capped / HOUR_MS
-  return {
-    hunger: clamp(n.hunger - hours * 12.5 * (0.7 + 0.6 * p.appetite)),
-    energy: energyOver(n.energy, capped, endMs),
-    happiness: clamp(n.happiness - hours * 2),
-  }
+  const { hunger, energy } = overTime(n, capped, endMs, p)
+  return { hunger, energy, happiness: clamp(n.happiness - hours * 2) }
 }
 
 export function feed(n: Needs): Needs {
-  return { ...n, hunger: clamp(n.hunger + 40), happiness: clamp(n.happiness + 5) }
+  return { ...n, hunger: clamp(n.hunger + 60), happiness: clamp(n.happiness + 5) }
 }
 
 export function pet(n: Needs, p: Personality): Needs {

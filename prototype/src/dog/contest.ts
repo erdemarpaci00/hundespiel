@@ -12,10 +12,10 @@ export interface League {
 }
 
 export const LEAGUES: League[] = [
-  { id: 'bronze', name: 'Bronze-Liga', rival: 30, win: 20, consolation: 4, entry: 0 },
-  { id: 'silber', name: 'Silber-Liga', rival: 48, win: 45, consolation: 8, entry: 35 },
-  { id: 'gold', name: 'Gold-Liga', rival: 66, win: 90, consolation: 14, entry: 50 },
-  { id: 'olympia', name: 'Olympia', rival: 84, win: 220, consolation: 30, entry: 68 },
+  { id: 'bronze', name: 'Bronze-Liga', rival: 28, win: 15, consolation: 5, entry: 0 },
+  { id: 'silber', name: 'Silber-Liga', rival: 50, win: 40, consolation: 10, entry: 35 },
+  { id: 'gold', name: 'Gold-Liga', rival: 66, win: 100, consolation: 20, entry: 50 },
+  { id: 'olympia', name: 'Olympia', rival: 80, win: 260, consolation: 40, entry: 68 },
 ]
 
 export const CONTEST_MIN_ENERGY = 40
@@ -31,12 +31,14 @@ export function eligible(league: League, values: Record<StatKey, number>): boole
 export interface Round { stat: StatKey; dog: number; rival: number; won: boolean }
 export interface Result { rounds: Round[]; won: boolean; prize: number }
 
-// Vier Runden, eine pro Wert. Tagesform (rng) kommt zu jedem Wert dazu (0 bis 20),
-// wer mehr Runden gewinnt, siegt; bei Gleichstand entscheidet die Gesamtsumme.
+// Vier Runden, eine pro Wert. Beide Seiten haben pro Runde Tagesform (0 bis 30), der Gegner ist
+// pro Turnier um +-12 staerker oder schwaecher. Wer mehr Runden gewinnt, siegt; bei 2:2 zaehlt die Gesamtsumme.
+// Simuliert: Gewinnchance steigt ueber etwa 30 Wertpunkte von 10 auf 90 Prozent.
 export function runContest(league: League, values: Record<StatKey, number>, rng: () => number): Result {
+  const form = (rng() - 0.5) * 24
   const rounds = STAT_KEYS.map((stat): Round => {
-    const dog = values[stat] + rng() * 20
-    const rival = league.rival + (rng() - 0.5) * 20
+    const dog = values[stat] + rng() * 30
+    const rival = league.rival + form + rng() * 30
     return { stat, dog, rival, won: dog > rival }
   })
   const wins = rounds.filter((r) => r.won).length

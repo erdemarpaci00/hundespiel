@@ -18,8 +18,8 @@ declare
   max_lose int;
   changed int;
 begin
-  max_win := case p_league when 'bronze' then 20 when 'silber' then 45 when 'gold' then 90 when 'olympia' then 220 end;
-  max_lose := case p_league when 'bronze' then 4 when 'silber' then 8 when 'gold' then 14 when 'olympia' then 30 end;
+  max_win := case p_league when 'bronze' then 15 when 'silber' then 40 when 'gold' then 100 when 'olympia' then 260 end;
+  max_lose := case p_league when 'bronze' then 5 when 'silber' then 10 when 'gold' then 20 when 'olympia' then 40 end;
   if max_win is null then
     raise exception 'Unbekannte Liga';
   end if;

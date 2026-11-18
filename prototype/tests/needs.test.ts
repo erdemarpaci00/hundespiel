@@ -8,14 +8,14 @@ const p = (appetite: number, affection = 0.5): Personality => ({ energy: 0.5, co
 const full: Needs = { hunger: 100, energy: 100, happiness: 100 }
 
 test('nach 8 Stunden ist ein Hund mit appetite 0.5 hungrig, aber nie unter MIN_NEED', () => {
-  const n = applyElapsed(full, 8 * H, p(0.5))
+  const n = applyElapsed(full, 8 * H, p(0.5), new Date(2026, 0, 10, 20).getTime())
   expect(n.hunger).toBeLessThanOrEqual(30)
   expect(n.hunger).toBeGreaterThanOrEqual(MIN_NEED)
 })
 
 test('verfressener Hund verliert schneller Hunger als wählerischer', () => {
-  const greedy = applyElapsed(full, 3 * H, p(1)).hunger
-  const picky = applyElapsed(full, 3 * H, p(0)).hunger
+  const greedy = applyElapsed(full, 3 * H, p(1), new Date(2026, 0, 10, 15).getTime()).hunger
+  const picky = applyElapsed(full, 3 * H, p(0), new Date(2026, 0, 10, 15).getTime()).hunger
   expect(greedy).toBeLessThan(picky)
 })
 
@@ -34,9 +34,9 @@ test('negative oder NaN-Zeit ändert nichts', () => {
   expect(applyElapsed(full, Number.NaN, p(0.5))).toEqual(full)
 })
 
-test('feed erhöht hunger um 40 höchstens auf 100 und happiness um 5', () => {
+test('feed erhöht hunger um 60 höchstens auf 100 und happiness um 5', () => {
   const n = feed({ hunger: 30, energy: 50, happiness: 50 })
-  expect(n).toEqual({ hunger: 70, energy: 50, happiness: 55 })
+  expect(n).toEqual({ hunger: 90, energy: 50, happiness: 55 })
   expect(feed({ hunger: 90, energy: 50, happiness: 98 })).toEqual({ hunger: 100, energy: 50, happiness: 100 })
 })
 
@@ -76,8 +76,13 @@ describe('Nachtschlaf', () => {
     const r = applyElapsed(tired, 8 * H, p(0.5), at(30))
     expect(r.energy).toBeGreaterThan(90)
   })
-  it('Energie sinkt tagsueber wie bisher', () => {
-    const r = applyElapsed({ hunger: 80, energy: 100, happiness: 80 }, 4 * H, p(0.5), noon + 4 * H)
-    expect(r.energy).toBeCloseTo(76, 0)
+  it('Energie erholt sich tagsueber langsam', () => {
+    const r = applyElapsed({ hunger: 80, energy: 50, happiness: 80 }, 4 * H, p(0.5), noon + 4 * H)
+    expect(r.energy).toBeCloseTo(66, 0)
+  })
+  it('Hunger sinkt nachts nur zu einem Drittel', () => {
+    const day = applyElapsed({ hunger: 100, energy: 50, happiness: 80 }, 6 * H, p(0.5), at(18))
+    const night = applyElapsed({ hunger: 100, energy: 50, happiness: 80 }, 6 * H, p(0.5), at(28))
+    expect(100 - night.hunger).toBeCloseTo((100 - day.hunger) / 3, 0)
   })
 })
