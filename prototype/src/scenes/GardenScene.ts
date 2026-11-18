@@ -514,7 +514,8 @@ export class GardenScene extends Phaser.Scene {
     if (!this.bubble) return
     const e = this.entries.get(this.bubble.dogId)
     if (!e) return
-    const x = Math.min(580, Math.max(60, e.dog.x))
+    const half = Math.max(30, ((this.bubble.box.length - 1) * 19) / 2 + 20)
+    const x = Math.min(640 - half, Math.max(half, e.dog.x))
     const y = Math.min(300, Math.max(70, e.dog.y - 26 - 92 * e.dog.scale))
     this.bubble.box.setPosition(x, y)
   }
