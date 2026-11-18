@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest'
+import { describe, expect, it, test } from 'vitest'
 import type { Personality } from '../src/dog/behavior'
 import { applyElapsed, feed, MIN_NEED, mood, pet, type Needs } from '../src/dog/needs'
 
@@ -66,4 +66,18 @@ test('moodPersonality: müde und traurige Hunde sind träger, glückliche aufgew
   expect(moodPersonality({ ...base, energy: 0.95 }, 'happy').energy).toBeLessThanOrEqual(1)
   expect(moodPersonality(base, 'tired').appetite).toBe(base.appetite)
   expect(moodPersonality(base, 'ok')).toEqual(base)
+})
+
+describe('Nachtschlaf', () => {
+  const noon = new Date(2026, 0, 10, 12).getTime()
+  const at = (h: number): number => new Date(2026, 0, 10 + (h >= 24 ? 1 : 0), h % 24).getTime()
+  it('Energie steigt ueber Nacht', () => {
+    const tired = { hunger: 80, energy: 20, happiness: 80 }
+    const r = applyElapsed(tired, 8 * H, p(0.5), at(30))
+    expect(r.energy).toBeGreaterThan(90)
+  })
+  it('Energie sinkt tagsueber wie bisher', () => {
+    const r = applyElapsed({ hunger: 80, energy: 100, happiness: 80 }, 4 * H, p(0.5), noon + 4 * H)
+    expect(r.energy).toBeCloseTo(76, 0)
+  })
 })

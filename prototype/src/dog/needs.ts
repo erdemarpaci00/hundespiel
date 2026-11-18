@@ -16,12 +16,26 @@ const HOUR_MS = 3600 * 1000
 const clamp = (v: number): number => Math.min(MAX_NEED, Math.max(MIN_NEED, v))
 
 // Verfall pro Stunde. Hunger haengt vom Appetit ab, die anderen sind fest.
-export function applyElapsed(n: Needs, elapsedMs: number, p: Personality): Needs {
+// Nachts (22 bis 6 Uhr Ortszeit) schlaeft der Hund und erholt sich: Energie steigt, tagsueber sinkt sie.
+const isSleepHour = (ms: number): boolean => { const h = new Date(ms).getHours(); return h >= 22 || h < 6 }
+
+function energyOver(start: number, elapsedMs: number, endMs: number): number {
+  let e = start
+  const step = 15 * 60 * 1000
+  for (let t = endMs - elapsedMs; t < endMs; t += step) {
+    const len = Math.min(step, endMs - t) / HOUR_MS
+    e = Math.min(MAX_NEED, Math.max(MIN_NEED, e + (isSleepHour(t + step / 2) ? 10 : -6) * len))
+  }
+  return e
+}
+
+export function applyElapsed(n: Needs, elapsedMs: number, p: Personality, endMs: number = Date.now()): Needs {
   if (!Number.isFinite(elapsedMs) || elapsedMs <= 0) return { ...n }
-  const hours = Math.min(elapsedMs, MAX_ELAPSED_MS) / HOUR_MS
+  const capped = Math.min(elapsedMs, MAX_ELAPSED_MS)
+  const hours = capped / HOUR_MS
   return {
     hunger: clamp(n.hunger - hours * 12.5 * (0.7 + 0.6 * p.appetite)),
-    energy: clamp(n.energy - hours * 6),
+    energy: energyOver(n.energy, capped, endMs),
     happiness: clamp(n.happiness - hours * 2),
   }
 }
