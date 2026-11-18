@@ -18,6 +18,7 @@ import { wantsPoop, type Poop } from '../garden/poop'
 import { dialogJustClosed, openDogDetail, pickDog } from '../ui/dogPanels'
 import { loadEconomy } from '../economy'
 import { createHud, type Tool } from '../ui/hud'
+import { showTutorial } from '../ui/tutorial'
 import { mulberry32 } from '../util/rng'
 import { isRestless, resistsWaking } from '../nightlife'
 import { createAtmosphere, type Atmosphere } from './atmosphere'
@@ -125,6 +126,7 @@ export class GardenScene extends Phaser.Scene {
     this.hud = createHud({ householdId: this.session.householdId, getActivity: () => this.activityLines(), travel: (k) => this.scene.start(k), current: 'garden', onEconomy: (items) => this.onEconomy(items), onTool: (t) => this.pick(t) })
     this.hand = this.makeHand()
     this.time.addEvent({ delay: 7000, loop: true, callback: () => this.ambientBall() })
+    this.time.delayedCall(1500, () => showTutorial())
     const welcome = shouldWelcome(readLastVisit(), Date.now())
     markVisit(Date.now())
     if (welcome) this.events.once('welcome', () => { let i = 0; for (const e of this.entries.values()) this.time.delayedCall(300 * i++, () => e.dog.cheer(4000)); this.hud.toast('Deine Hunde freuen sich, dass du wieder da bist') })
