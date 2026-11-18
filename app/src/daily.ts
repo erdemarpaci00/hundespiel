@@ -1,7 +1,7 @@
 // Tagesbuch: gleiche Werte wie supabase/013-daily.sql (need) - der Server prueft und zahlt aus.
 export const DAILY_TASKS = [
   { label: 'Hunde füttern oder mit Leckerli verwöhnen', need: 2 },
-  { label: 'Spielen, streicheln oder bürsten', need: 3 },
+  { label: 'Spielen, streicheln, bürsten oder Schätze suchen', need: 3 },
   { label: 'Trainieren oder zum Turnier gehen', need: 2 },
 ] as const
 
