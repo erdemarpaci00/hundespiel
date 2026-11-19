@@ -2,6 +2,7 @@ import { cue } from '../feedback'
 import { parseTimestamp } from '../time'
 import Phaser from 'phaser'
 import { fadeTo } from './transition'
+import { airCatch, dogRunsTo, floatText, mouthOf, timingThrow } from './duelFx'
 import { burst } from './fx'
 import { describeActivity, favoriteOf, relativeTime, type ActivityEntry } from '../activity'
 import { DogSprite, type Pose } from '../dog/dogSprite'
@@ -589,115 +590,6 @@ export class GardenScene extends Phaser.Scene {
     if (level >= 3) g.fillStyle(0x8c7a5a, 1).fillEllipse(540, 300, 92, 46).fillStyle(0x4aa3df, 1).fillEllipse(540, 300, 82, 38).fillStyle(0xffffff, 0.35).fillEllipse(530, 295, 26, 8)
   }
 
-  // Ein Zeiger pendelt ueber einen Balken, ein Tipp wirft. Mitte (gruen) = perfekter Wurf. Liefert 0 bis 1.
-  private timingThrow(title: string): Promise<number> {
-    return new Promise((resolve) => {
-      const cx = 320, cy = 322, w = 190
-      const bar = this.add.graphics().setDepth(3000)
-      bar.fillStyle(0x000000, 0.55).fillRoundedRect(cx - w / 2 - 6, cy - 12, w + 12, 24, 6)
-      bar.fillStyle(0xe05555, 1).fillRect(cx - w / 2, cy - 5, w, 10)
-      bar.fillStyle(0xf0c040, 1).fillRect(cx - w * 0.3, cy - 5, w * 0.6, 10)
-      bar.fillStyle(0x4caf50, 1).fillRect(cx - w * 0.1, cy - 5, w * 0.2, 10)
-      const label = this.add.text(cx, cy - 20, title, { fontSize: '10px', color: '#ffffff', backgroundColor: 'rgba(0,0,0,0.6)', padding: { x: 6, y: 3 }, resolution: 3, fontFamily: 'Arial, Helvetica, sans-serif' }).setOrigin(0.5, 1).setDepth(3002)
-      const cursor = this.add.rectangle(cx, cy, 3, 18, 0xffffff).setDepth(3001)
-      const t0 = this.time.now
-      const pos = (): number => 0.5 + 0.5 * Math.sin(((this.time.now - t0) / 1000) * 3.2 - Math.PI / 2)
-      const tick = this.time.addEvent({ delay: 16, loop: true, callback: () => cursor.setX(cx - w / 2 + pos() * w) })
-      let done = false
-      const finish = (q: number): void => {
-        if (done) return
-        done = true
-        tick.remove(false)
-        bar.destroy(); label.destroy(); cursor.destroy()
-        resolve(q)
-      }
-      this.time.delayedCall(300, () => {
-        if (done) return
-        this.input.once('pointerdown', () => finish(1 - Math.abs(pos() - 0.5) * 2))
-      })
-      this.time.delayedCall(8000, () => finish(0.2))
-    })
-  }
-
-  // Frisbee im hohen Bogen: der Hund rennt unter die Flugbahn, springt und faengt ihn in der Luft (oder springt daneben).
-  private async airCatch(e: Entry, land: { x: number; y: number }, caught: boolean): Promise<void> {
-    const from = { x: 320, y: 292 }
-    const PEAK = 105
-    const CATCH = 0.78
-    const catchPt = { x: from.x + (land.x - from.x) * CATCH, y: from.y + (land.y - from.y) * CATCH }
-    const dist = Math.hypot(catchPt.x - e.dog.x, catchPt.y - e.dog.y)
-    const dur = Math.min(3000, Math.max(1500, (dist / 0.11) * 0.9 + 500))
-    const g = this.add.graphics().setDepth(3000)
-    g.fillStyle(0xe8453c, 1).fillEllipse(0, 0, 14, 5.5).fillStyle(0xffffff, 1).fillEllipse(0, -0.8, 8, 2.4)
-    const shadow = this.add.ellipse(from.x, from.y, 12, 4, 0x000000, 0.25).setDepth(1)
-    const place = (v: number): void => {
-      const x = from.x + (land.x - from.x) * v
-      const y = from.y + (land.y - from.y) * v
-      g.setPosition(x, y - Math.sin(v * Math.PI) * PEAK).setAngle(v * 1080)
-      shadow.setPosition(x, y)
-    }
-    place(0)
-    const flight = new Promise<void>((resolve) => {
-      this.tweens.addCounter({ from: 0, to: CATCH, duration: dur * CATCH, onUpdate: (tw) => place(tw.getValue() ?? 0), onComplete: () => resolve() })
-    })
-    const run = this.dogRunsTo(e, catchPt)
-    await Promise.all([flight, run])
-    const k = e.record.look.size * e.dog.scale
-    const A = Math.max(14, Math.sin(CATCH * Math.PI) * PEAK - 40 * k)
-    const jumpMs = 620
-    cue('soft')
-    if (caught) {
-      // Sprung: Hund und Frisbee treffen sich auf Maulhoehe, danach traegt er ihn im Maul.
-      await new Promise<void>((resolve) => {
-        this.tweens.addCounter({
-          from: 0, to: 1, duration: jumpMs,
-          onUpdate: (tw) => {
-            const v = tw.getValue() ?? 0
-            e.dog.setAir(Math.sin(v * Math.PI) * A)
-            const m = this.mouth(e)
-            g.setPosition(m.x, m.y - e.dog.airNow).setAngle(0).setDepth(e.dog.y + 1)
-            shadow.setPosition(e.dog.x, e.dog.y)
-          },
-          onComplete: () => { e.dog.setAir(0); resolve() },
-        })
-      })
-      const m = this.mouth(e)
-      g.setPosition(m.x, m.y)
-      await new Promise((r) => this.time.delayedCall(450, () => r(null)))
-    } else {
-      // Zu frueh oder zu spaet abgesprungen: der Frisbee segelt darueber und landet im Gras.
-      this.tweens.addCounter({
-        from: CATCH, to: 1, duration: dur * (1 - CATCH),
-        onUpdate: (tw) => place(tw.getValue() ?? 0),
-        onComplete: () => { g.setPosition(land.x, land.y).setAngle(0).setDepth(land.y - 1); shadow.setPosition(land.x, land.y) },
-      })
-      await new Promise<void>((resolve) => {
-        this.tweens.addCounter({
-          from: 0, to: 1, duration: jumpMs,
-          onUpdate: (tw) => e.dog.setAir(Math.sin((tw.getValue() ?? 0) * Math.PI) * A * 0.8),
-          onComplete: () => { e.dog.setAir(0); resolve() },
-        })
-      })
-      await new Promise((r) => this.time.delayedCall(dur * (1 - CATCH) + 200, () => r(null)))
-    }
-    g.destroy()
-    shadow.destroy()
-  }
-
-  private dogRunsTo(e: { dog: LivingDog }, to: { x: number; y: number }): Promise<void> {
-    return new Promise((resolve) => {
-      let done = false
-      const end = (): void => { if (!done) { done = true; resolve() } }
-      e.dog.goTo(to, end)
-      this.time.delayedCall(7000, () => { e.dog.cancelChase(); end() })
-    })
-  }
-
-  private floatText(x: number, y: number, text: string, color: string): void {
-    const t = this.add.text(x, y, text, { fontSize: '12px', color, stroke: '#000000', strokeThickness: 3, resolution: 3, fontFamily: 'Arial, Helvetica, sans-serif' }).setOrigin(0.5).setDepth(3003)
-    this.tweens.add({ targets: t, y: y - 26, alpha: 0, duration: 1100, onComplete: () => t.destroy() })
-  }
-
   // Sichtbares Frisbee-Turnier: vier Wuerfe mit Timing, der Hund rennt und faengt (oder nicht).
   // Ausgang: Wert + Tagesglueck + Laune + Passung (Anhaenglichkeit) + Wurfqualitaet gegen die Liga.
   private async playFrisbee(record: DogRecord, league: League): Promise<void> {
@@ -734,7 +626,7 @@ export class GardenScene extends Phaser.Scene {
         const stat = STAT_KEYS[i]
         const scores: number[] = []
         for (const e of [a, b]) {
-          const q = await this.timingThrow(`Duell, Runde ${i + 1} von ${STAT_KEYS.length}: ${STAT_LABEL[stat]} - Wurf für ${e.record.name}`)
+          const q = await timingThrow(this, `Duell, Runde ${i + 1} von ${STAT_KEYS.length}: ${STAT_LABEL[stat]} - Wurf für ${e.record.name}`)
           const tx = GARDEN_BOUNDS.x + 40 + Math.random() * (GARDEN_BOUNDS.w - 80)
           const ty = GARDEN_BOUNDS.y + 30 + Math.random() * (GARDEN_BOUNDS.h - 60)
           const miss = (1 - q) * 70
@@ -743,18 +635,18 @@ export class GardenScene extends Phaser.Scene {
             x: Math.min(GARDEN_BOUNDS.x + GARDEN_BOUNDS.w, Math.max(GARDEN_BOUNDS.x, tx + Math.cos(ang) * miss)),
             y: Math.min(GARDEN_BOUNDS.y + GARDEN_BOUNDS.h, Math.max(GARDEN_BOUNDS.y, ty + Math.sin(ang) * miss * 0.5)),
           }
-          await this.airCatch(e, land, q >= 0.4)
+          await airCatch(this, e, land, q >= 0.4)
           const sc = duelScore({ value: statValue(e.record.look.breed, e.record.training, stat), happiness: this.currentNeeds(e).happiness, affection: e.record.personality.affection, throwQuality: q, favorite: favoriteOf(this.affection[e.record.id] ?? {}) === this.session.displayName }, Math.random)
           scores.push(sc)
           cue(q < 0.4 ? 'bad' : 'good')
-          this.floatText(e.dog.x, e.dog.y - 70 * e.dog.scale, q > 0.8 ? 'Perfekt!' : q < 0.4 ? 'Daneben' : 'Gefangen', q < 0.4 ? '#ffb3b3' : '#8dff8d')
+          floatText(this, e.dog.x, e.dog.y - 70 * e.dog.scale, q > 0.8 ? 'Perfekt!' : q < 0.4 ? 'Daneben' : 'Gefangen', q < 0.4 ? '#ffb3b3' : '#8dff8d')
           await new Promise((r) => this.time.delayedCall(700, () => r(null)))
         }
         const win: Entry = scores[0] >= scores[1] ? a : b
         if (win === a) winsA++; else winsB++
         win.dog.cheer(1200)
         this.heartsAt(win.dog.x, win.dog.y - 60 * win.dog.scale)
-        this.floatText(win.dog.x, win.dog.y - 85 * win.dog.scale, `${win.record.name} gewinnt die Runde`, '#ffffff')
+        floatText(this, win.dog.x, win.dog.y - 85 * win.dog.scale, `${win.record.name} gewinnt die Runde`, '#ffffff')
         await new Promise((r) => this.time.delayedCall(1000, () => r(null)))
       }
       const champ = winsA === winsB ? null : winsA > winsB ? a : b
@@ -939,11 +831,6 @@ export class GardenScene extends Phaser.Scene {
     this.ball = { g, x, y, flying: false, carrier: null }
   }
 
-  private mouth(e: Entry): { x: number; y: number } {
-    const k = e.record.look.size * e.dog.scale
-    return { x: e.dog.x + e.dog.facing * 50 * k, y: e.dog.y - 44 * k }
-  }
-
   private randomSpot(): { x: number; y: number } {
     return { x: GARDEN_BOUNDS.x + 20 + Math.random() * (GARDEN_BOUNDS.w - 40), y: GARDEN_BOUNDS.y + 20 + Math.random() * (GARDEN_BOUNDS.h - 40) }
   }
@@ -952,7 +839,7 @@ export class GardenScene extends Phaser.Scene {
     const b = this.ball
     if (!b || !b.carrier) return
     if (b.carrier.dog.sleeping) { this.dropBall(b.carrier, false); return }
-    const m = this.mouth(b.carrier)
+    const m = mouthOf(b.carrier)
     b.x = m.x
     b.y = m.y
     b.g.setPosition(m.x, m.y).setDepth(b.carrier.dog.y + 1)
