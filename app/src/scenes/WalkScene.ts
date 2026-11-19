@@ -83,6 +83,8 @@ export class WalkScene extends Phaser.Scene {
     this.input.on('gameout', () => { this.touch = null })
     this.meters = this.add.text(0, 0, '', { fontSize: '11px', color: '#ffffff', stroke: '#2b2b2b', strokeThickness: 4, resolution: 3, fontFamily: FONT, fontStyle: 'bold' }).setOrigin(0.5, 0).setDepth(3501)
     this.hud = createHud({ householdId: session.householdId, getActivity: () => [], travel: (k) => fadeTo(this, k), current: 'walk' })
+    document.getElementById('hud')?.classList.add('walk')
+    this.events.once('shutdown', () => document.getElementById('hud')?.classList.remove('walk'))
     void this.populate(session)
   }
 
