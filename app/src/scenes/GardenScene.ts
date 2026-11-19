@@ -490,6 +490,7 @@ export class GardenScene extends Phaser.Scene {
     const e = this.entries.get(dogId)
     if (!e) return
     this.selectedId = dogId
+    e.dog.hideEmote(true)
     const box = this.add.container(0, 0).setDepth(2000)
     const timer = this.time.delayedCall(8000, () => this.closeBubble())
     this.bubble = { box, dogId, timer, state: '' }
@@ -539,7 +540,7 @@ export class GardenScene extends Phaser.Scene {
     if (!this.bubble) return
     this.bubble.timer.remove(false)
     const e = this.entries.get(this.bubble.dogId)
-    if (e) e.dog.setCaption(e.record.name)
+    if (e) { e.dog.setCaption(e.record.name); e.dog.hideEmote(false) }
     this.bubble.box.destroy()
     this.bubble = null
   }
