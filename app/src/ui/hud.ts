@@ -4,7 +4,7 @@ import { DAILY_TASKS, readyCount, taskStatus } from '../daily'
 import { friendlyError } from '../errors'
 import { openSettings } from './settings'
 import { breedCollection } from '../dog/breedCollection'
-import { loadWeekActivity } from '../dogRepo'
+import { loadFinds, loadWeekActivity } from '../dogRepo'
 import { weekSummary } from '../weekly'
 
 export type Tool = 'hand' | 'futter' | 'leckerli' | 'ball' | 'buerste'
@@ -125,6 +125,15 @@ export function createHud(actions: HudActions): { toast(text: string): void; ref
       row.appendChild(wb)
       card.appendChild(row)
     } catch { /* ohne Netz fehlt nur das Wochenziel */ }
+    try {
+      const finds = await loadFinds(actions.householdId)
+      if (finds.length > 0) {
+        const box = document.createElement('div')
+        box.className = 'task'
+        box.innerHTML = `<div>Funde auf den Spaziergängen<br><small>${finds.map((f) => `${f.what.replace(/^(einen|eine) /, '')}: <b>${f.n}</b>`).join(' · ')}</small></div>`
+        card.appendChild(box)
+      }
+    } catch { /* ohne Netz fehlt nur das Album */ }
     try {
       const lines = weekSummary(await loadWeekActivity(actions.householdId), Date.now())
       const box = document.createElement('div')

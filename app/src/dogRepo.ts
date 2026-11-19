@@ -259,6 +259,12 @@ export async function countMembers(householdId: string): Promise<number> {
   return count ?? 0
 }
 
+export async function loadFinds(householdId: string): Promise<{ what: string; n: number }[]> {
+  const { data, error } = await supabase.from('treasure_finds').select('what, n').eq('household_id', householdId).order('n', { ascending: false })
+  fail(error)
+  return (data ?? []) as { what: string; n: number }[]
+}
+
 export interface Relation { a: string; b: string; meetings: number }
 
 export async function loadRelations(): Promise<Relation[]> {
