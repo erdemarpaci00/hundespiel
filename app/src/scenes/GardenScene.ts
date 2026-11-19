@@ -211,8 +211,7 @@ export class GardenScene extends Phaser.Scene {
       // Die Hand folgt dem Finger, solange er ueber dem Hund wischt.
       this.hand.setPosition(p.worldX, p.worldY).setAngle(Math.sin(this.time.now / 90) * 14).setVisible(true)
       const step = Math.hypot(p.x - p.prevPosition.x, p.y - p.prevPosition.y) / this.cameras.main.zoom
-      if (!this.busy) this.swipe += step
-      hit.dog.hold(900)
+      if (!this.busy) { this.swipe += step; hit.dog.hold(900) }
       hit.dog.bliss(1500)
       this.heartAcc += step
       if (this.heartAcc > 30) { this.heartAcc = 0; this.heartsAt(hit.dog.x + (Math.random() - 0.5) * 24, hit.dog.y - 55 * hit.dog.scale) }
