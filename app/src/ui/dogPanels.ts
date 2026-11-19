@@ -290,7 +290,7 @@ export function openContest(dog: DogRecord, onChange: (d: DogRecord) => void, pl
       const b = document.createElement('button')
       b.className = 'alt'
       const cups = current.trophies[league.id] ?? 0
-      b.textContent = `${league.name} (Sieg ${league.win} Münzen${cups ? `, ${cups} Pokal${cups > 1 ? 'e' : ''}` : ''})${ok || qualified ? '' : missing > 0 ? ` - noch ${missing} Sieg${missing > 1 ? 'e' : ''} in der Liga davor` : ` - ab Schnitt ${league.entry}`}`
+      b.textContent = `${league.name} (${league.entry > 0 ? `Einsatz ${league.entry}, ` : ''}Sieg ${league.win} Münzen${cups ? `, ${cups} Pokal${cups > 1 ? 'e' : ''}` : ''})${ok || qualified ? '' : missing > 0 ? ` - noch ${missing} Sieg${missing > 1 ? 'e' : ''} in der Liga davor` : ` - ab Schnitt ${league.entry}`}`
       b.disabled = !ok
       b.addEventListener('click', async () => {
         if (playContest) { o.remove(); playContest(current, league); return }
