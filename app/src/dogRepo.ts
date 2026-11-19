@@ -82,9 +82,17 @@ async function logQuiet(dogId: string, kind: ActivityKind): Promise<void> {
   } catch { /* Verlauf ist nur Beiwerk */ }
 }
 
+// Gleiche Namen verwirren Duelle und Freundschaftslisten, deshalb pro Haushalt nur einmal.
+async function assertFreeName(householdId: string, clean: string): Promise<void> {
+  const { data, error } = await supabase.from('dogs').select('name').eq('household_id', householdId)
+  fail(error)
+  if ((data ?? []).some((d) => (d.name as string).trim().toLowerCase() === clean.toLowerCase())) throw new Error(`Einen Hund namens ${clean} gibt es bei euch schon, nimm bitte einen anderen Namen`)
+}
+
 export async function adoptPuppy(session: Session, pick: Puppy, name: string): Promise<DogRecord> {
   const clean = name.trim()
   if (!clean) throw new Error('Bitte gib dem Welpen einen Namen')
+  await assertFreeName(session.householdId, clean)
   const { data, error } = await supabase
     .from('dogs')
     .insert({
@@ -109,6 +117,7 @@ export async function adoptPuppy(session: Session, pick: Puppy, name: string): P
 export async function adoptFromKennel(session: Session, pick: Puppy, name: string): Promise<DogRecord> {
   const clean = name.trim()
   if (!clean) throw new Error('Bitte gib dem Hund einen Namen')
+  await assertFreeName(session.householdId, clean)
   const { data, error } = await supabase.rpc('adopt_dog', { p_name: clean, p_look: pick.look, p_personality: pick.personality })
   fail(error)
   const dog = await loadDog(data as string)
