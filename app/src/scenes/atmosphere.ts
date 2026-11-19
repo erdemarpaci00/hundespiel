@@ -24,9 +24,25 @@ export function createAtmosphere(scene: Phaser.Scene, outdoor: boolean, backdrop
   const q = new URLSearchParams(location.search)
   const debug = q.has('debug')
 
+  // Tint blendet weich ueber (ca. 3 s) statt hart umzuschalten.
+  let cur = { r: 0, g: 0, b: 0, a: 0 }
+  let target = { ...cur }
+  let shaded = false
+  const paintShade = (): void => {
+    shade.clear().fillStyle((Math.round(cur.r) << 16) | (Math.round(cur.g) << 8) | Math.round(cur.b), cur.a).fillRect(0, 0, 640, 360)
+  }
+  const fadeShade = (dtMs: number): void => {
+    const k = Math.min(1, dtMs / 3000)
+    const d = Math.abs(target.r - cur.r) + Math.abs(target.g - cur.g) + Math.abs(target.b - cur.b) + Math.abs(target.a - cur.a) * 255
+    if (d < 0.5) { if (d > 0) { cur = { ...target }; paintShade() } return }
+    cur = { r: cur.r + (target.r - cur.r) * k, g: cur.g + (target.g - cur.g) * k, b: cur.b + (target.b - cur.b) * k, a: cur.a + (target.a - cur.a) * k }
+    paintShade()
+  }
+
   const redraw = (): void => {
     const [color, alpha] = TINT[phase]
-    shade.clear().fillStyle(color, alpha + (outdoor && weather === 'rain' ? 0.12 : 0)).fillRect(0, 0, 640, 360)
+    target = { r: (color >> 16) & 255, g: (color >> 8) & 255, b: color & 255, a: alpha + (outdoor && weather === 'rain' ? 0.12 : 0) }
+    if (!shaded) { cur = { ...target }; shaded = true; paintShade() }
     sky.clear()
     backdrop?.sun.setVisible(phase !== 'night' && weather !== 'rain')
     backdrop?.clouds.setVisible(weather === 'sun')
@@ -47,6 +63,7 @@ export function createAtmosphere(scene: Phaser.Scene, outdoor: boolean, backdrop
   return {
     update(dtMs: number): void {
       sinceCheck += dtMs
+      fadeShade(dtMs)
       if (sinceCheck > 20000) {
         sinceCheck = 0
         const d = now()

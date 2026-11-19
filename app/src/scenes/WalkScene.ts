@@ -34,6 +34,7 @@ export class WalkScene extends Phaser.Scene {
   private lastPullToast = 0
   private lastRedirect = 0
   private pairUntil = 0
+  private camX = 320
   private endShown = false
   private meters!: Phaser.GameObjects.Text
 
@@ -51,6 +52,7 @@ export class WalkScene extends Phaser.Scene {
     this.sparks = []
     this.nightOwls = new Set()
     this.hand = { x: 110, y: 275 }
+    this.camX = 320
     this.endShown = false
     this.lastPullToast = 0
     const backdrop = this.drawRoute()
@@ -153,7 +155,10 @@ export class WalkScene extends Phaser.Scene {
     }
     this.checkPair(now)
     this.drawLeash(taut)
-    this.cameras.main.centerOn(Phaser.Math.Clamp(this.hand.x, 320, W - 320), 180)
+    // Kamera gleitet der Hand hinterher statt starr zu kleben
+    const want = Phaser.Math.Clamp(this.hand.x, 320, W - 320)
+    this.camX += (want - this.camX) * Math.min(1, delta * 0.006)
+    this.cameras.main.centerOn(this.camX, 180)
     this.meters.setText(`${Math.round(this.hand.x / 10)} m von ${W / 10} m`)
     if (!this.endShown && this.hand.x > W - 140) {
       this.endShown = true
