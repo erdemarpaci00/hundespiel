@@ -14,6 +14,8 @@ function shade(color: number, amount: number): number {
 
 export class DogSprite {
   readonly container: Phaser.GameObjects.Container
+  private ear?: Phaser.GameObjects.Shape
+  private earBase = 0
   private readonly look: DogLook
   private pose: Pose = 'sit'
   private phase = 0
@@ -90,10 +92,13 @@ export class DogSprite {
       const ear = scene.add.ellipse(-6, 4, 11, 24, dark)
       ear.setRotation(0.25)
       this.head.add(ear)
+      this.ear = ear
     } else if (look.ear === 'pointy') {
-      this.head.add(scene.add.triangle(-5, -13, -9, 8, 0, -10, 9, 8, dark))
+      this.ear = scene.add.triangle(-5, -13, -9, 8, 0, -10, 9, 8, dark)
+      this.head.add(this.ear)
     } else {
-      this.head.add(scene.add.circle(-6, -12, 8, dark))
+      this.ear = scene.add.circle(-6, -12, 8, dark)
+      this.head.add(this.ear)
     }
     this.container.add(this.head)
 
@@ -181,6 +186,11 @@ export class DogSprite {
       this.eyeClosed.setVisible(blink)
     }
     this.body.scaleY = 1 + Math.sin(this.phase * 0.004) * 0.022
+    if (this.ear) {
+      if (this.earBase === 0) this.earBase = this.ear.rotation
+      const tw = (this.phase + this.blinkOff * 2) % 6100
+      this.ear.rotation = this.earBase + (tw < 260 ? Math.sin((tw / 260) * Math.PI * 3) * 0.28 : 0)
+    }
   }
 
   private layout(t: number): void {
