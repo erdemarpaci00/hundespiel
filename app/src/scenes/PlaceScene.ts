@@ -8,6 +8,7 @@ import { findTreasure, loadDogs } from '../dogRepo'
 import type { Session } from '../session'
 import { isRestless } from '../nightlife'
 import { createAtmosphere, type Atmosphere } from './atmosphere'
+import { cue } from '../feedback'
 import { dialogJustClosed, openAdoption, openTraining } from '../ui/dogPanels'
 import { createHud } from '../ui/hud'
 import { buildShop } from '../ui/shop'
@@ -78,7 +79,7 @@ export class PlaceScene extends Phaser.Scene {
       d.onTap(() => {
         if (dialogJustClosed()) return
         if (d.sleeping) { d.wake(15 * 60 * 1000); this.hud.toast(`${r.name} ist wach, aber noch müde`) }
-        else if (this.kind === 'training') openTraining(records.get(r.id) ?? r, (t) => this.hud.toast(t), (nd) => { records.set(r.id, nd); d.cheer(1500) })
+        else if (this.kind === 'training') openTraining(records.get(r.id) ?? r, (t) => this.hud.toast(t), (nd) => { records.set(r.id, nd); d.cheer(1500); cue('good') })
         else this.hud.toast(`${r.name} (${r.look.breed ? breedById(r.look.breed).name : 'Mischling'})`)
       })
       this.dogs.push(d)
@@ -93,7 +94,7 @@ export class PlaceScene extends Phaser.Scene {
       d.setCaption(breed.name)
       d.onTap(() => {
         if (dialogJustClosed()) return
-        if (this.kind === 'kennel') openAdoption(session, pup, (nd) => { this.hud.toast(`${nd.name} ist jetzt bei euch zu Hause`); fadeTo(this, 'garden') })
+        if (this.kind === 'kennel') openAdoption(session, pup, (nd) => { cue('win'); this.hud.toast(`${nd.name} ist jetzt bei euch zu Hause`); fadeTo(this, 'garden') })
         else this.hud.toast(`Ein fremder ${breed.name}`)
       })
       if (this.kind !== 'kennel') this.nightOwls.add(d)
