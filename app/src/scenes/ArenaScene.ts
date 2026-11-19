@@ -5,7 +5,6 @@ import { DogSprite } from '../dog/dogSprite'
 import { STAT_KEYS, STAT_LABEL, statValue, type StatKey } from '../dog/stats'
 import { applyElapsed } from '../dog/needs'
 import { catchChance, moodOf, refuseChance, playRound, rivalForm, summarize, type League, type Round } from '../dog/contest'
-import { friendlyError } from '../errors'
 import { enterContest, type DogRecord } from '../dogRepo'
 import { parseTimestamp } from '../time'
 import { cue } from '../feedback'
@@ -226,7 +225,7 @@ export class ArenaScene extends Phaser.Scene {
       this.say(result.won ? `Sieg in der ${this.league.name}!\n+${r.result.prize} Münzen` : `Nicht gewonnen\nTrostpreis +${r.result.prize} Münzen`, result.won ? '#ffe36b' : '#ffffff')
       if (result.won) { this.confetti(); this.cameras.main.flash(350, 255, 240, 170) }
     } catch (err) {
-      this.say(err instanceof Error && /zu müde|keine lust/i.test(err.message) ? err.message : friendlyError(err instanceof Error ? err.message : undefined), '#ffb3b3')
+      this.say(err instanceof Error ? err.message : 'Etwas ist schiefgelaufen, bitte nochmal versuchen', '#ffb3b3')
     }
     // Hund zur Seite, damit der Zurueck-Knopf frei bleibt
     this.dog.setPose('walk')
