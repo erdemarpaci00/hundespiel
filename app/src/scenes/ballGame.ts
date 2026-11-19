@@ -27,6 +27,9 @@ export class BallGame {
   ball: BallState | null = null
   constructor(private ctx: BallContext) {}
 
+  // Wurf des Partners: nur zeigen, nicht nochmal als Spielen speichern.
+  private remote = false
+
   reset(): void { this.ball = null }
 
   spawn(x: number, y: number): void {
@@ -51,8 +54,10 @@ export class BallGame {
   }
 
   // Ball werfen: alle wachen, nicht zu muede Hunde rennen los, der schnellste nimmt ihn ins Maul und bringt ihn zurueck.
-  throwAt(wx: number, wy: number): void {
+  throwAt(wx: number, wy: number, remote = false): void {
     if (this.ctx.busy()) return
+    if (this.ball?.flying) return
+    this.remote = remote
     if (!this.ball) this.spawn(320, 292)
     const b = this.ball!
     if (b.flying) return
@@ -124,6 +129,7 @@ export class BallGame {
     if (!fetched) return
     e.dog.cheer(1500)
     cue('good')
+    if (this.remote) { this.remote = false; return }
     this.ctx.toast(`${e.record.name} bringt den Ball zurück`)
     this.ctx.fulfill(e.record.id, 'ball')
     void playWithDog(e.record).then(() => { this.ctx.refresh(); return this.ctx.reload() }).catch((err) => this.ctx.toast(err instanceof Error ? err.message : 'Etwas ist schiefgelaufen, bitte nochmal versuchen'))

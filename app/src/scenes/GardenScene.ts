@@ -273,10 +273,22 @@ export class GardenScene extends Phaser.Scene {
   private announceNew(activity: ActivityEntry[]): void {
     if (this.seenActivity) {
       for (const a of activity) {
-        if (!this.seenActivity.has(a.id) && a.userName !== this.session.displayName) this.hud.toast(describeActivity(a))
+        if (!this.seenActivity.has(a.id) && a.userName !== this.session.displayName) { this.hud.toast(describeActivity(a)); this.showRemote(a) }
       }
     }
     this.seenActivity = new Set(activity.map((a) => a.id))
+  }
+
+  // Was der Partner tut, zeigt der Hund auch hier: fressen, Ball holen, sich freuen.
+  private showRemote(a: ActivityEntry): void {
+    const e = [...this.entries.values()].find((x) => x.record.name === a.dogName)
+    if (!e) return
+    if (a.kind === 'feed' || a.kind === 'treat') { e.dog.wake(60000); e.dog.eat(2500); cue('munch'); return }
+    if (a.kind === 'pet' || a.kind === 'groom') { e.dog.wake(60000); e.dog.cheer(2000); cue('soft'); return }
+    if (a.kind === 'play') {
+      this.entries.forEach((x) => x.dog.wake(60000))
+      this.balls.throwAt(GARDEN_BOUNDS.x + 30 + Math.random() * (GARDEN_BOUNDS.w - 60), GARDEN_BOUNDS.y + 20 + Math.random() * (GARDEN_BOUNDS.h - 40), true)
+    }
   }
 
   private syncDogs(records: DogRecord[]): void {
