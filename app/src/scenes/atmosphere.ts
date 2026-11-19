@@ -10,10 +10,11 @@ export interface Atmosphere {
 }
 
 // Dunkelheit, Mond, Sterne, Wolken und Regen je nach echter Uhrzeit. Drinnen nur die Dunkelheit.
-export function createAtmosphere(scene: Phaser.Scene, outdoor: boolean, backdrop?: { sun: Phaser.GameObjects.Graphics; clouds: Phaser.GameObjects.Graphics }, now: () => Date = () => new Date()): Atmosphere {
+export function createAtmosphere(scene: Phaser.Scene, outdoor: boolean, backdrop?: { sun: Phaser.GameObjects.Graphics; clouds: Phaser.GameObjects.Graphics }, now: () => Date = () => new Date(), fixed = false): Atmosphere {
   const shade = scene.add.graphics().setDepth(900)
   const sky = scene.add.graphics().setDepth(1)
   const rain = scene.add.graphics().setDepth(901)
+  if (fixed) { shade.setScrollFactor(0); sky.setScrollFactor(0); rain.setScrollFactor(0) }
   const drops = Array.from({ length: 70 }, (_, i) => ({ x: (i * 97) % 640, y: (i * 53) % 360, v: 0.35 + (i % 5) * 0.05 }))
   const SIDE: Record<string, string> = { day: '#6fc45a', dusk: '#4f8a45', dawn: '#5fa850', night: '#1f3a2a' }
   let phase: Phase = 'day'

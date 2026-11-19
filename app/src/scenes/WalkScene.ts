@@ -56,7 +56,7 @@ export class WalkScene extends Phaser.Scene {
     this.endShown = false
     this.lastPullToast = 0
     const backdrop = this.drawRoute()
-    this.atmosphere = createAtmosphere(this, true, backdrop)
+    this.atmosphere = createAtmosphere(this, true, backdrop, () => new Date(), true)
     this.leash = this.add.graphics().setDepth(2999)
     this.grip = this.add.graphics().setDepth(3000)
     this.meters = this.add.text(320, 14, '', { fontSize: '12px', color: '#ffffff', stroke: '#2b2b2b', strokeThickness: 4, resolution: 3, fontFamily: FONT, fontStyle: 'bold' }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(6000)
