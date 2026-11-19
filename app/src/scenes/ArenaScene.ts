@@ -210,7 +210,12 @@ export class ArenaScene extends Phaser.Scene {
     } catch (err) {
       this.say(err instanceof Error ? err.message : 'Etwas ist schiefgelaufen, bitte nochmal versuchen', '#ffb3b3')
     }
-    await this.wait(2500)
+    // Hund zur Seite, damit der Zurueck-Knopf frei bleibt
+    this.dog.setPose('walk')
+    this.dog.face(-1)
+    await new Promise<void>((res) => this.tweens.add({ targets: this.dog.container, x: 130, y: 300, duration: 900, onUpdate: () => this.dog.container.setDepth(this.dog.container.y), onComplete: () => res() }))
+    this.dog.setPose('sit')
+    await this.wait(1600)
     const back = this.add.text(320, 250, 'Zurück in den Garten', { fontSize: '14px', color: '#ffffff', backgroundColor: '#2b6cb0', padding: { x: 12, y: 8 }, resolution: 3, fontFamily: FONT }).setOrigin(0.5).setDepth(4000).setInteractive({ useHandCursor: true })
     back.once('pointerdown', () => this.scene.start('garden'))
   }
