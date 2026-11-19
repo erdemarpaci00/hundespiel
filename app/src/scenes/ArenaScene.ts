@@ -97,7 +97,7 @@ export class ArenaScene extends Phaser.Scene {
       const disc = this.add.graphics().setDepth(4000).setPosition(from.x, from.y)
       disc.fillStyle(0xe8453c, 1).fillEllipse(0, 0, 14, 5.5).fillStyle(0xffffff, 1).fillEllipse(0, -0.8, 8, 2.4)
       const aim = this.add.graphics().setDepth(3500)
-      const hint = this.add.text(320, 345, 'Wische von der Scheibe in Richtung Ring', { fontSize: '9px', color: '#ffffff', stroke: '#1d2b44', strokeThickness: 3, resolution: 3, fontFamily: FONT }).setOrigin(0.5, 1).setDepth(4001)
+      const hint = this.add.text(320, 358, 'Wische von der Scheibe in Richtung Ring', { fontSize: '9px', color: '#ffffff', stroke: '#1d2b44', strokeThickness: 3, resolution: 3, fontFamily: FONT }).setOrigin(0.5, 1).setDepth(4001)
       let down: { x: number; y: number } | null = null
       let done = false
       const spot = (px: number, py: number): { x: number; y: number } => ({
