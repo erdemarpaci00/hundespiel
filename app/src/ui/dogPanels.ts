@@ -8,7 +8,7 @@ import { EXERCISE, STAT_KEYS, STAT_LABEL, statValue, type StatKey } from '../dog
 import type { DogRecord } from '../dogRepo'
 import { adoptFromKennel, buyCollar, enterContest, trainDog } from '../dogRepo'
 import { COLLARS, COLLAR_PRICE } from '../dog/collar'
-import { cupsMissing, eligible, formBonus, LEAGUES, trophyShelf, type League } from '../dog/contest'
+import { contestWaitMinutes, cupsMissing, eligible, formBonus, LEAGUES, trophyShelf, type League } from '../dog/contest'
 import type { Puppy } from '../puppies'
 import type { Session } from '../session'
 import { friendlyError } from '../errors'
@@ -275,8 +275,15 @@ export function openContest(dog: DogRecord, onChange: (d: DogRecord) => void, pl
       f.textContent = bonus > 0 ? `${current.name} ist bester Laune: +${bonus} pro Runde` : `${current.name} ist niedergeschlagen: ${bonus} pro Runde`
       card.appendChild(f)
     }
+    const pause = contestWaitMinutes(current)
+    if (!res && pause > 0) {
+      const w = document.createElement('div')
+      w.className = 'sub'
+      w.textContent = `${current.name} verschnauft noch, wieder in ${pause} Min`
+      card.appendChild(w)
+    }
     for (const league of LEAGUES) {
-      const ok = eligible(league, values(), current.trophies)
+      const ok = eligible(league, values(), current.trophies) && pause === 0
       const missing = cupsMissing(league, current.trophies)
       const b = document.createElement('button')
       b.className = 'alt'
