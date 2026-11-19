@@ -1,5 +1,15 @@
 import { buyItem, HOME_UPGRADES, loadEconomy, SHOP, upgradeHome, type Economy } from '../economy'
 
+// Zwei feste Zeilen pro Knopf: Name oben, Preis unten, damit alle gleich hoch sind.
+function two(btn: HTMLElement, top: string, bottom: string): void {
+  const a = document.createElement('span')
+  a.textContent = top
+  const b = document.createElement('small')
+  b.textContent = bottom
+  b.style.cssText = 'display:block;font-weight:normal;opacity:.9;margin-top:2px'
+  btn.replaceChildren(a, b)
+}
+
 // Muenzen und Kauf-Knoepfe als Block, im Laden und in den Einstellungen verwendbar.
 export function buildShop(): HTMLElement {
   const shop = document.createElement('div')
@@ -14,7 +24,7 @@ export function buildShop(): HTMLElement {
       const have = e.items[it.item] ?? 0
       const btn = document.createElement('button')
       btn.className = 'alt'
-      btn.textContent = `${it.label} (${have}) kaufen, ${it.price} Münzen`
+      two(btn, `${it.label} (${have})`, `${it.price} Münzen`)
       btn.disabled = e.coins < it.price || (it.single && have >= 1)
       btn.addEventListener('click', async () => {
         btn.disabled = true
@@ -26,7 +36,9 @@ export function buildShop(): HTMLElement {
     const up = HOME_UPGRADES[lvl]
     const hb = document.createElement('button')
     hb.className = 'alt'
-    hb.textContent = up ? `Garten ausbauen: ${up.label}, ${up.price} Münzen` : 'Der Garten ist ganz ausgebaut'
+    if (up) two(hb, `Garten ausbauen: ${up.label}`, `${up.price} Münzen`)
+    else hb.textContent = 'Der Garten ist ganz ausgebaut'
+    hb.style.gridColumn = '1 / -1'
     hb.disabled = !up || e.coins < up.price
     hb.addEventListener('click', async () => {
       hb.disabled = true
