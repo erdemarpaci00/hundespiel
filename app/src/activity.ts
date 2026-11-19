@@ -5,6 +5,7 @@ export interface ActivityEntry {
   id: string
   kind: ActivityKind
   userName: string
+  userId?: string
   dogName: string
   at: string
 }

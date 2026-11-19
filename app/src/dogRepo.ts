@@ -250,6 +250,7 @@ export async function loadActivity(session: Session, limit: number): Promise<Act
     id: r.id,
     kind: r.kind,
     userName: userNames.get(r.user_id) ?? 'Jemand',
+    userId: r.user_id,
     dogName: dogNames.get(r.dog_id) ?? 'einen Hund',
     at: r.created_at,
   }))

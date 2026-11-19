@@ -273,10 +273,15 @@ export class GardenScene extends Phaser.Scene {
   private announceNew(activity: ActivityEntry[]): void {
     if (this.seenActivity) {
       for (const a of activity) {
-        if (!this.seenActivity.has(a.id) && a.userName !== this.session.displayName) { this.hud.toast(describeActivity(a)); this.showRemote(a) }
+        if (!this.seenActivity.has(a.id) && !this.isOwn(a)) { this.hud.toast(describeActivity(a)); this.showRemote(a) }
       }
     }
     this.seenActivity = new Set(activity.map((a) => a.id))
+  }
+
+  // Eigene Aktionen erkennt man an der Nutzer-ID, der Anzeigename kann bei beiden gleich sein.
+  private isOwn(a: ActivityEntry): boolean {
+    return a.userId ? a.userId === this.session.userId : a.userName === this.session.displayName
   }
 
   // Was der Partner tut, zeigt der Hund auch hier: fressen, Ball holen, sich freuen.
