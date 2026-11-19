@@ -4,7 +4,7 @@ import { BREEDS, breedById, rollBreedPuppy } from '../dog/breeds'
 import { ageDays, ageStage } from '../dog/age'
 import { parseTimestamp } from '../time'
 import { LivingDog } from '../dog/livingDog'
-import { findTreasure, loadDogs, recordMeeting } from '../dogRepo'
+import { findTreasure, loadDogs, playWithDog, recordMeeting, type DogRecord } from '../dogRepo'
 import type { Session } from '../session'
 import { isRestless } from '../nightlife'
 import { createAtmosphere, type Atmosphere } from './atmosphere'
@@ -28,6 +28,7 @@ export class WalkScene extends Phaser.Scene {
   private hud!: ReturnType<typeof createHud>
   private atmosphere!: Atmosphere
   private own: LivingDog[] = []
+  private records: DogRecord[] = []
   private names = new Map<LivingDog, string>()
   private strangers: Stranger[] = []
   private sparks: Spark[] = []
@@ -57,6 +58,7 @@ export class WalkScene extends Phaser.Scene {
     const session = this.registry.get('session') as Session
     this.cameras.main.setZoom(3).centerOn(320, 180)
     this.own = []
+    this.records = []
     this.names = new Map()
     this.strangers = []
     this.sparks = []
@@ -102,6 +104,7 @@ export class WalkScene extends Phaser.Scene {
       d.onTap(() => this.hud.toast(`${r.name} (${r.look.breed ? breedById(r.look.breed).name : 'Mischling'})`))
       this.names.set(d, r.name)
       this.own.push(d)
+      this.records.push(r)
     })
     // Fremde Hunde stehen verteilt an der Route
     for (let i = 0; i < 6; i++) {
@@ -189,14 +192,20 @@ export class WalkScene extends Phaser.Scene {
     if (!this.endShown && this.hand.x > W - 140) {
       this.endShown = true
       this.touch = null
+      void this.rewardWalk()
       openChoice('Ziel erreicht!', [
         `${this.foundCount} Funkelstelle${this.foundCount === 1 ? '' : 'n'} gefunden, ${this.sniffCount} fremde Hund${this.sniffCount === 1 ? '' : 'e'} beschnuppert.`,
-        'Die Hunde sind stolz auf die Runde.',
+        this.records.length > 0 ? 'Die lange Runde hat Spaß gemacht: Die Laune der Hunde steigt.' : 'Die Runde war schön.',
       ], [
         { label: 'Nach Hause', onClick: () => fadeTo(this, 'garden') },
         { label: 'Noch ein bisschen bleiben', onClick: () => undefined },
       ])
     }
+  }
+
+  // Das Ziel zaehlt wie eine Runde Spielen: Laune hoch, Energie runter. Zu muede Hunde gehen leer aus.
+  private async rewardWalk(): Promise<void> {
+    for (const r of this.records) { try { await playWithDog(r) } catch { /* zu muede oder Verbindung weg: keine Belohnung */ } }
   }
 
   // Zeigt, wohin der Finger den Spaziergaenger schickt, und am Anfang einen Pfeil nach rechts.
