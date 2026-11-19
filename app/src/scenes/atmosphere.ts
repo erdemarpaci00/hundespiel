@@ -40,6 +40,8 @@ export function createAtmosphere(scene: Phaser.Scene, outdoor: boolean, backdrop
     paintShade()
   }
 
+  let drift = 0
+
   const redraw = (): void => {
     const [color, alpha] = TINT[phase]
     target = { r: (color >> 16) & 255, g: (color >> 8) & 255, b: color & 255, a: alpha + (outdoor && weather === 'rain' ? 0.12 : 0) }
@@ -65,6 +67,8 @@ export function createAtmosphere(scene: Phaser.Scene, outdoor: boolean, backdrop
     update(dtMs: number): void {
       sinceCheck += dtMs
       fadeShade(dtMs)
+      drift += dtMs
+      if (backdrop) backdrop.clouds.x = Math.sin(drift / 9000) * 28
       if (sinceCheck > 20000) {
         sinceCheck = 0
         const d = now()

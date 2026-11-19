@@ -43,6 +43,7 @@ export class DogSprite {
       const leg = scene.add.rectangle(lx, -26, 8, LEG_LEN, i % 2 === 0 ? dark : coat).setOrigin(0.5, 0)
       return leg
     })
+    this.container.add(scene.add.ellipse(0, 1, 58, 9, 0x000000, 0.2))
     this.container.add(this.legs)
 
     this.body = scene.add.ellipse(0, -36, 64, 34, coat)
