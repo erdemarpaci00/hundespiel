@@ -13,7 +13,7 @@ import { loadPartnerSince, loadWishDone, wishReward, enterContest, cleanPoop, dr
 import { GARDEN_BOUNDS } from '../garden'
 import type { Session } from '../session'
 import { markVisit, readLastVisit, shouldWelcome } from '../garden/welcome'
-import { contestWaitMinutes, duelScore, MEDAL_COLORS, topLeague, CONTEST_MIN_ENERGY, playRound, rivalForm, summarize, type League, type Round } from '../dog/contest'
+import { contestWaitMinutes, duelScore, MEDAL_COLORS, topLeague, CONTEST_MIN_ENERGY, moodOf, playRound, rivalForm, summarize, type League, type Round } from '../dog/contest'
 import { STAT_KEYS, STAT_LABEL, statValue } from '../dog/stats'
 import { wishBlock, wishFor, type Wish } from '../dog/wish'
 import { wantsPoop, type Poop } from '../garden/poop'
@@ -551,7 +551,10 @@ export class GardenScene extends Phaser.Scene {
     const state = this.bubbleState(e)
     const phrase = state === 'asleep' ? 'schläft' : state === 'restless' ? 'unruhig' : MOOD_PHRASE[mood(this.currentNeeds(e))]
     const dots = energyDots(this.currentNeeds(e).energy)
-    e.dog.setCaption(`${e.record.name} · ${phrase} · Kraft ${'●'.repeat(dots)}${'○'.repeat(3 - dots)}`)
+    // Wer launisch oder lustlos ist, patzt im Turnier: das soll man vorher sehen.
+    const cm = moodOf({ gehorsam: statValue(e.record.look.breed, e.record.training, 'gehorsam'), happiness: this.currentNeeds(e).happiness })
+    const warn = cm === 'lustlos' ? ' · lustlos' : cm === 'launisch' ? ' · launisch' : ''
+    e.dog.setCaption(`${e.record.name} · ${phrase}${warn} · Kraft ${'●'.repeat(dots)}${'○'.repeat(3 - dots)}`)
     if (this.bubble.state !== state) {
       this.bubble.state = state
       this.buildRing(e, state)
