@@ -1,3 +1,4 @@
+import { watchOnline } from './ui/offlineBanner'
 import Phaser from 'phaser'
 import { loadDogs } from './dogRepo'
 import { GardenScene } from './scenes/GardenScene'
@@ -48,4 +49,5 @@ function showStartError(e: unknown): void {
   ui.replaceChildren(card)
 }
 
+watchOnline()
 start().catch(showStartError)
