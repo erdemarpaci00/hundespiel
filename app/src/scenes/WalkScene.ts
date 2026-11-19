@@ -8,6 +8,7 @@ import { findTreasure, loadDogs, playWithDog, recordMeeting, type DogRecord } fr
 import type { Session } from '../session'
 import { isRestless } from '../nightlife'
 import { createAtmosphere, type Atmosphere } from './atmosphere'
+import { cue } from '../feedback'
 import { createHud } from '../ui/hud'
 import { mulberry32 } from '../util/rng'
 import { openChoice } from '../ui/dogPanels'
@@ -193,6 +194,7 @@ export class WalkScene extends Phaser.Scene {
       this.endShown = true
       this.touch = null
       void this.rewardWalk()
+      cue('win')
       openChoice('Ziel erreicht!', [
         `${this.foundCount} Funkelstelle${this.foundCount === 1 ? '' : 'n'} gefunden, ${this.sniffCount} fremde Hund${this.sniffCount === 1 ? '' : 'e'} beschnuppert.`,
         this.records.length > 0 ? 'Die lange Runde hat Spaß gemacht: Die Laune der Hunde steigt.' : 'Die Runde war schön.',
@@ -252,6 +254,7 @@ export class WalkScene extends Phaser.Scene {
         this.pairUntil = now + 60000
         a.meet(b.x, 3000)
         b.meet(a.x, 3000)
+        cue('soft')
         this.hud.toast(`${this.names.get(a)} und ${this.names.get(b)} begrüßen sich`)
         void recordMeeting(a.dogKey, b.dogKey).catch(() => undefined)
         return
@@ -269,6 +272,7 @@ export class WalkScene extends Phaser.Scene {
       const id = d.dogKey
       void (id ? findTreasure(id) : Promise.resolve(null)).then((f) => {
         if (!f) { this.hud.toast('Hier war nichts. Vielleicht später nochmal'); return }
+        cue('coin')
         this.hud.toast(`${this.names.get(d) ?? 'Dein Hund'} hat etwas ausgegraben: ${f.what}, +${f.coins} Münzen`)
         this.hud.refresh()
       }).catch(() => undefined)
@@ -285,6 +289,7 @@ export class WalkScene extends Phaser.Scene {
         d.cancelChase()
         d.meet(s.dog.x, 3500)
         s.dog.meet(d.x, 3500)
+        cue('munch')
         this.hud.toast(`${this.names.get(d) ?? 'Dein Hund'} schnuppert an einem fremden ${s.name}`)
         return
       }
