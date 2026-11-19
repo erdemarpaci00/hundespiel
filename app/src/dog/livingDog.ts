@@ -189,6 +189,15 @@ export class LivingDog {
     this.sprite.setPose('walk')
   }
 
+  // Frisst: bleibt stehen, Kopf unten (Schnueffel-Pose). Wiederholt aufrufen, solange gefressen wird.
+  eat(ms: number): void {
+    if (this.resting) return
+    this.chase = null
+    this.behavior = 'sniff'
+    this.remainingMs = ms
+    this.sprite.setPose('sniff')
+  }
+
   // Bewegungsraum verschieben (z.B. an der Leine um die Hand herum).
   setBounds(r: Rect): void { this.bounds = r }
 
