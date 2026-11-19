@@ -11,6 +11,7 @@ const RULES: [RegExp, string][] = [
   [/mehr als vier hunde/i, 'Mehr als vier Hunde passen nicht in die Wohnung'],
   [/zu schnell hintereinander/i, 'Nicht so schnell, kurz verschnaufen lassen'],
   [/liga noch nicht freigeschaltet/i, 'Diese Liga ist noch gesperrt, gewinnt erst drei Pokale in der Liga davor'],
+  [/dogs_unique_name_per_household/i, 'Einen Hund mit diesem Namen gibt es bei euch schon, nimm bitte einen anderen Namen'],
   [/failed to fetch|load failed|networkerror|network request failed/i, 'Keine Verbindung, bitte Netz prüfen'],
 ]
 

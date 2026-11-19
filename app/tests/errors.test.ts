@@ -23,3 +23,7 @@ test('Safari meldet Netzfehler als "Load failed"', () => {
 test('gesperrte Liga wird verständlich erklärt', () => {
   expect(friendlyError('Liga noch nicht freigeschaltet')).toBe('Diese Liga ist noch gesperrt, gewinnt erst drei Pokale in der Liga davor')
 })
+
+test('doppelter Hundename aus der Datenbank wird verständlich erklärt', () => {
+  expect(friendlyError('duplicate key value violates unique constraint "dogs_unique_name_per_household"')).toMatch(/gibt es bei euch schon/)
+})
