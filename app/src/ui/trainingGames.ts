@@ -1,3 +1,4 @@
+import { cue } from '../feedback'
 import type { StatKey } from '../dog/stats'
 import { commandScore, jumpScore, rhythmScore, SPRINT_SECONDS, sprintScore } from '../dog/trainingScore'
 
@@ -45,9 +46,10 @@ async function sprint(card: HTMLElement): Promise<number> {
       e.preventDefault()
       if (!started) {
         started = true
-        setTimeout(() => { b.disabled = true; resolve(sprintScore(taps)) }, SPRINT_SECONDS * 1000)
+        setTimeout(() => { b.disabled = true; const sc = sprintScore(taps); cue(sc > 0.7 ? 'good' : 'bad'); resolve(sc) }, SPRINT_SECONDS * 1000)
       }
       taps++
+      cue('soft')
       m.fill.style.width = `${sprintScore(taps) * 100}%`
       hint.textContent = `${taps} Schritte`
     })
@@ -81,6 +83,7 @@ async function endurance(card: HTMLElement): Promise<number> {
   b.addEventListener('pointerdown', (e) => {
     e.preventDefault()
     taps.push(performance.now())
+    cue('soft')
     b.style.transform = 'scale(.97)'
     setTimeout(() => { b.style.transform = '' }, 80)
   })
@@ -93,6 +96,7 @@ async function endurance(card: HTMLElement): Promise<number> {
     return near !== null && near <= 350 ? near : null
   })
   const score = rhythmScore(errors)
+  cue(score > 0.7 ? 'good' : 'bad')
   hint.textContent = `${errors.filter((e) => e !== null && e <= 120).length} von ${BEATS} Schritten genau im Takt`
   await wait(700)
   return score
@@ -122,6 +126,7 @@ async function hurdles(card: HTMLElement): Promise<number> {
     })
     const sc = jumpScore(power, needs[i])
     scores.push(sc)
+    cue(sc > 0.8 ? 'good' : sc > 0.3 ? 'soft' : 'bad')
     hint.textContent = sc > 0.8 ? 'Drüber, sauber!' : sc > 0.3 ? 'Streift die Stange' : 'Gerissen'
     await wait(800)
   }
@@ -150,12 +155,13 @@ async function commands(card: HTMLElement): Promise<number> {
       const b = document.createElement('button')
       b.textContent = c.label
       b.style.cssText = 'touch-action:manipulation;font-size:18px;padding:14px 6px'
-      b.addEventListener('click', () => { given.push(c.id); big.textContent = given.map(label).join(' - '); if (given.length >= shown.length) resolve() })
+      b.addEventListener('click', () => { given.push(c.id); cue('soft'); big.textContent = given.map(label).join(' - '); if (given.length >= shown.length) resolve() })
       row.appendChild(b)
     }
   })
   row.querySelectorAll('button').forEach((x) => { (x as HTMLButtonElement).disabled = true })
   const score = commandScore(shown, given)
+  cue(score > 0.7 ? 'good' : 'bad')
   hint.textContent = `${Math.round(score * shown.length)} von ${shown.length} richtig`
   big.textContent = `Richtig: ${shown.map(label).join(' - ')}`
   await wait(1400)
