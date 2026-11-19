@@ -53,3 +53,17 @@ export async function claimDaily(task: number): Promise<{ reward: number; bonus:
   if (error) throw new Error(friendlyError(error.message))
   return data as { reward: number; bonus: number }
 }
+
+export interface WeeklyState { count: number; need: number; reward: number; claimed: boolean }
+
+export async function loadWeekly(): Promise<WeeklyState> {
+  const { data, error } = await supabase.rpc('weekly_state')
+  if (error) throw new Error(friendlyError(error.message))
+  return data as WeeklyState
+}
+
+export async function claimWeekly(): Promise<number> {
+  const { data, error } = await supabase.rpc('claim_weekly')
+  if (error) throw new Error(friendlyError(error.message))
+  return data as number
+}

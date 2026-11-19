@@ -1,5 +1,5 @@
 import { PLACES } from '../scenes/places'
-import { claimDaily, loadDaily, loadEconomy } from '../economy'
+import { claimDaily, claimWeekly, loadDaily, loadEconomy, loadWeekly } from '../economy'
 import { DAILY_TASKS, readyCount, taskStatus } from '../daily'
 import { friendlyError } from '../errors'
 import { openSettings } from './settings'
@@ -102,6 +102,29 @@ export function createHud(actions: HudActions): { toast(text: string): void; ref
       box.innerHTML = `<div>Rassen bei euch: ${col.have} von ${col.items.length}<br><small>${col.items.map((i) => (i.owned ? `<b>${i.name}</b>` : i.name)).join(' · ')}</small></div>`
       card.appendChild(box)
     }
+    try {
+      const w = await loadWeekly()
+      const row = document.createElement('div')
+      row.className = 'task' + (w.claimed ? ' done' : '')
+      const text = document.createElement('div')
+      text.innerHTML = `Wochenziel: ${w.need} Aktivitäten seit Montag<br><small>${Math.min(w.count, w.need)} von ${w.need}</small>`
+      row.appendChild(text)
+      const wb = document.createElement('button')
+      const ready = !w.claimed && w.count >= w.need
+      wb.textContent = w.claimed ? '✓' : ready ? `+${w.reward} holen` : 'offen'
+      wb.disabled = !ready
+      wb.addEventListener('click', () => {
+        wb.disabled = true
+        void claimWeekly().then((c) => {
+          overlay.remove()
+          toastEl.textContent = `Wochenziel geschafft: +${c} Münzen`
+          toastEl.style.opacity = '1'
+          refresh()
+        }).catch((e) => { toastEl.textContent = friendlyError(e instanceof Error ? e.message : String(e)); toastEl.style.opacity = '1'; wb.disabled = false })
+      })
+      row.appendChild(wb)
+      card.appendChild(row)
+    } catch { /* ohne Netz fehlt nur das Wochenziel */ }
     try {
       const lines = weekSummary(await loadWeekActivity(actions.householdId), Date.now())
       const box = document.createElement('div')
