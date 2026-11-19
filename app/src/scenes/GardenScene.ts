@@ -205,18 +205,19 @@ export class GardenScene extends Phaser.Scene {
         }
         this.brushGfx.setVisible(false)
       }
-      if (!p.isDown || this.tool !== 'hand' || this.busy || this.contestBusy) { this.swipe = 0; return }
+      if (!p.isDown || this.tool !== 'hand' || this.contestBusy) { this.swipe = 0; return }
       const hit = [...this.entries.values()].find((e) => Math.abs(p.worldX - e.dog.x) < 40 * e.dog.scale + 10 && Math.abs(p.worldY - (e.dog.y - 25 * e.dog.scale)) < 35)
       if (!hit) { this.swipe = 0; return }
       // Die Hand folgt dem Finger, solange er ueber dem Hund wischt.
       this.hand.setPosition(p.worldX, p.worldY).setAngle(Math.sin(this.time.now / 90) * 14).setVisible(true)
       const step = Math.hypot(p.x - p.prevPosition.x, p.y - p.prevPosition.y) / this.cameras.main.zoom
-      this.swipe += step
+      if (!this.busy) this.swipe += step
       hit.dog.hold(900)
       hit.dog.bliss(1500)
       this.heartAcc += step
       if (this.heartAcc > 30) { this.heartAcc = 0; this.heartsAt(hit.dog.x + (Math.random() - 0.5) * 24, hit.dog.y - 55 * hit.dog.scale) }
-      if (this.swipe > 120) {
+      // Waehrend ein Speichern laeuft, gibt es weiter Hand und Herzen, aber noch keinen neuen Streichler.
+      if (this.swipe > 120 && !this.busy) {
         this.swipe = 0
         cue('soft')
         this.closeBubble()
