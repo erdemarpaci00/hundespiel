@@ -223,7 +223,7 @@ export class ArenaScene extends Phaser.Scene {
       const r = await enterContest(rec, this.league, result)
       cue(result.won ? 'win' : 'soft')
       this.say(result.won ? `Sieg in der ${this.league.name}!\n+${r.result.prize} Münzen` : `Nicht gewonnen\nTrostpreis +${r.result.prize} Münzen`, result.won ? '#ffe36b' : '#ffffff')
-      if (result.won) this.confetti()
+      if (result.won) { this.confetti(); this.cameras.main.flash(350, 255, 240, 170) }
     } catch (err) {
       this.say(err instanceof Error ? err.message : 'Etwas ist schiefgelaufen, bitte nochmal versuchen', '#ffb3b3')
     }

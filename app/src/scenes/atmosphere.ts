@@ -68,6 +68,8 @@ export function createAtmosphere(scene: Phaser.Scene, outdoor: boolean, backdrop
       sinceCheck += dtMs
       fadeShade(dtMs)
       drift += dtMs
+      if (phase === 'night' && outdoor) sky.setAlpha(0.75 + Math.sin(drift / 700) * 0.25)
+      else sky.setAlpha(1)
       if (backdrop) backdrop.clouds.x = Math.sin(drift / 9000) * 28
       if (sinceCheck > 20000) {
         sinceCheck = 0
