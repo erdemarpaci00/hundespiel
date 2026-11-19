@@ -2,6 +2,7 @@ import { cue } from '../feedback'
 import { parseTimestamp } from '../time'
 import Phaser from 'phaser'
 import { fadeTo } from './transition'
+import { BallGame } from './ballGame'
 import { airCatch, dogRunsTo, floatText, mouthOf, timingThrow } from './duelFx'
 import { burst } from './fx'
 import { describeActivity, favoriteOf, relativeTime, type ActivityEntry } from '../activity'
@@ -28,8 +29,6 @@ import { mulberry32 } from '../util/rng'
 import { isRestless, resistsWaking } from '../nightlife'
 import { createAtmosphere, type Atmosphere } from './atmosphere'
 import { drawScenery } from './scenery'
-
-interface BallState { g: Phaser.GameObjects.Graphics; x: number; y: number; flying: boolean; carrier: Entry | null }
 
 const BUCKET_FULL = 100
 
@@ -66,7 +65,7 @@ export class GardenScene extends Phaser.Scene {
   private busy = false
   private tool: Tool = 'hand'
   private inv: Record<string, number> = {}
-  private ball: BallState | null = null
+  private balls!: BallGame
   private swipe = 0
   private contestBusy = false
   private owned: Wish[] = ['pet']
@@ -100,7 +99,7 @@ export class GardenScene extends Phaser.Scene {
     this.busy = false
     this.tool = 'hand'
     this.inv = {}
-    this.ball = null
+    this.balls = new BallGame({ scene: this, entries: () => [...this.entries.values()], busy: () => this.contestBusy, energy: (e) => this.currentNeeds(e).energy, toast: (t) => this.hud.toast(t), refresh: () => this.hud.refresh(), reload: () => this.reload(), fulfill: (id, k) => this.fulfill(id, k) })
     this.food = null
     this.seenActivity = null
     this.swipe = 0
@@ -135,7 +134,7 @@ export class GardenScene extends Phaser.Scene {
     this.hud = createHud({ householdId: this.session.householdId, getActivity: () => this.activityLines(), getBreeds: () => [...this.entries.values()].map((e) => e.record.look.breed), travel: (k) => fadeTo(this, k), current: 'garden', onEconomy: (items) => this.onEconomy(items), onTool: (t) => this.pick(t) })
     this.hand = this.makeHand()
     this.brushGfx = this.makeBrush()
-    this.time.addEvent({ delay: 7000, loop: true, callback: () => this.ambientBall() })
+    this.time.addEvent({ delay: 7000, loop: true, callback: () => this.balls.ambient() })
     this.time.delayedCall(1500, () => showTutorial())
     this.time.delayedCall(2500, () => void this.showAway())
     const welcome = shouldWelcome(readLastVisit(), Date.now())
@@ -230,7 +229,7 @@ export class GardenScene extends Phaser.Scene {
       if (over.length > 0) return
       if (this.contestBusy) return
       if (this.tool === 'futter') { this.throwFood(p.worldX, p.worldY); return }
-      if (this.tool === 'ball') { this.throwBallAt(p.worldX, p.worldY); return }
+      if (this.tool === 'ball') { this.balls.throwAt(p.worldX, p.worldY); return }
       this.closeBubble()
     })
     void this.reload()
@@ -686,7 +685,7 @@ export class GardenScene extends Phaser.Scene {
   private onEconomy(items: Record<string, number>): void {
     this.inv = items
     if (this.tool !== 'hand' && (items[this.tool] ?? 0) < 1) this.cancelModes(false)
-    if ((items.ball ?? 0) > 0 && !this.ball) this.spawnBall(200 + Math.random() * 240, GARDEN_BOUNDS.y + 30 + Math.random() * (GARDEN_BOUNDS.h - 60))
+    if ((items.ball ?? 0) > 0 && !this.balls.ball) this.balls.spawn(200 + Math.random() * 240, GARDEN_BOUNDS.y + 30 + Math.random() * (GARDEN_BOUNDS.h - 60))
   }
 
   private useToolOnDog(id: string): void {
@@ -695,7 +694,7 @@ export class GardenScene extends Phaser.Scene {
     if (this.tool === 'futter') void this.care('feed', id)
     else if (this.tool === 'leckerli') void this.giveTreat(id)
     else if (this.tool === 'buerste') void this.brush(id)
-    else if (this.tool === 'ball') this.throwBallAt(e.dog.x, e.dog.y)
+    else if (this.tool === 'ball') this.balls.throwAt(e.dog.x, e.dog.y)
   }
 
   private async giveTreat(id: string): Promise<void> {
@@ -824,131 +823,6 @@ export class GardenScene extends Phaser.Scene {
   }
 
   // ---- Ball: liegt im Garten, wird geworfen, geholt, getragen und von den Hunden selbst herumgetragen ----
-  private spawnBall(x: number, y: number): void {
-    const g = this.add.graphics()
-    g.fillStyle(0xc9a227, 1).fillCircle(0, 0, 3.5).fillStyle(0xffffff, 1).fillRect(-3.5, -0.5, 7, 1)
-    g.setPosition(x, y).setDepth(y)
-    this.ball = { g, x, y, flying: false, carrier: null }
-  }
-
-  private randomSpot(): { x: number; y: number } {
-    return { x: GARDEN_BOUNDS.x + 20 + Math.random() * (GARDEN_BOUNDS.w - 40), y: GARDEN_BOUNDS.y + 20 + Math.random() * (GARDEN_BOUNDS.h - 40) }
-  }
-
-  private updateBall(): void {
-    const b = this.ball
-    if (!b || !b.carrier) return
-    if (b.carrier.dog.sleeping) { this.dropBall(b.carrier, false); return }
-    const m = mouthOf(b.carrier)
-    b.x = m.x
-    b.y = m.y
-    b.g.setPosition(m.x, m.y).setDepth(b.carrier.dog.y + 1)
-  }
-
-  // Ball werfen: alle wachen, nicht zu muede Hunde rennen los, der schnellste nimmt ihn ins Maul und bringt ihn zurueck.
-  private throwBallAt(wx: number, wy: number): void {
-    if (this.contestBusy) return
-    if (!this.ball) this.spawnBall(320, 292)
-    const b = this.ball!
-    if (b.flying) return
-    const t = { x: Math.min(GARDEN_BOUNDS.x + GARDEN_BOUNDS.w, Math.max(GARDEN_BOUNDS.x, wx)), y: Math.min(GARDEN_BOUNDS.y + GARDEN_BOUNDS.h, Math.max(GARDEN_BOUNDS.y, wy)) }
-    b.carrier = null
-    for (const e of this.entries.values()) e.dog.cancelChase()
-    const runners = [...this.entries.values()].filter((e) => !e.dog.sleeping && !e.dog.busyMeeting && this.currentNeeds(e).energy >= PLAY_MIN_ENERGY)
-    const from = { x: 320, y: 292 }
-    b.flying = true
-    this.tweens.addCounter({
-      from: 0, to: 1, duration: 650,
-      onUpdate: (tw) => {
-        const v = tw.getValue() ?? 0
-        b.x = from.x + (t.x - from.x) * v
-        b.y = from.y + (t.y - from.y) * v
-        b.g.setPosition(b.x, b.y - Math.sin(v * Math.PI) * 60).setDepth(3000)
-      },
-      onComplete: () => {
-        b.g.setPosition(t.x, t.y).setDepth(t.y)
-        burst(this, t.x, t.y, 'dust', 5)
-        cue('soft')
-        // Zwei kleine Huepfer nach der Landung, dann liegt er still.
-        this.tweens.addCounter({ from: 0, to: 1, duration: 420, onUpdate: (tw) => {
-          const v = tw.getValue() ?? 0
-          b.g.setY(t.y - Math.abs(Math.sin(v * Math.PI * 2)) * 9 * (1 - v))
-        }, onComplete: () => { b.flying = false; b.g.setPosition(t.x, t.y) } })
-      },
-    })
-    if (runners.length === 0) { this.hud.toast('Gerade hat niemand Lust auf den Ball'); return }
-    for (const e of runners) e.dog.goTo(t, () => this.reachBall(e, runners))
-  }
-
-  private reachBall(e: Entry, runners: Entry[]): void {
-    const b = this.ball
-    if (!b || b.carrier) return
-    if (b.flying) { e.dog.hold(300); this.time.delayedCall(150, () => this.reachBall(e, runners)); return }
-    b.carrier = e
-    // Die anderen jagen dem Ballträger hinterher.
-    const chase = this.time.addEvent({ delay: 900, loop: true, callback: () => {
-      if (this.ball?.carrier !== e) { chase.remove(false); return }
-      for (const o of runners) if (o !== e && !o.dog.sleeping) o.dog.goTo({ x: e.dog.x - e.dog.facing * 28 + (Math.random() - 0.5) * 20, y: e.dog.y + (Math.random() - 0.5) * 14 }, () => undefined)
-    } })
-    for (const o of runners) if (o !== e) o.dog.cancelChase()
-    const back = { x: 320 + (Math.random() - 0.5) * 90, y: GARDEN_BOUNDS.y + GARDEN_BOUNDS.h - 6 - Math.random() * 14 }
-    e.dog.goTo(back, () => this.dropBall(e, true))
-    this.time.delayedCall(20000, () => { if (this.ball?.carrier === e) this.dropBall(e, false) })
-  }
-
-  // Ball fallen lassen mit kleinem Hopser; beim Zurueckbringen zaehlt es als Spielen.
-  private dropBall(e: Entry, fetched: boolean): void {
-    const b = this.ball
-    if (!b || b.carrier !== e) return
-    b.carrier = null
-    const x0 = b.x
-    const y0 = b.y
-    const x1 = Math.min(GARDEN_BOUNDS.x + GARDEN_BOUNDS.w, Math.max(GARDEN_BOUNDS.x, x0 + e.dog.facing * (8 + Math.random() * 18)))
-    const y1 = Math.min(GARDEN_BOUNDS.y + GARDEN_BOUNDS.h, Math.max(GARDEN_BOUNDS.y, e.dog.y + (Math.random() - 0.5) * 8))
-    b.flying = true
-    this.tweens.addCounter({
-      from: 0, to: 1, duration: 380,
-      onUpdate: (tw) => {
-        const v = tw.getValue() ?? 0
-        b.x = x0 + (x1 - x0) * v
-        b.y = y0 + (y1 - y0) * v
-        b.g.setPosition(b.x, b.y - Math.sin(v * Math.PI) * 14).setDepth(3000)
-      },
-      onComplete: () => { b.flying = false; b.g.setPosition(x1, y1).setDepth(y1) },
-    })
-    if (!fetched) return
-    e.dog.cheer(1500)
-    cue('good')
-    this.hud.toast(`${e.record.name} bringt den Ball zurück`)
-    this.fulfill(e.record.id, 'ball')
-    void playWithDog(e.record).then(() => { this.hud.refresh(); return this.reload() }).catch((err) => this.hud.toast(err instanceof Error ? err.message : 'Etwas ist schiefgelaufen, bitte nochmal versuchen'))
-  }
-
-  // Von allein: ein Hund holt den Ball, traegt ihn herum, laesst ihn fallen, der naechste schnappt ihn sich.
-  private ambientBall(): void {
-    const b = this.ball
-    if (!b || b.flying || b.carrier || this.contestBusy || Math.random() > 0.6) return
-    const pool = [...this.entries.values()].filter((e) => !e.dog.sleeping && !e.dog.busyMeeting)
-    if (pool.length === 0) return
-    this.ambientFetch(pool[Math.floor(Math.random() * pool.length)], 0.6)
-  }
-
-  private ambientFetch(e: Entry, chain: number): void {
-    const b = this.ball
-    if (!b || b.carrier || b.flying || e.dog.sleeping) return
-    e.dog.goTo({ x: b.x, y: b.y }, () => {
-      const bb = this.ball
-      if (!bb || bb.carrier || bb.flying) return
-      bb.carrier = e
-      e.dog.goTo(this.randomSpot(), () => {
-        this.dropBall(e, false)
-        const others = [...this.entries.values()].filter((o) => o !== e && !o.dog.sleeping && !o.dog.busyMeeting)
-        if (others.length > 0 && Math.random() < chain) this.time.delayedCall(700, () => this.ambientFetch(others[Math.floor(Math.random() * others.length)], chain * 0.6))
-      })
-      this.time.delayedCall(15000, () => { if (this.ball?.carrier === e) this.dropBall(e, false) })
-    })
-  }
-
   private async care(action: 'feed' | 'pet', dogId: string | null = this.selectedId): Promise<void> {
     const sel = dogId ? this.entries.get(dogId) : undefined
     if (!sel || this.busy) return
@@ -1008,7 +882,7 @@ export class GardenScene extends Phaser.Scene {
     if (this.entries.size > 1) { this.checkMeetings(); this.avoidOverlap() }
     for (const d of this.poseDogs) d.update(delta)
     for (const e of this.entries.values()) e.dog.update(delta)
-    this.updateBall()
+    this.balls.update()
     this.atmosphere.update(delta)
     this.placeBubble()
   }
