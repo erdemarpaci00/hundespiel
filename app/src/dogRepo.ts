@@ -246,6 +246,13 @@ export async function loadActivity(session: Session, limit: number): Promise<Act
   }))
 }
 
+export async function loadWeekActivity(householdId: string): Promise<{ kind: ActivityKind; at: string }[]> {
+  const since = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString()
+  const { data, error } = await supabase.from('activity').select('kind, created_at').eq('household_id', householdId).gte('created_at', since).limit(1000)
+  fail(error)
+  return (data as { kind: ActivityKind; created_at: string }[]).map((r) => ({ kind: r.kind, at: r.created_at }))
+}
+
 export interface Relation { a: string; b: string; meetings: number }
 
 export async function loadRelations(): Promise<Relation[]> {

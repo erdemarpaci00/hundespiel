@@ -4,6 +4,8 @@ import { DAILY_TASKS, readyCount, taskStatus } from '../daily'
 import { friendlyError } from '../errors'
 import { openSettings } from './settings'
 import { breedCollection } from '../dog/breedCollection'
+import { loadWeekActivity } from '../dogRepo'
+import { weekSummary } from '../weekly'
 
 export type Tool = 'hand' | 'futter' | 'leckerli' | 'ball' | 'buerste'
 
@@ -100,6 +102,13 @@ export function createHud(actions: HudActions): { toast(text: string): void; ref
       box.innerHTML = `<div>Rassen bei euch: ${col.have} von ${col.items.length}<br><small>${col.items.map((i) => (i.owned ? `<b>${i.name}</b>` : i.name)).join(' · ')}</small></div>`
       card.appendChild(box)
     }
+    try {
+      const lines = weekSummary(await loadWeekActivity(actions.householdId), Date.now())
+      const box = document.createElement('div')
+      box.className = 'task'
+      box.innerHTML = `<div>Eure Woche<br><small>${lines.map((l) => `${l.label}: <b>${l.count}</b>`).join(' · ')}</small></div>`
+      card.appendChild(box)
+    } catch { /* ohne Netz fehlt nur die Wochenbilanz */ }
     const close = document.createElement('button')
     close.className = 'tab'
     close.textContent = 'Zurück'
