@@ -807,6 +807,21 @@ export class GardenScene extends Phaser.Scene {
     if (!e || this.busy) return
     this.busy = true
     try {
+      // Knochen fliegt im Bogen zum Maul, der Hund schnappt und kaut kurz.
+      const bone = this.add.graphics().setDepth(3000)
+      bone.fillStyle(0xf4ead2, 1).lineStyle(1, 0x8a7a55, 1)
+      bone.fillRoundedRect(-7, -2, 14, 4, 2).strokeRoundedRect(-7, -2, 14, 4, 2)
+      bone.fillCircle(-7, -2, 3).fillCircle(-7, 2, 3).fillCircle(7, -2, 3).fillCircle(7, 2, 3)
+      const sx = e.dog.x + 70, sy = e.dog.y - 130
+      const tx = e.dog.x + 24 * e.dog.scale, ty = e.dog.y - 46 * e.dog.scale
+      bone.setPosition(sx, sy)
+      await new Promise<void>((res) => this.tweens.addCounter({ from: 0, to: 1, duration: 520, ease: 'Sine.easeIn', onUpdate: (tw) => {
+        const k = tw.getValue() ?? 0
+        bone.setPosition(sx + (tx - sx) * k, sy + (ty - sy) * k - Math.sin(k * Math.PI) * 26).setAngle(k * 540)
+      }, onComplete: () => res() }))
+      bone.destroy()
+      e.dog.eat(900)
+      for (let i = 0; i < 3; i++) { cue('munch'); await new Promise<void>((r) => this.time.delayedCall(260, () => r())) }
       await treatDog(e.record)
       this.heartsAt(e.dog.x, e.dog.y - 60 * e.dog.scale)
       e.dog.cheer(1200)
