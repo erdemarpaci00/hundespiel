@@ -3,7 +3,7 @@ import { BREEDS, breedById, rollBreedPuppy } from '../dog/breeds'
 import { ageDays, ageStage } from '../dog/age'
 import { parseTimestamp } from '../time'
 import { LivingDog } from '../dog/livingDog'
-import { findTreasure, loadDogs } from '../dogRepo'
+import { findTreasure, loadDogs, recordMeeting } from '../dogRepo'
 import type { Session } from '../session'
 import { isRestless } from '../nightlife'
 import { createAtmosphere, type Atmosphere } from './atmosphere'
@@ -32,6 +32,7 @@ export class WalkScene extends Phaser.Scene {
   private leash!: Phaser.GameObjects.Graphics
   private lastPullToast = 0
   private lastRedirect = 0
+  private pairUntil = 0
   private endShown = false
   private meters!: Phaser.GameObjects.Text
 
@@ -148,12 +149,30 @@ export class WalkScene extends Phaser.Scene {
       s.dog.setResting(night && !this.nightOwls.has(s.dog))
       s.dog.update(delta)
     }
+    this.checkPair(now)
     this.drawLeash(taut)
     this.cameras.main.centerOn(Phaser.Math.Clamp(this.hand.x, 320, W - 320), 180)
     this.meters.setText(`${Math.round(this.hand.x / 10)} m von ${W / 10} m`)
     if (!this.endShown && this.hand.x > W - 140) {
       this.endShown = true
       this.hud.toast('Ende der Runde! Über die Karte geht es zurück nach Hause.')
+    }
+  }
+
+  // Zwei eigene Hunde an der Leine begegnen sich: zaehlt fuer ihre Freundschaft (wie im Garten, 60 s Pause).
+  private checkPair(now: number): void {
+    if (now < this.pairUntil) return
+    for (let i = 0; i < this.own.length; i++) {
+      for (let j = i + 1; j < this.own.length; j++) {
+        const a = this.own[i], b = this.own[j]
+        if (a.sleeping || b.sleeping || !a.dogKey || !b.dogKey || Math.hypot(a.x - b.x, a.y - b.y) > 48) continue
+        this.pairUntil = now + 60000
+        a.meet(b.x, 3000)
+        b.meet(a.x, 3000)
+        this.hud.toast(`${this.names.get(a)} und ${this.names.get(b)} begrüßen sich`)
+        void recordMeeting(a.dogKey, b.dogKey).catch(() => undefined)
+        return
+      }
     }
   }
 
