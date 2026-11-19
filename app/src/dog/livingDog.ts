@@ -34,6 +34,7 @@ export class LivingDog {
   private readonly emoteGfx: Phaser.GameObjects.Graphics
   private emote: Emote | null = null
   private emoteHidden = false
+  private emoteCrowded = false
   private shown: Emote | 'love' | null = null
   private loveUntil = 0
   private pulse = 0
@@ -105,7 +106,7 @@ export class LivingDog {
     this.pulse += dt
     const want = this.loveUntil > Date.now() ? 'love' : this.emote
     if (want !== this.shown) this.drawEmote(want)
-    this.emoteGfx.setPosition(this.pos.x, this.pos.y - 42 - 92 * this.size + Math.sin(this.pulse / 300) * 2).setDepth(1001).setVisible(want !== null && !this.resting && !this.emoteHidden)
+    this.emoteGfx.setPosition(this.pos.x, this.pos.y - 42 - 92 * this.size + Math.sin(this.pulse / 300) * 2).setDepth(1001).setVisible(want !== null && !this.resting && !this.emoteHidden && !this.emoteCrowded)
     this.label
       .setPosition(this.pos.x, this.pos.y - 92 * this.size)
       .setDepth(1000)
@@ -285,6 +286,11 @@ export class LivingDog {
 
   setPersonality(p: Personality): void {
     this.personality = p
+  }
+
+  // Steht ein anderer Hund direkt dahinter, wuerde die Blase seinen Namen verdecken.
+  setCrowded(crowded: boolean): void {
+    this.emoteCrowded = crowded
   }
 
   // Waehrend das Symbolrad offen ist, bleibt die Denkblase aus.

@@ -1091,6 +1091,14 @@ export class GardenScene extends Phaser.Scene {
 
   private meetCooldown = new Map<string, number>()
 
+  // Der weiter vorn stehende Hund (groesseres y) laesst seine Denkblase weg, wenn sie den Namen des hinteren verdecken wuerde.
+  private avoidOverlap(): void {
+    const list = [...this.entries.values()]
+    for (const a of list) {
+      a.dog.setCrowded(list.some((b) => b !== a && b.dog.y < a.dog.y && Math.abs(a.dog.x - b.dog.x) < 50 && a.dog.y - b.dog.y < 70))
+    }
+  }
+
   // Begegnen sich zwei wache Hunde, bleiben sie kurz stehen (Freundschaft waechst spaeter daraus).
   private checkMeetings(): void {
     const now = Date.now()
@@ -1110,7 +1118,7 @@ export class GardenScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
-    if (this.entries.size > 1) this.checkMeetings()
+    if (this.entries.size > 1) { this.checkMeetings(); this.avoidOverlap() }
     for (const d of this.poseDogs) d.update(delta)
     for (const e of this.entries.values()) e.dog.update(delta)
     this.updateBall()
