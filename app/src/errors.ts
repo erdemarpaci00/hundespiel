@@ -10,6 +10,7 @@ const RULES: [RegExp, string][] = [
   [/das habt ihr schon/i, 'Das habt ihr schon'],
   [/mehr als vier hunde/i, 'Mehr als vier Hunde passen nicht in die Wohnung'],
   [/zu schnell hintereinander/i, 'Nicht so schnell, kurz verschnaufen lassen'],
+  [/liga noch nicht freigeschaltet/i, 'Diese Liga ist noch gesperrt, gewinnt erst drei Pokale in der Liga davor'],
   [/failed to fetch|load failed|networkerror|network request failed/i, 'Keine Verbindung, bitte Netz prüfen'],
 ]
 

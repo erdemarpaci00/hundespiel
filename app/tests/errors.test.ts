@@ -19,3 +19,7 @@ test('Netzfehler und Unbekanntes ergeben verständliche Meldungen', () => {
 test('Safari meldet Netzfehler als "Load failed"', () => {
   expect(friendlyError('TypeError: Load failed')).toBe('Keine Verbindung, bitte Netz prüfen')
 })
+
+test('gesperrte Liga wird verständlich erklärt', () => {
+  expect(friendlyError('Liga noch nicht freigeschaltet')).toBe('Diese Liga ist noch gesperrt, gewinnt erst drei Pokale in der Liga davor')
+})
