@@ -85,30 +85,56 @@ export class ArenaScene extends Phaser.Scene {
     this.banner.setText(text).setColor(color)
   }
 
-  // Zeiger pendelt ueber den Balken, Tipp wirft. 1 = perfekt in der Mitte.
-  private timing(): Promise<number> {
+  // Echter Wurf: Ein Ring zeigt, wohin der Hund soll. Man wischt von der Frisbee-Scheibe in Richtung Ring,
+  // je laenger der Wisch, desto weiter fliegt sie. Die Landestelle folgt dem Finger (Zielpunkt), q = Naehe zum Ring.
+  private throwIt(): Promise<{ land: { x: number; y: number }; q: number }> {
     return new Promise((resolve) => {
-      const cx = 320, cy = 322, w = 200
-      const bar = this.add.graphics().setDepth(4000)
-      bar.fillStyle(0x000000, 0.6).fillRoundedRect(cx - w / 2 - 6, cy - 12, w + 12, 24, 6)
-      bar.fillStyle(0xe05555, 1).fillRect(cx - w / 2, cy - 5, w, 10)
-      bar.fillStyle(0xf0c040, 1).fillRect(cx - w * 0.3, cy - 5, w * 0.6, 10)
-      bar.fillStyle(0x4caf50, 1).fillRect(cx - w * 0.1, cy - 5, w * 0.2, 10)
-      const cursor = this.add.rectangle(cx, cy, 3, 18, 0xffffff).setDepth(4001)
-      const t0 = this.time.now
-      const speed = 3.2 + Math.random() * 1.4
-      const pos = (): number => 0.5 + 0.5 * Math.sin(((this.time.now - t0) / 1000) * speed - Math.PI / 2)
-      const tick = this.time.addEvent({ delay: 16, loop: true, callback: () => cursor.setX(cx - w / 2 + pos() * w) })
+      const from = { x: 40, y: 320 }
+      const target = { x: 330 + Math.random() * 230, y: 215 + Math.random() * 100 }
+      const ring = this.add.graphics().setDepth(3000)
+      ring.lineStyle(2, 0xffffff, 0.9).strokeCircle(target.x, target.y, 22).lineStyle(1.5, 0x4caf50, 1).strokeCircle(target.x, target.y, 11)
+      this.tweens.add({ targets: ring, alpha: 0.45, duration: 600, yoyo: true, repeat: -1 })
+      const disc = this.add.graphics().setDepth(4000).setPosition(from.x, from.y)
+      disc.fillStyle(0xe8453c, 1).fillEllipse(0, 0, 14, 5.5).fillStyle(0xffffff, 1).fillEllipse(0, -0.8, 8, 2.4)
+      const aim = this.add.graphics().setDepth(3500)
+      const hint = this.add.text(320, 345, 'Wische von der Scheibe in Richtung Ring', { fontSize: '9px', color: '#ffffff', stroke: '#1d2b44', strokeThickness: 3, resolution: 3, fontFamily: FONT }).setOrigin(0.5, 1).setDepth(4001)
+      let down: { x: number; y: number } | null = null
       let done = false
-      const finish = (q: number): void => {
+      const spot = (px: number, py: number): { x: number; y: number } => ({
+        x: Math.min(600, Math.max(130, from.x + (px - down!.x) * 2.4)),
+        y: Math.min(335, Math.max(195, from.y + (py - down!.y) * 2.4)),
+      })
+      const clean = (): void => {
+        this.input.off('pointerdown', onDown); this.input.off('pointermove', onMove); this.input.off('pointerup', onUp)
+        ring.destroy(); disc.destroy(); aim.destroy(); hint.destroy()
+      }
+      const finish = (land: { x: number; y: number }): void => {
         if (done) return
         done = true
-        tick.remove(false)
-        bar.destroy(); cursor.destroy()
-        resolve(q)
+        const q = Math.max(0, 1 - Math.hypot(land.x - target.x, land.y - target.y) / 110)
+        clean()
+        resolve({ land, q })
       }
-      this.time.delayedCall(300, () => { if (!done) this.input.once('pointerdown', () => finish(1 - Math.abs(pos() - 0.5) * 2)) })
-      this.time.delayedCall(8000, () => finish(0.2))
+      const onDown = (pt: Phaser.Input.Pointer): void => { down = { x: pt.worldX, y: pt.worldY } }
+      const onMove = (pt: Phaser.Input.Pointer): void => {
+        if (!down) return
+        const l = spot(pt.worldX, pt.worldY)
+        aim.clear().lineStyle(1.5, 0xffffff, 0.8)
+        for (let i = 1; i <= 12; i++) {
+          const v = i / 12
+          aim.fillStyle(0xffffff, 0.8).fillCircle(from.x + (l.x - from.x) * v, from.y + (l.y - from.y) * v - Math.sin(v * Math.PI) * 40, 1.4)
+        }
+        aim.fillStyle(0xffd23f, 0.9).fillCircle(l.x, l.y, 4)
+      }
+      const onUp = (pt: Phaser.Input.Pointer): void => {
+        if (!down) return
+        const moved = Math.hypot(pt.worldX - down.x, pt.worldY - down.y)
+        if (moved < 8) { down = null; aim.clear(); return }
+        finish(spot(pt.worldX, pt.worldY))
+      }
+      this.input.on('pointerdown', onDown); this.input.on('pointermove', onMove); this.input.on('pointerup', onUp)
+      // Wer nichts tut, wirft schwach: nach 20 Sekunden fliegt die Scheibe kurz vor die Fuesse.
+      this.time.delayedCall(20000, () => { if (!done) { down = { x: 0, y: 0 }; finish({ x: 200, y: 300 }) } })
     })
   }
 
@@ -192,13 +218,7 @@ export class ArenaScene extends Phaser.Scene {
         scores.forEach((s, k) => { this.rows[k].push(String(Math.round(s))); this.rivalTotals[k] += s })
         this.refreshBoard()
         this.say(`Runde ${i + 1} von ${STAT_KEYS.length}: ${STAT_LABEL[stat]}\nZu toppen: ${Math.round(top)} Punkte`)
-        const q = await this.timing()
-        const miss = (1 - q) * 70
-        const ang = Math.random() * Math.PI * 2
-        const land = {
-          x: Math.min(590, Math.max(150, 380 + Math.cos(ang) * miss + (Math.random() - 0.5) * 120)),
-          y: Math.min(330, Math.max(200, 265 + Math.sin(ang) * miss * 0.5)),
-        }
+        const { land, q } = await this.throwIt()
         const round = playRound({ stat, value, league: this.league, form, happiness: needs.happiness, affection: rec.personality.affection, throwQuality: q }, Math.random)
         round.rival = top
         // Ungeuebte oder lustlose Hunde fangen nicht jeden Wurf; manchmal rennen sie gar nicht erst los.
