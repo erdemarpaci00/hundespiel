@@ -88,8 +88,8 @@ export class PlaceScene extends Phaser.Scene {
     for (let i = 0; i < strangers; i++) {
       const breed = BREEDS[Math.floor(rng() * BREEDS.length)]
       const pup = rollBreedPuppy(breed, rng)
-      const pen = this.kind === 'kennel' ? { x: 40 + i * 100, y: 290, w: 40, h: 20 } : area
-      const d = new LivingDog(this, pup.look, pup.personality, pen, this.kind === 'kennel' ? { x: pen.x + 20, y: pen.y + 10 } : { x: 120 + i * 90, y: 230 + (i % 2) * 50 }, Math.random)
+      const pen = this.kind === 'kennel' ? { x: 74 + i * 100, y: 290, w: 12, h: 20 } : area
+      const d = new LivingDog(this, pup.look, pup.personality, pen, this.kind === 'kennel' ? { x: pen.x + 6, y: pen.y + 10 } : { x: 120 + i * 90, y: 230 + (i % 2) * 50 }, Math.random)
       d.setCaption(breed.name)
       d.onTap(() => {
         if (dialogJustClosed()) return
