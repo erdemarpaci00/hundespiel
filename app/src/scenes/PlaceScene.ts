@@ -84,11 +84,11 @@ export class PlaceScene extends Phaser.Scene {
       this.dogs.push(d)
     })
     if (this.kind === 'walk' && this.dogs.length > 0) this.spawnSparkles(area, rng)
-    const strangers = this.kind === 'walk' ? 4 : this.kind === 'kennel' ? 6 : 0
+    const strangers = this.kind === 'walk' ? 4 : this.kind === 'kennel' ? 4 : 0
     for (let i = 0; i < strangers; i++) {
       const breed = BREEDS[Math.floor(rng() * BREEDS.length)]
       const pup = rollBreedPuppy(breed, rng)
-      const pen = this.kind === 'kennel' ? { x: 74 + i * 100, y: 290, w: 12, h: 20 } : area
+      const pen = this.kind === 'kennel' ? { x: 89 + i * 150, y: 290, w: 12, h: 20 } : area
       const d = new LivingDog(this, pup.look, pup.personality, pen, this.kind === 'kennel' ? { x: pen.x + 6, y: pen.y + 10 } : { x: 120 + i * 90, y: 230 + (i % 2) * 50 }, Math.random)
       d.setCaption(breed.name)
       d.onTap(() => {
@@ -162,9 +162,9 @@ export class PlaceScene extends Phaser.Scene {
         }
         g.fillStyle(0x8b5a2b).fillRect(200, 190, 240, 40).fillStyle(0xa8793f).fillRect(200, 190, 240, 8)
       } else {
-        for (let i = 0; i < 6; i++) {
-          g.fillStyle(0x8a8a8a, 0.9).fillRect(30 + i * 100, 190, 4, 140).fillRect(30 + i * 100 + 96, 190, 4, 140)
-          g.fillRect(30 + i * 100, 190, 100, 4)
+        for (let i = 0; i < 4; i++) {
+          g.fillStyle(0x8a8a8a, 0.9).fillRect(20 + i * 150, 190, 4, 140).fillRect(20 + i * 150 + 146, 190, 4, 140)
+          g.fillRect(20 + i * 150, 190, 150, 4)
         }
       }
       return backdrop
