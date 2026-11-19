@@ -11,7 +11,7 @@ import { ageDays, ageStage } from '../dog/age'
 import { LivingDog } from '../dog/livingDog'
 import { randomLook } from '../dog/look'
 import { applyElapsed, energyDots, PLAY_MIN_ENERGY, mood, moodPersonality, type Mood, type Needs } from '../dog/needs'
-import { loadPartnerSince, loadWishDone, wishReward, enterContest, cleanPoop, dropPoop, findTreasure, loadPoopsFromDb, loadRelations, recordMeeting, type Relation, careForDog, groomDog, treatDog, playWithDog, loadActivity, loadAffection, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
+import { countMembers, loadPartnerSince, loadWishDone, wishReward, enterContest, cleanPoop, dropPoop, findTreasure, loadPoopsFromDb, loadRelations, recordMeeting, type Relation, careForDog, groomDog, treatDog, playWithDog, loadActivity, loadAffection, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
 import { GARDEN_BOUNDS } from '../garden'
 import type { Session } from '../session'
 import { markVisit, readLastVisit, shouldWelcome } from '../garden/welcome'
@@ -137,6 +137,7 @@ export class GardenScene extends Phaser.Scene {
     this.time.addEvent({ delay: 7000, loop: true, callback: () => this.balls.ambient() })
     this.time.delayedCall(1500, () => showTutorial())
     this.time.delayedCall(2500, () => void this.showAway())
+    this.time.delayedCall(12000, () => void this.inviteHint())
     const welcome = shouldWelcome(readLastVisit(), Date.now())
     markVisit(Date.now())
     if (welcome) this.events.once('welcome', () => { let i = 0; for (const e of this.entries.values()) this.time.delayedCall(300 * i++, () => e.dog.cheer(4000)); this.hud.toast('Deine Hunde freuen sich, dass du wieder da bist') })
@@ -428,6 +429,17 @@ export class GardenScene extends Phaser.Scene {
       const msg = awayMessage(partner?.acts ?? 0, this.poops.length, partner?.name ?? 'Dein Partner')
       if (msg) this.hud.toast(msg)
     } catch { /* ohne Netz entfaellt der Hinweis */ }
+  }
+
+  // Einmaliger Tipp, solange man allein im Haushalt ist: der Hund ist fuer zwei gedacht.
+  private async inviteHint(): Promise<void> {
+    const key = 'hundespiel-invite-hint'
+    try { if (localStorage.getItem(key)) return } catch { return }
+    try {
+      if ((await countMembers(this.session.householdId)) > 1) return
+      localStorage.setItem(key, '1')
+      this.hud.toast('Tipp: Im Zahnrad findest du den Einladungscode, damit ihr den Hund zu zweit versorgen könnt')
+    } catch { /* ohne Netz kommt der Tipp beim naechsten Mal */ }
   }
 
   private refreshNeeds(): void {

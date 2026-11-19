@@ -253,6 +253,12 @@ export async function loadWeekActivity(householdId: string): Promise<{ kind: Act
   return (data as { kind: ActivityKind; created_at: string }[]).map((r) => ({ kind: r.kind, at: r.created_at }))
 }
 
+export async function countMembers(householdId: string): Promise<number> {
+  const { count, error } = await supabase.from('members').select('user_id', { count: 'exact', head: true }).eq('household_id', householdId)
+  fail(error)
+  return count ?? 0
+}
+
 export interface Relation { a: string; b: string; meetings: number }
 
 export async function loadRelations(): Promise<Relation[]> {
