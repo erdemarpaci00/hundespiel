@@ -1,6 +1,7 @@
 import { cue } from '../feedback'
 import { parseTimestamp } from '../time'
 import Phaser from 'phaser'
+import { fadeTo } from './transition'
 import { describeActivity, favoriteOf, relativeTime, type ActivityEntry } from '../activity'
 import { DogSprite, type Pose } from '../dog/dogSprite'
 import { ageDays, ageStage } from '../dog/age'
@@ -88,6 +89,7 @@ export class GardenScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.cameras.main.fadeIn(260, 0, 0, 0)
     // Die Szene wird beim Zurueckkehren wiederverwendet: alter Stand verweist auf zerstoerte Objekte.
     this.entries = new Map()
     this.poseDogs = []
@@ -128,7 +130,7 @@ export class GardenScene extends Phaser.Scene {
     }
 
     this.session = this.registry.get('session') as Session
-    this.hud = createHud({ householdId: this.session.householdId, getActivity: () => this.activityLines(), getBreeds: () => [...this.entries.values()].map((e) => e.record.look.breed), travel: (k) => this.scene.start(k), current: 'garden', onEconomy: (items) => this.onEconomy(items), onTool: (t) => this.pick(t) })
+    this.hud = createHud({ householdId: this.session.householdId, getActivity: () => this.activityLines(), getBreeds: () => [...this.entries.values()].map((e) => e.record.look.breed), travel: (k) => fadeTo(this, k), current: 'garden', onEconomy: (items) => this.onEconomy(items), onTool: (t) => this.pick(t) })
     this.hand = this.makeHand()
     this.brushGfx = this.makeBrush()
     this.time.addEvent({ delay: 7000, loop: true, callback: () => this.ambientBall() })
@@ -507,7 +509,7 @@ export class GardenScene extends Phaser.Scene {
     const showContest = (): void => openContest(e.record, () => { this.hud.refresh(); void this.reload() }, (d, l) => void this.playFrisbee(d, l))
     const actions: [Action, () => void][] =
       state === 'asleep' ? [['wake', () => this.tryWake(e.record.id)], ['details', showDetail]]
-      : state === 'restless' ? [['walk', () => this.scene.start('walk')], ['details', showDetail]]
+      : state === 'restless' ? [['walk', () => fadeTo(this, 'walk')], ['details', showDetail]]
       : [['feed', () => void this.care('feed', e.record.id)], ['pet', () => void this.care('pet')], ['ball', () => this.pick('ball')], ['brush', () => void this.brush(e.record.id)], ['contest', showContest], ['details', showDetail]]
     const n = actions.length
     actions.forEach(([kind, fn], i) => {
@@ -707,7 +709,7 @@ export class GardenScene extends Phaser.Scene {
     const wait = contestWaitMinutes(record)
     if (wait > 0) { this.hud.toast(`${record.name} verschnauft noch, wieder in ${wait} Min`); return }
     this.hud.showHotbar(false)
-    this.scene.start('arena', { record, league })
+    fadeTo(this, 'arena', { record, league })
   }
 
   // Duell: du wirfst abwechselnd fuer beide Hunde, wer vier Runden besser faengt, gewinnt. Nur zum Spass, ohne Preis.

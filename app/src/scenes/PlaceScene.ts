@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { fadeTo } from './transition'
 import { BREEDS, breedById, rollBreedPuppy } from '../dog/breeds'
 import { ageDays, ageStage } from '../dog/age'
 import { parseTimestamp } from '../time'
@@ -28,6 +29,7 @@ export class PlaceScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.cameras.main.fadeIn(260, 0, 0, 0)
     const session = this.registry.get('session') as Session
     this.cameras.main.setZoom(3).centerOn(320, 180)
     this.dogs = []
@@ -35,7 +37,7 @@ export class PlaceScene extends Phaser.Scene {
     const backdrop = this.draw()
     this.atmosphere = createAtmosphere(this, this.kind === 'walk' || this.kind === 'training', backdrop)
     this.add.text(320, 14, TITLES[this.kind], { fontSize: '14px', color: '#ffffff', stroke: '#2b2b2b', strokeThickness: 4, resolution: 3, fontFamily: 'Arial, Helvetica, sans-serif', fontStyle: 'bold' }).setOrigin(0.5, 0).setDepth(5)
-    this.hud = createHud({ householdId: session.householdId, getActivity: () => [], travel: (k) => this.scene.start(k), current: this.kind })
+    this.hud = createHud({ householdId: session.householdId, getActivity: () => [], travel: (k) => fadeTo(this, k), current: this.kind })
     if (this.kind === 'shop') this.openShopPanel()
     else void this.populate(session)
   }
@@ -51,7 +53,7 @@ export class PlaceScene extends Phaser.Scene {
     const back = document.createElement('button')
     back.className = 'tab'
     back.textContent = 'Zurück in den Garten'
-    back.addEventListener('click', () => { overlay.remove(); this.scene.start('garden') })
+    back.addEventListener('click', () => { overlay.remove(); fadeTo(this, 'garden') })
     card.append(h, buildShop(), back)
     overlay.appendChild(card)
     document.body.appendChild(overlay)
@@ -91,7 +93,7 @@ export class PlaceScene extends Phaser.Scene {
       d.setCaption(breed.name)
       d.onTap(() => {
         if (dialogJustClosed()) return
-        if (this.kind === 'kennel') openAdoption(session, pup, (nd) => { this.hud.toast(`${nd.name} ist jetzt bei euch zu Hause`); this.scene.start('garden') })
+        if (this.kind === 'kennel') openAdoption(session, pup, (nd) => { this.hud.toast(`${nd.name} ist jetzt bei euch zu Hause`); fadeTo(this, 'garden') })
         else this.hud.toast(`Ein fremder ${breed.name}`)
       })
       if (this.kind !== 'kennel') this.nightOwls.add(d)

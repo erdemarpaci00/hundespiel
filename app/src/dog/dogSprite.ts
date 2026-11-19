@@ -25,6 +25,8 @@ export class DogSprite {
   private readonly legs: Phaser.GameObjects.Rectangle[] // hinten, hinten, vorne, vorne
   private readonly eyeOpen: Phaser.GameObjects.Arc
   private readonly eyeClosed: Phaser.GameObjects.Rectangle
+  private shut = false
+  private readonly blinkOff = 600 + Math.random() * 3000
   private readonly zzz: Phaser.GameObjects.Text
   private readonly patternShapes: { obj: Phaser.GameObjects.Shape; baseY: number }[] = []
 
@@ -105,6 +107,7 @@ export class DogSprite {
     this.pose = pose
     this.phase = 0
     const sleeping = pose === 'sleep'
+    this.shut = sleeping
     this.eyeOpen.setVisible(!sleeping)
     this.eyeClosed.setVisible(sleeping)
     this.zzz.setVisible(sleeping)
@@ -144,6 +147,7 @@ export class DogSprite {
     if (f === this.feeling) return
     this.feeling = f
     const sleeping = this.pose === 'sleep'
+    this.shut = sleeping || f === 'blissful'
     this.eyeOpen.setVisible(!sleeping && f !== 'blissful')
     this.eyeClosed.setVisible(sleeping || f === 'blissful')
   }
@@ -165,6 +169,17 @@ export class DogSprite {
   update(dtMs: number): void {
     this.phase += clampDelta(dtMs)
     this.layout(this.phase)
+    this.idle()
+  }
+
+  // Kleine Lebenszeichen: Blinzeln alle paar Sekunden und leises Atmen.
+  private idle(): void {
+    if (!this.shut) {
+      const blink = (this.phase + this.blinkOff) % 4300 < 140
+      this.eyeOpen.setVisible(!blink)
+      this.eyeClosed.setVisible(blink)
+    }
+    this.body.scaleY = 1 + Math.sin(this.phase * 0.004) * 0.022
   }
 
   private layout(t: number): void {

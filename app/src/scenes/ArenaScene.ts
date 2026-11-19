@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { fadeTo } from './transition'
 import { DogSprite } from '../dog/dogSprite'
 import { STAT_KEYS, STAT_LABEL, statValue, type StatKey } from '../dog/stats'
 import { applyElapsed } from '../dog/needs'
@@ -38,6 +39,7 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.cameras.main.fadeIn(260, 0, 0, 0)
     this.cameras.main.setZoom(3).centerOn(320, 180)
     this.drawStage()
     this.dog = new DogSprite(this, this.record.look, 140, 285)
@@ -132,7 +134,8 @@ export class ArenaScene extends Phaser.Scene {
     shadow.destroy()
     if (caught) {
       this.tweens.add({ targets: disc, x: this.dog.container.x, y: this.dog.container.y - 20, duration: 160 })
-      this.tweens.add({ targets: this.dog.container, y: land.y - 14, duration: 140, yoyo: true })
+      this.tweens.add({ targets: this.dog.container, y: land.y - 14, duration: 140, yoyo: true, ease: 'Quad.easeOut' })
+      this.tweens.add({ targets: this.dog.container, scaleY: this.dog.container.scaleY * 1.12, duration: 120, yoyo: true })
       await this.wait(500)
       disc.destroy()
     } else {
@@ -141,6 +144,16 @@ export class ArenaScene extends Phaser.Scene {
       disc.destroy()
     }
     this.dog.setPose('sit')
+  }
+
+  // Konfettiregen bei einem Sieg: bunte Plaettchen fallen mit leichtem Taumeln von oben.
+  private confetti(): void {
+    const cols = [0xff5d8f, 0xffd23f, 0x4caf50, 0x4aa3df, 0xb084f0, 0xff9a4d]
+    for (let i = 0; i < 70; i++) {
+      const r = this.add.rectangle(60 + Math.random() * 520, -10 - Math.random() * 60, 4 + Math.random() * 3, 2.5, cols[i % cols.length]).setDepth(4500).setAngle(Math.random() * 360)
+      this.tweens.add({ targets: r, y: 330 + Math.random() * 20, x: r.x + (Math.random() - 0.5) * 90, angle: r.angle + 360 * (Math.random() > 0.5 ? 1 : -1), alpha: 0.2, duration: 1800 + Math.random() * 1600, delay: Math.random() * 700, ease: 'Sine.easeIn', onComplete: () => r.destroy() })
+    }
+    this.cameras.main.shake(180, 0.002)
   }
 
   // Der Hund bleibt sitzen, schaut dem Frisbee nach und waehlt lieber ein Nickerchen.
@@ -199,6 +212,7 @@ export class ArenaScene extends Phaser.Scene {
         this.myTotal += round.dog
         this.refreshBoard()
         cue(round.won ? 'good' : 'bad')
+        if (caught) this.cameras.main.shake(110, 0.003); else this.cameras.main.shake(200, 0.005)
         this.say(refuses ? `${this.record.name} hat keine Lust` : caught ? (q > 0.8 ? 'Perfekter Wurf!' : 'Gefangen!') : 'Daneben, nicht gefangen', caught ? '#8dff8d' : '#ffb3b3')
         await this.wait(1500)
       }
@@ -206,7 +220,7 @@ export class ArenaScene extends Phaser.Scene {
       const r = await enterContest(rec, this.league, result)
       cue(result.won ? 'win' : 'soft')
       this.say(result.won ? `Sieg in der ${this.league.name}!\n+${r.result.prize} Münzen` : `Nicht gewonnen\nTrostpreis +${r.result.prize} Münzen`, result.won ? '#ffe36b' : '#ffffff')
-      if (result.won) this.dog.setPose('sit')
+      if (result.won) this.confetti()
     } catch (err) {
       this.say(err instanceof Error ? err.message : 'Etwas ist schiefgelaufen, bitte nochmal versuchen', '#ffb3b3')
     }
@@ -217,6 +231,6 @@ export class ArenaScene extends Phaser.Scene {
     this.dog.setPose('sit')
     await this.wait(1600)
     const back = this.add.text(320, 250, 'Zurück in den Garten', { fontSize: '14px', color: '#ffffff', backgroundColor: '#2b6cb0', padding: { x: 12, y: 8 }, resolution: 3, fontFamily: FONT }).setOrigin(0.5).setDepth(4000).setInteractive({ useHandCursor: true })
-    back.once('pointerdown', () => this.scene.start('garden'))
+    back.once('pointerdown', () => fadeTo(this, 'garden'))
   }
 }

@@ -118,9 +118,13 @@ export function createHud(actions: HudActions): { toast(text: string): void; ref
     const b = (ev.target as HTMLElement).closest('button')
     if (b) actions.onTool?.(b.dataset.tool as Tool)
   })
+  let lastCoins: number | null = null
   const refresh = (): void => {
     void loadEconomy().then((eco) => {
+      const changed = lastCoins !== null && lastCoins !== eco.coins
+      lastCoins = eco.coins
       statsEl.innerHTML = `<span><i class="coin"></i>${eco.coins}</span>`
+      if (changed) { statsEl.classList.remove('pop'); void statsEl.offsetWidth; statsEl.classList.add('pop') }
       for (const [t] of SLOTS) {
         if (t === 'hand') continue
         const n = eco.items[t] ?? 0

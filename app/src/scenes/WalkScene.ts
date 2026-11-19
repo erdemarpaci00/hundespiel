@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { fadeTo } from './transition'
 import { BREEDS, breedById, rollBreedPuppy } from '../dog/breeds'
 import { ageDays, ageStage } from '../dog/age'
 import { parseTimestamp } from '../time'
@@ -41,6 +42,7 @@ export class WalkScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.cameras.main.fadeIn(260, 0, 0, 0)
     const session = this.registry.get('session') as Session
     this.cameras.main.setZoom(3).centerOn(320, 180)
     this.own = []
@@ -56,7 +58,7 @@ export class WalkScene extends Phaser.Scene {
     this.leash = this.add.graphics().setDepth(2999)
     this.grip = this.add.graphics().setDepth(3000)
     this.meters = this.add.text(320, 14, '', { fontSize: '12px', color: '#ffffff', stroke: '#2b2b2b', strokeThickness: 4, resolution: 3, fontFamily: FONT, fontStyle: 'bold' }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(6000)
-    this.hud = createHud({ householdId: session.householdId, getActivity: () => [], travel: (k) => this.scene.start(k), current: 'walk' })
+    this.hud = createHud({ householdId: session.householdId, getActivity: () => [], travel: (k) => fadeTo(this, k), current: 'walk' })
     void this.populate(session)
   }
 
