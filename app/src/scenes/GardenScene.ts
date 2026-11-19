@@ -807,6 +807,8 @@ export class GardenScene extends Phaser.Scene {
     if (!e || this.busy) return
     this.busy = true
     try {
+      // Erst der Vorrat (Server), dann die Show: ohne Leckerli fliegt kein Knochen.
+      await treatDog(e.record)
       // Knochen fliegt im Bogen zum Maul, der Hund schnappt und kaut kurz.
       const bone = this.add.graphics().setDepth(3000)
       bone.fillStyle(0xf4ead2, 1).lineStyle(1, 0x8a7a55, 1)
@@ -822,7 +824,6 @@ export class GardenScene extends Phaser.Scene {
       bone.destroy()
       e.dog.eat(900)
       for (let i = 0; i < 3; i++) { cue('munch'); await new Promise<void>((r) => this.time.delayedCall(260, () => r())) }
-      await treatDog(e.record)
       this.heartsAt(e.dog.x, e.dog.y - 60 * e.dog.scale)
       e.dog.cheer(1200)
       cue('soft')
