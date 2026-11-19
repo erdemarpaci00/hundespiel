@@ -33,6 +33,7 @@ describe('Aufstieg und Tagesform', () => {
     expect(eligible(LEAGUES[1], stats(60), {})).toBe(false)
     expect(cupsMissing(LEAGUES[1], { bronze: 1 })).toBe(2)
     expect(eligible(LEAGUES[1], stats(60), { bronze: 3 })).toBe(true)
+    expect(eligible(LEAGUES[1], stats(10), { bronze: 3 })).toBe(false)
     expect(cupsMissing(LEAGUES[0], {})).toBe(0)
   })
   it('gute Laune gibt Rueckenwind, schlechte kostet', () => {
