@@ -78,7 +78,7 @@ export class PlaceScene extends Phaser.Scene {
       d.onTap(() => {
         if (dialogJustClosed()) return
         if (d.sleeping) { d.wake(15 * 60 * 1000); this.hud.toast(`${r.name} ist wach, aber noch müde`) }
-        else if (this.kind === 'training') openTraining(records.get(r.id) ?? r, (t) => this.hud.toast(t), (nd) => records.set(r.id, nd))
+        else if (this.kind === 'training') openTraining(records.get(r.id) ?? r, (t) => this.hud.toast(t), (nd) => { records.set(r.id, nd); d.cheer(1500) })
         else this.hud.toast(`${r.name} (${r.look.breed ? breedById(r.look.breed).name : 'Mischling'})`)
       })
       this.dogs.push(d)
