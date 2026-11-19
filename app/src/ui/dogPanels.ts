@@ -348,8 +348,7 @@ export function openAdoption(session: Session, pup: Puppy, onDone: (d: DogRecord
       o.remove()
       onDone(dog)
     } catch (e) {
-      msg.textContent = friendlyError(e instanceof Error ? e.message : undefined)
-      if (e instanceof Error && /bitte gib/i.test(e.message)) msg.textContent = e.message
+      msg.textContent = e instanceof Error && e.message ? e.message : friendlyError(undefined)
       go.disabled = false
     }
   })
