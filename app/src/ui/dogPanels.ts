@@ -276,6 +276,7 @@ export function openContest(dog: DogRecord, onChange: (d: DogRecord) => void, pl
       card.appendChild(f)
     }
     const pause = contestWaitMinutes(current)
+    lastPause = pause
     if (!res && pause > 0) {
       const w = document.createElement('div')
       w.className = 'sub'
@@ -315,7 +316,15 @@ export function openContest(dog: DogRecord, onChange: (d: DogRecord) => void, pl
       card.appendChild(b)
     }
     card.appendChild(closeButton(o, 'Fertig'))
+    shownResult = res !== undefined
   }
+  // Die Wartezeit zaehlt herunter und gibt die Knoepfe von selbst frei, solange kein Ergebnis angezeigt wird.
+  let shownResult = false
+  const tick = setInterval(() => {
+    if (!o.isConnected) { clearInterval(tick); return }
+    if (!shownResult && contestWaitMinutes(current) !== lastPause) render()
+  }, 5000)
+  let lastPause = contestWaitMinutes(current)
   render()
 }
 
