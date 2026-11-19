@@ -2,6 +2,7 @@ import { cue } from '../feedback'
 import { parseTimestamp } from '../time'
 import Phaser from 'phaser'
 import { fadeTo } from './transition'
+import { burst } from './fx'
 import { describeActivity, favoriteOf, relativeTime, type ActivityEntry } from '../activity'
 import { DogSprite, type Pose } from '../dog/dogSprite'
 import { ageDays, ageStage } from '../dog/age'
@@ -329,10 +330,7 @@ export class GardenScene extends Phaser.Scene {
   }
 
   private shineAt(x: number, y: number): void {
-    for (let i = 0; i < 2; i++) {
-      const t = this.add.text(x + (Math.random() - 0.5) * 20, y + (Math.random() - 0.5) * 10, '✦', { fontSize: '10px', color: '#fff6a8', resolution: 3 }).setOrigin(0.5).setDepth(3001)
-      this.tweens.add({ targets: t, y: t.y - 14, alpha: 0, scale: 1.6, duration: 600, onComplete: () => t.destroy() })
-    }
+    burst(this, x, y, 'star', 3)
   }
 
   // Sichtbares Buersten: Buerste faehrt ueber das Fell, Glanzfunken steigen auf.
@@ -349,10 +347,7 @@ export class GardenScene extends Phaser.Scene {
   }
 
   private heartsAt(x: number, y: number): void {
-    for (let i = 0; i < 3; i++) {
-      const h = this.add.text(x + (i - 1) * 9, y, '♥', { fontSize: '12px', color: '#e0527a', resolution: 3 }).setOrigin(0.5).setDepth(3001)
-      this.tweens.add({ targets: h, y: y - 24 - i * 5, alpha: 0, duration: 900, delay: i * 120, onComplete: () => h.destroy() })
-    }
+    burst(this, x, y, 'heart', 4)
   }
 
   // Haeufchen: braune Wirbel, antippen raeumt auf (fuer alle im Haushalt).

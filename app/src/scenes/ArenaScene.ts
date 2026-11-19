@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import { fadeTo } from './transition'
+import { burst } from './fx'
 import { DogSprite } from '../dog/dogSprite'
 import { STAT_KEYS, STAT_LABEL, statValue, type StatKey } from '../dog/stats'
 import { applyElapsed } from '../dog/needs'
@@ -132,7 +133,9 @@ export class ArenaScene extends Phaser.Scene {
     const fly = new Promise<void>((res) => this.tweens.addCounter({ from: 0, to: 1, duration: dur, onUpdate: (tw) => place(tw.getValue() ?? 0), onComplete: () => res() }))
     await Promise.all([run, fly])
     shadow.destroy()
+    burst(this, this.dog.container.x, this.dog.container.y, 'dust', 7)
     if (caught) {
+      burst(this, this.dog.container.x, this.dog.container.y - 20, 'star', 6)
       this.tweens.add({ targets: disc, x: this.dog.container.x, y: this.dog.container.y - 20, duration: 160 })
       this.tweens.add({ targets: this.dog.container, y: land.y - 14, duration: 140, yoyo: true, ease: 'Quad.easeOut' })
       this.tweens.add({ targets: this.dog.container, scaleY: this.dog.container.scaleY * 1.12, duration: 120, yoyo: true })
