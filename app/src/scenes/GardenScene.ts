@@ -974,7 +974,16 @@ export class GardenScene extends Phaser.Scene {
         b.y = from.y + (t.y - from.y) * v
         b.g.setPosition(b.x, b.y - Math.sin(v * Math.PI) * 60).setDepth(3000)
       },
-      onComplete: () => { b.flying = false; b.g.setPosition(t.x, t.y).setDepth(t.y) },
+      onComplete: () => {
+        b.g.setPosition(t.x, t.y).setDepth(t.y)
+        burst(this, t.x, t.y, 'dust', 5)
+        cue('soft')
+        // Zwei kleine Huepfer nach der Landung, dann liegt er still.
+        this.tweens.addCounter({ from: 0, to: 1, duration: 420, onUpdate: (tw) => {
+          const v = tw.getValue() ?? 0
+          b.g.setY(t.y - Math.abs(Math.sin(v * Math.PI * 2)) * 9 * (1 - v))
+        }, onComplete: () => { b.flying = false; b.g.setPosition(t.x, t.y) } })
+      },
     })
     if (runners.length === 0) { this.hud.toast('Gerade hat niemand Lust auf den Ball'); return }
     for (const e of runners) e.dog.goTo(t, () => this.reachBall(e, runners))
