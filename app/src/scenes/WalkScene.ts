@@ -10,9 +10,13 @@ import { isRestless } from '../nightlife'
 import { createAtmosphere, type Atmosphere } from './atmosphere'
 import { createHud } from '../ui/hud'
 import { mulberry32 } from '../util/rng'
+import { openChoice } from '../ui/dogPanels'
 
 const W = 2600
 const LEASH = 100
+// Beim Spaziergang wirken die Hunde durch die Kamera naeher, daher etwas kleiner gezeichnet.
+const WALK_SCALE = 0.7
+const HAND_SPEED = 0.2
 const FONT = 'Arial, Helvetica, sans-serif'
 
 interface Stranger { dog: LivingDog; name: string; cooldownUntil: number; x: number }
@@ -37,6 +41,12 @@ export class WalkScene extends Phaser.Scene {
   private camX = 320
   private endShown = false
   private meters!: Phaser.GameObjects.Text
+  private minimap!: Phaser.GameObjects.Graphics
+  private aim!: Phaser.GameObjects.Graphics
+  private touch: { x: number; y: number } | null = null
+  private moved = false
+  private foundCount = 0
+  private sniffCount = 0
 
   constructor() {
     super('walk')
@@ -55,10 +65,22 @@ export class WalkScene extends Phaser.Scene {
     this.camX = 320
     this.endShown = false
     this.lastPullToast = 0
+    this.touch = null
+    this.moved = false
+    this.foundCount = 0
+    this.sniffCount = 0
     const backdrop = this.drawRoute()
     this.atmosphere = createAtmosphere(this, true, backdrop, () => new Date(), true)
     this.leash = this.add.graphics().setDepth(2999)
     this.grip = this.add.graphics().setDepth(3000)
+    this.aim = this.add.graphics().setDepth(2998)
+    this.minimap = this.add.graphics().setScrollFactor(0).setDepth(3500)
+    // Zeiger direkt verfolgen: funktioniert mit Maus und Finger gleich (auch mit mehreren Beruehrungen)
+    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => { this.touch = { x: p.worldX, y: p.worldY } })
+    this.input.on('pointermove', (p: Phaser.Input.Pointer) => { if (p.isDown) this.touch = { x: p.worldX, y: p.worldY } })
+    this.input.on('pointerup', () => { this.touch = null })
+    this.input.on('pointerupoutside', () => { this.touch = null })
+    this.input.on('gameout', () => { this.touch = null })
     this.meters = this.add.text(320, 14, '', { fontSize: '12px', color: '#ffffff', stroke: '#2b2b2b', strokeThickness: 4, resolution: 3, fontFamily: FONT, fontStyle: 'bold' }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(6000)
     this.hud = createHud({ householdId: session.householdId, getActivity: () => [], travel: (k) => fadeTo(this, k), current: 'walk' })
     void this.populate(session)
@@ -72,7 +94,7 @@ export class WalkScene extends Phaser.Scene {
     own.forEach((r, i) => {
       const d = new LivingDog(this, r.look, r.personality, this.leashRect(), { x: this.hand.x - 20 - i * 30, y: 280 + (i % 2) * 20 }, Math.random)
       d.setCaption(r.name)
-      d.setSize(ageStage(ageDays(parseTimestamp(r.createdAt), Date.now())).scale)
+      d.setSize(ageStage(ageDays(parseTimestamp(r.createdAt), Date.now())).scale * WALK_SCALE)
       d.setKey(r.id)
       if (isRestless(r.id, r.personality, new Date())) d.wake(30 * 60 * 1000)
       d.onTap(() => this.hud.toast(`${r.name} (${r.look.breed ? breedById(r.look.breed).name : 'Mischling'})`))
@@ -87,6 +109,7 @@ export class WalkScene extends Phaser.Scene {
       const y = 225 + rng() * 100
       const d = new LivingDog(this, pup.look, pup.personality, { x: x - 40, y: 215, w: 80, h: 125 }, { x, y }, Math.random)
       d.setCaption(breed.name)
+      d.setSize([0.62, 0.82, 1, 1][Math.floor(rng() * 4)] * WALK_SCALE)
       d.onTap(() => this.hud.toast(`Ein fremder ${breed.name}`))
       this.nightOwls.add(d)
       this.strangers.push({ dog: d, name: breed.name, cooldownUntil: 0, x })
@@ -102,7 +125,7 @@ export class WalkScene extends Phaser.Scene {
     }
     if (this.own.length === 0) return
     if (this.atmosphere.isNight()) this.hud.toast('Es ist spät, die Hunde sind müde. Nur wer unbedingt raus wollte, läuft mit.')
-    else this.hud.toast('Halte den Finger gedrückt und zieh, dann geht die Runde los')
+    else this.hud.toast('Lege den Finger auf den Weg: Der Spaziergänger läuft dorthin, die Hunde folgen an der Leine')
   }
 
   // Bewegungsraum der Hunde: um die Hand herum, so weit die Leine reicht.
@@ -121,14 +144,13 @@ export class WalkScene extends Phaser.Scene {
   update(_t: number, delta: number): void {
     this.atmosphere.update(delta)
     const now = this.time.now
-    const ptr = this.input.activePointer
-    if (ptr.isDown && this.own.length > 0) {
-      const tx = Phaser.Math.Clamp(ptr.worldX, 60, W - 60)
-      const ty = Phaser.Math.Clamp(ptr.worldY, 225, 335)
+    if (this.touch && this.own.length > 0) {
+      const tx = Phaser.Math.Clamp(this.touch.x, 60, W - 60)
+      const ty = Phaser.Math.Clamp(this.touch.y, 225, 335)
       const dx = tx - this.hand.x, dy = ty - this.hand.y
       const d = Math.hypot(dx, dy)
-      const step = Math.min(d, 0.11 * delta)
-      if (d > 1) { this.hand.x += (dx / d) * step; this.hand.y += (dy / d) * step }
+      const step = Math.min(d, HAND_SPEED * delta)
+      if (d > 1) { this.hand.x += (dx / d) * step; this.hand.y += (dy / d) * step; if (Math.abs(this.hand.x - 110) > 30) this.moved = true }
     }
     const night = this.atmosphere.isNight()
     const rect = this.leashRect()
@@ -159,11 +181,51 @@ export class WalkScene extends Phaser.Scene {
     const want = Phaser.Math.Clamp(this.hand.x, 320, W - 320)
     this.camX += (want - this.camX) * Math.min(1, delta * 0.006)
     this.cameras.main.centerOn(this.camX, 180)
-    this.meters.setText(`${Math.round(this.hand.x / 10)} m von ${W / 10} m`)
+    this.meters.setText(`Ziel in ${Math.max(0, Math.round((W - 100 - this.hand.x) / 10))} m`)
+    this.drawAim(now)
+    this.drawMinimap()
     if (!this.endShown && this.hand.x > W - 140) {
       this.endShown = true
-      this.hud.toast('Ende der Runde! Über die Karte geht es zurück nach Hause.')
+      this.touch = null
+      openChoice('Ziel erreicht!', [
+        `${this.foundCount} Funkelstelle${this.foundCount === 1 ? '' : 'n'} gefunden, ${this.sniffCount} fremde Hund${this.sniffCount === 1 ? '' : 'e'} beschnuppert.`,
+        'Die Hunde sind stolz auf die Runde.',
+      ], [
+        { label: 'Nach Hause', onClick: () => fadeTo(this, 'garden') },
+        { label: 'Noch ein bisschen bleiben', onClick: () => undefined },
+      ])
     }
+  }
+
+  // Zeigt, wohin der Finger den Spaziergaenger schickt, und am Anfang einen Pfeil nach rechts.
+  private drawAim(now: number): void {
+    this.aim.clear()
+    if (this.touch) {
+      const x = Phaser.Math.Clamp(this.touch.x, 60, W - 60), y = Phaser.Math.Clamp(this.touch.y, 225, 335)
+      this.aim.lineStyle(1.5, 0xffffff, 0.9).strokeCircle(x, y, 7 + Math.sin(now / 120) * 1.5)
+      this.aim.fillStyle(0xffffff, 0.35).fillCircle(x, y, 4)
+      return
+    }
+    if (this.moved || this.own.length === 0) return
+    const bob = Math.sin(now / 250) * 5
+    const x = this.hand.x + 55 + bob, y = this.hand.y - 8
+    this.aim.fillStyle(0xffffff, 0.95).fillTriangle(x + 14, y, x, y - 9, x, y + 9).fillRect(x - 16, y - 3, 17, 6)
+  }
+
+  // Route oben: Weg, Position des Spaziergaengers, Funkelstellen, Fremde und das Ziel.
+  private drawMinimap(): void {
+    const g = this.minimap
+    g.clear()
+    const x0 = 130, x1 = 510, y = 34
+    const at = (wx: number): number => x0 + (Phaser.Math.Clamp(wx, 0, W) / W) * (x1 - x0)
+    g.fillStyle(0x000000, 0.3).fillRoundedRect(x0 - 14, y - 11, x1 - x0 + 40, 22, 8)
+    g.lineStyle(3, 0xe9d7a4, 1).beginPath().moveTo(x0, y).lineTo(x1, y).strokePath()
+    g.lineStyle(3, 0xffd84a, 1).beginPath().moveTo(x0, y).lineTo(at(this.hand.x), y).strokePath()
+    for (const sp of this.sparks) if (sp.alive) g.fillStyle(0xfff3a0, 1).fillCircle(at(sp.x), y - 5, 1.8)
+    for (const s of this.strangers) g.fillStyle(0xb9b9b9, 1).fillCircle(at(s.x), y + 5, 1.8)
+    // Ziel: kleine Fahne
+    g.fillStyle(0x7a4e2a, 1).fillRect(x1 + 3, y - 9, 1.5, 16).fillStyle(0xe5484d, 1).fillTriangle(x1 + 4.5, y - 9, x1 + 12, y - 6, x1 + 4.5, y - 3)
+    g.fillStyle(0xffffff, 1).fillCircle(at(this.hand.x), y, 4.2).fillStyle(0xd9534f, 1).fillCircle(at(this.hand.x), y, 2.6)
   }
 
   // Zwei eigene Hunde an der Leine begegnen sich: zaehlt fuer ihre Freundschaft (wie im Garten, 60 s Pause).
@@ -187,6 +249,7 @@ export class WalkScene extends Phaser.Scene {
     for (const sp of this.sparks) {
       if (!sp.alive || Math.hypot(d.x - sp.x, d.y - sp.y) > 26) continue
       sp.alive = false
+      this.foundCount++
       sp.g.destroy()
       d.cheer(1500)
       const id = d.dogKey
@@ -204,6 +267,7 @@ export class WalkScene extends Phaser.Scene {
       const dist = Math.hypot(d.x - s.dog.x, d.y - s.dog.y)
       if (dist < 44) {
         s.cooldownUntil = now + 60000
+        this.sniffCount++
         d.cancelChase()
         d.meet(s.dog.x, 3500)
         s.dog.meet(d.x, 3500)

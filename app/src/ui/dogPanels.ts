@@ -49,6 +49,26 @@ function row(label: string, value: number): HTMLElement {
   return r
 }
 
+// Kleines Fenster mit Text und Knoepfen (z.B. Ziel des Spaziergangs erreicht).
+export function openChoice(title: string, lines: string[], buttons: { label: string; onClick: () => void }[]): void {
+  const { overlay: o, card } = overlay()
+  const h = document.createElement('h1')
+  h.textContent = title
+  card.appendChild(h)
+  for (const l of lines) {
+    const d = document.createElement('div')
+    d.className = 'sub'
+    d.textContent = l
+    card.appendChild(d)
+  }
+  for (const b of buttons) {
+    const e = document.createElement('button')
+    e.textContent = b.label
+    e.addEventListener('click', () => { o.remove(); b.onClick() })
+    card.appendChild(e)
+  }
+}
+
 function heading(text: string): HTMLElement {
   const d = document.createElement('div')
   d.className = 'sub'
