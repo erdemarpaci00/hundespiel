@@ -8,7 +8,7 @@ import { EXERCISE, STAT_KEYS, STAT_LABEL, statValue, type StatKey } from '../dog
 import type { DogRecord } from '../dogRepo'
 import { adoptFromKennel, buyCollar, enterContest, trainDog } from '../dogRepo'
 import { COLLARS, COLLAR_PRICE } from '../dog/collar'
-import { contestWaitMinutes, cupsMissing, eligible, formBonus, LEAGUES, trophyShelf, type League } from '../dog/contest'
+import { average, contestWaitMinutes, cupsMissing, eligible, formBonus, LEAGUES, trophyShelf, type League } from '../dog/contest'
 import type { Puppy } from '../puppies'
 import type { Session } from '../session'
 import { friendlyError } from '../errors'
@@ -290,7 +290,7 @@ export function openContest(dog: DogRecord, onChange: (d: DogRecord) => void, pl
       const b = document.createElement('button')
       b.className = 'alt'
       const cups = current.trophies[league.id] ?? 0
-      b.textContent = `${league.name} (${league.entry > 0 ? `Einsatz ${league.entry}, ` : ''}Sieg ${league.win} Münzen${cups ? `, ${cups} Pokal${cups > 1 ? 'e' : ''}` : ''})${ok || qualified ? '' : missing > 0 ? ` - noch ${missing} Sieg${missing > 1 ? 'e' : ''} in der Liga davor` : ` - ab Schnitt ${league.entry}`}`
+      b.textContent = `${league.name} (${league.entry > 0 ? `Einsatz ${league.entry}, ` : ''}Sieg ${league.win} Münzen${cups ? `, ${cups} Pokal${cups > 1 ? 'e' : ''}` : ''})${ok || qualified ? '' : missing > 0 ? ` - noch ${missing} Sieg${missing > 1 ? 'e' : ''} in der Liga davor` : ` - ab Schnitt ${league.entry}, jetzt ${Math.round(average(values()))}`}`
       b.disabled = !ok
       b.addEventListener('click', async () => {
         if (playContest) { o.remove(); playContest(current, league); return }
