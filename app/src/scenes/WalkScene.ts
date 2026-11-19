@@ -16,7 +16,7 @@ const W = 2600
 const LEASH = 100
 // Beim Spaziergang wirken die Hunde durch die Kamera naeher, daher etwas kleiner gezeichnet.
 const WALK_SCALE = 0.7
-const HAND_SPEED = 0.2
+const HAND_SPEED = 0.15
 const FONT = 'Arial, Helvetica, sans-serif'
 
 interface Stranger { dog: LivingDog; name: string; cooldownUntil: number; x: number }
@@ -74,14 +74,14 @@ export class WalkScene extends Phaser.Scene {
     this.leash = this.add.graphics().setDepth(2999)
     this.grip = this.add.graphics().setDepth(3000)
     this.aim = this.add.graphics().setDepth(2998)
-    this.minimap = this.add.graphics().setScrollFactor(0).setDepth(3500)
+    this.minimap = this.add.graphics().setDepth(3500)
     // Zeiger direkt verfolgen: funktioniert mit Maus und Finger gleich (auch mit mehreren Beruehrungen)
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => { this.touch = { x: p.worldX, y: p.worldY } })
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => { if (p.isDown) this.touch = { x: p.worldX, y: p.worldY } })
     this.input.on('pointerup', () => { this.touch = null })
     this.input.on('pointerupoutside', () => { this.touch = null })
     this.input.on('gameout', () => { this.touch = null })
-    this.meters = this.add.text(320, 14, '', { fontSize: '12px', color: '#ffffff', stroke: '#2b2b2b', strokeThickness: 4, resolution: 3, fontFamily: FONT, fontStyle: 'bold' }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(6000)
+    this.meters = this.add.text(0, 0, '', { fontSize: '11px', color: '#ffffff', stroke: '#2b2b2b', strokeThickness: 4, resolution: 3, fontFamily: FONT, fontStyle: 'bold' }).setOrigin(0.5, 0).setDepth(3501)
     this.hud = createHud({ householdId: session.householdId, getActivity: () => [], travel: (k) => fadeTo(this, k), current: 'walk' })
     void this.populate(session)
   }
@@ -216,7 +216,10 @@ export class WalkScene extends Phaser.Scene {
   private drawMinimap(): void {
     const g = this.minimap
     g.clear()
-    const x0 = 130, x1 = 510, y = 34
+    // Leiste klebt oben an der Kamera (feste Bildschirmposition ohne Scrollfaktor, da der Zoom sie sonst verschiebt)
+    const v = this.cameras.main.worldView
+    const x0 = v.x + 100, x1 = v.x + 540, y = v.y + 14
+    this.meters.setPosition(v.x + 320, v.y + 22)
     const at = (wx: number): number => x0 + (Phaser.Math.Clamp(wx, 0, W) / W) * (x1 - x0)
     g.fillStyle(0x000000, 0.3).fillRoundedRect(x0 - 14, y - 11, x1 - x0 + 40, 22, 8)
     g.lineStyle(3, 0xe9d7a4, 1).beginPath().moveTo(x0, y).lineTo(x1, y).strokePath()
