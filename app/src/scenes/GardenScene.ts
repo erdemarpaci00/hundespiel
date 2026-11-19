@@ -330,6 +330,7 @@ export class GardenScene extends Phaser.Scene {
   }
 
   private shineAt(x: number, y: number): void {
+    cue('brush')
     burst(this, x, y, 'star', 3)
   }
 
@@ -871,6 +872,7 @@ export class GardenScene extends Phaser.Scene {
         bucket.left -= take
         ate += take
         this.drawBucket(bucket)
+        cue('munch')
         e.dog.eat(gap + 200)
         if (bucket.left <= 0) {
           this.time.delayedCall(900, gone)

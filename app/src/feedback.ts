@@ -1,5 +1,5 @@
 // Kleine Toene (WebAudio, keine Dateien) und Vibration. Stumm-Schalter wird im Browser gemerkt.
-export type Cue = 'good' | 'bad' | 'win' | 'soft' | 'coin'
+export type Cue = 'good' | 'bad' | 'win' | 'soft' | 'coin' | 'brush' | 'munch'
 
 const KEY = 'hundespiel-stumm'
 let ctx: AudioContext | null = null
@@ -19,9 +19,11 @@ const TONES: Record<Cue, [number, number][]> = {
   win: [[523, 90], [659, 90], [784, 90], [1047, 220]],
   soft: [[440, 60]],
   coin: [[988, 60], [1319, 120]],
+  brush: [[1500, 40], [1900, 70]],
+  munch: [[180, 45], [140, 60]],
 }
 
-const BUZZ: Record<Cue, number | number[]> = { good: 25, bad: 60, win: [50, 40, 50, 40, 90], soft: 10, coin: 20 }
+const BUZZ: Record<Cue, number | number[]> = { good: 25, bad: 60, win: [50, 40, 50, 40, 90], soft: 10, coin: 20, brush: 8, munch: 12 }
 
 export function cue(kind: Cue): void {
   if (isMuted()) return
@@ -35,8 +37,8 @@ export function cue(kind: Cue): void {
     for (const [freq, ms] of TONES[kind]) {
       const o = ctx.createOscillator()
       const g = ctx.createGain()
-      o.type = 'sine'
-      o.frequency.value = freq
+      o.type = kind === 'munch' || kind === 'brush' ? 'triangle' : 'sine'
+      o.frequency.value = freq * (0.96 + Math.random() * 0.08)
       g.gain.setValueAtTime(0.0001, t)
       g.gain.exponentialRampToValueAtTime(0.12, t + 0.01)
       g.gain.exponentialRampToValueAtTime(0.0001, t + ms / 1000)
