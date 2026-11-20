@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { othersFrom } from '../src/presence'
+import { othersFrom } from '../src/presenceNames'
 
 describe('Anwesenheit', () => {
   it('ich selbst zaehle nicht, die anderen kommen sortiert', () => {
