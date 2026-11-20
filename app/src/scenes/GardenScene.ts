@@ -9,6 +9,7 @@ import { BallGame } from './ballGame'
 import { airCatch, floatText, timingThrow } from './duelFx'
 import { burst } from './fx'
 import { tugRope } from './tugRope'
+import { fleeSpot } from '../dog/tag'
 import { emoteFor } from '../dog/emoteChoice'
 import { describeActivity, favoriteOf, relativeTime, type ActivityEntry } from '../activity'
 import { DogSprite, type Pose } from '../dog/dogSprite'
@@ -824,6 +825,20 @@ export class GardenScene extends Phaser.Scene {
     }
   }
 
+  // Fangspiel: nach der Begegnung rennt einer weg, der andere jagt ihm kurz hinterher.
+  private playTag(a: { dog: LivingDog }, b: { dog: LivingDog }): void {
+    const [runner, chaser] = Math.random() < 0.5 ? [a, b] : [b, a]
+    this.time.delayedCall(3600, () => {
+      if (runner.dog.sleeping || chaser.dog.sleeping || runner.dog.busyMeeting || chaser.dog.busyMeeting) return
+      runner.dog.goTo(fleeSpot(GARDEN_BOUNDS, chaser.dog, Math.random), () => undefined)
+      let n = 0
+      const ev = this.time.addEvent({ delay: 800, repeat: 4, callback: () => {
+        if (++n > 4 || chaser.dog.sleeping) { ev.remove(false); return }
+        chaser.dog.goTo({ x: runner.dog.x - runner.dog.facing * 26, y: runner.dog.y }, () => undefined)
+      } })
+    })
+  }
+
   private tugs(key: string): boolean {
     let h = 0
     for (const ch of key) h = (h * 31 + ch.charCodeAt(0)) >>> 0
@@ -847,6 +862,7 @@ export class GardenScene extends Phaser.Scene {
         // Jede zweite Begegnung (je Paar fest) ist ein kurzes Zerrspiel mit einem Seil.
         // Nur wenn beide wirklich stehen geblieben sind (ein Hund auf Ballsuche bleibt nicht stehen).
         if (a.dog.busyMeeting && b.dog.busyMeeting && this.tugs(key)) tugRope(this, a, b, 3200)
+        else if (a.dog.busyMeeting && b.dog.busyMeeting && Math.random() < 0.5) this.playTag(a, b)
       }
     }
   }
