@@ -1,5 +1,15 @@
 export type Phase = 'night' | 'dawn' | 'day' | 'dusk'
 export type Weather = 'sun' | 'cloud' | 'rain'
+export type Season = 'winter' | 'spring' | 'summer' | 'autumn'
+
+// Jahreszeit nach Kalendermonat (noerdliche Halbkugel): Dez-Feb Winter, Mar-Mai Fruehling, Jun-Aug Sommer, Sep-Nov Herbst.
+export function seasonOf(d: Date): Season {
+  const m = d.getMonth()
+  if (m === 11 || m <= 1) return 'winter'
+  if (m <= 4) return 'spring'
+  if (m <= 7) return 'summer'
+  return 'autumn'
+}
 
 // Ortszeit des Handys: 23-7 Nacht, 7-8 Morgen, 8-19 Tag, 19-23 Abend.
 export function dayPhase(d: Date): Phase {

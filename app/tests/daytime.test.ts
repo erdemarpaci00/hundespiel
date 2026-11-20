@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dayPhase, weatherAt } from '../src/daytime'
+import { dayPhase, seasonOf, weatherAt } from '../src/daytime'
 
 describe('dayPhase', () => {
   it.each([[0, 'night'], [3, 'night'], [6, 'night'], [7, 'dawn'], [8, 'day'], [18, 'day'], [19, 'dusk'], [22, 'dusk'], [23, 'night']])('%i Uhr ist %s', (h, p) => {
@@ -18,5 +18,11 @@ describe('weatherAt', () => {
     expect(c.rain).toBeGreaterThan(0)
     expect(c.cloud).toBeGreaterThan(0)
     expect(c.sun).toBeGreaterThan(c.rain)
+  })
+})
+
+describe('seasonOf', () => {
+  it.each([[0, 'winter'], [1, 'winter'], [2, 'spring'], [4, 'spring'], [5, 'summer'], [7, 'summer'], [8, 'autumn'], [10, 'autumn'], [11, 'winter']])('Monat %i ist %s', (m, s) => {
+    expect(seasonOf(new Date(2026, m, 15))).toBe(s)
   })
 })
