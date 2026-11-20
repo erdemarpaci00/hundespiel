@@ -29,6 +29,7 @@ export class BallGame {
 
   // Wurf des Partners: nur zeigen, nicht nochmal als Spielen speichern.
   private remote = false
+  onThrow: ((x: number, y: number) => void) | null = null
 
   reset(): void { this.ball = null }
 
@@ -61,6 +62,7 @@ export class BallGame {
     if (!this.ball) this.spawn(320, 292)
     const b = this.ball!
     if (b.flying) return
+    if (!remote) this.onThrow?.(wx, wy)
     const t = { x: Math.min(GARDEN_BOUNDS.x + GARDEN_BOUNDS.w, Math.max(GARDEN_BOUNDS.x, wx)), y: Math.min(GARDEN_BOUNDS.y + GARDEN_BOUNDS.h, Math.max(GARDEN_BOUNDS.y, wy)) }
     b.carrier = null
     for (const e of this.ctx.entries()) e.dog.cancelChase()

@@ -77,6 +77,7 @@ export class GardenScene extends Phaser.Scene {
   private homeGfx: Phaser.GameObjects.Graphics | null = null
   private tapDist = 0
   private lastPetSave = new Map<string, number>()
+  private lastRemoteThrow = 0
   private welcomed = false
   private heartAcc = 0
   private poops!: PoopField
@@ -241,11 +242,18 @@ export class GardenScene extends Phaser.Scene {
     // Wer vom Haushalt gerade auch im Garten ist, zeigt ein Abzeichen; wer dazukommt, wird kurz gemeldet.
     const badge = createPresenceBadge()
     let known: string[] | null = null
-    const stopPresence = watchPresence(this.session, (names) => {
+    const link = watchPresence(this.session, (names) => {
       badge.show(names)
       if (known) for (const n of names) if (!known.includes(n)) this.hud.toast(`${n} ist jetzt auch im Garten`)
       known = names
+    }, (name, x, y) => {
+      // Wurf des Partners sofort zeigen; die spaetere Datenbank-Meldung wirft nicht noch einmal.
+      this.lastRemoteThrow = Date.now()
+      this.hud.toast(`${name} wirft den Ball`)
+      this.entries.forEach((e) => e.dog.wake(60000))
+      this.balls.throwAt(x, y, true)
     })
+    this.balls.onThrow = (x, y) => link.sendThrow(x, y)
     this.time.addEvent({ delay: 5000, loop: true, callback: () => this.refreshNeeds() })
     // Zurueck aus dem Hintergrund oder Netz wieder da: Stand neu holen.
     const resync = (): void => { if (document.visibilityState === 'visible') void this.reload() }
@@ -253,7 +261,7 @@ export class GardenScene extends Phaser.Scene {
     window.addEventListener('online', resync)
     this.events.once('shutdown', () => {
       this.unsubscribe?.()
-      stopPresence()
+      link.stop()
       badge.destroy()
       document.removeEventListener('visibilitychange', resync)
       window.removeEventListener('online', resync)
@@ -303,7 +311,7 @@ export class GardenScene extends Phaser.Scene {
     if (!e) return
     if (a.kind === 'feed' || a.kind === 'treat') { e.dog.wake(60000); e.dog.eat(2500); cue('munch'); return }
     if (a.kind === 'pet' || a.kind === 'groom') { e.dog.wake(60000); e.dog.cheer(2000); cue('soft'); return }
-    if (a.kind === 'play') {
+    if (a.kind === 'play' && Date.now() - this.lastRemoteThrow > 30000) {
       this.entries.forEach((x) => x.dog.wake(60000))
       this.balls.throwAt(GARDEN_BOUNDS.x + 30 + Math.random() * (GARDEN_BOUNDS.w - 60), GARDEN_BOUNDS.y + 20 + Math.random() * (GARDEN_BOUNDS.h - 40), true)
     }
