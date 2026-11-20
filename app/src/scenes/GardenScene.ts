@@ -464,7 +464,7 @@ export class GardenScene extends Phaser.Scene {
       e.dog.setCollar(collarColor(e.record.collar))
       e.dog.setFeeling(m === 'happy' || (m === 'ok' && favoriteOf(this.affection[e.record.id] ?? {}) === this.session.displayName) ? 'happy' : m === 'sad' || m === 'hungry' ? 'sad' : 'ok')
       const w = this.currentWish(e)
-      e.dog.setEmote(m === 'hungry' ? 'hungry' : m === 'sad' ? 'sad' : w ? (`wish-${w}` as const) : null)
+      e.dog.setEmote(m === 'hungry' ? 'hungry' : m === 'sad' ? 'sad' : m === 'tired' ? 'tired' : w ? (`wish-${w}` as const) : null)
       e.dog.setResting(this.atmosphere.isNight() && !isRestless(e.record.id, e.record.personality, new Date()))
     }
     this.updateBubbleText()
