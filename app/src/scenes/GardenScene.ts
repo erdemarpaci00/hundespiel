@@ -1,5 +1,7 @@
 import { cue } from '../feedback'
 import { FoodGame } from './foodGame'
+import { watchPresence } from '../presence'
+import { createPresenceBadge } from '../ui/presenceBadge'
 import { parseTimestamp } from '../time'
 import Phaser from 'phaser'
 import { fadeTo } from './transition'
@@ -236,6 +238,14 @@ export class GardenScene extends Phaser.Scene {
     })
     void this.reload()
     this.unsubscribe = subscribeToHousehold(this.session, () => void this.reload())
+    // Wer vom Haushalt gerade auch im Garten ist, zeigt ein Abzeichen; wer dazukommt, wird kurz gemeldet.
+    const badge = createPresenceBadge()
+    let known: string[] | null = null
+    const stopPresence = watchPresence(this.session, (names) => {
+      badge.show(names)
+      if (known) for (const n of names) if (!known.includes(n)) this.hud.toast(`${n} ist jetzt auch im Garten`)
+      known = names
+    })
     this.time.addEvent({ delay: 5000, loop: true, callback: () => this.refreshNeeds() })
     // Zurueck aus dem Hintergrund oder Netz wieder da: Stand neu holen.
     const resync = (): void => { if (document.visibilityState === 'visible') void this.reload() }
@@ -243,6 +253,8 @@ export class GardenScene extends Phaser.Scene {
     window.addEventListener('online', resync)
     this.events.once('shutdown', () => {
       this.unsubscribe?.()
+      stopPresence()
+      badge.destroy()
       document.removeEventListener('visibilitychange', resync)
       window.removeEventListener('online', resync)
     })
