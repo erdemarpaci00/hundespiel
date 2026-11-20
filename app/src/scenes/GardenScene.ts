@@ -9,6 +9,7 @@ import { BallGame } from './ballGame'
 import { airCatch, floatText, timingThrow } from './duelFx'
 import { burst } from './fx'
 import { tugRope } from './tugRope'
+import { emoteFor } from '../dog/emoteChoice'
 import { describeActivity, favoriteOf, relativeTime, type ActivityEntry } from '../activity'
 import { DogSprite, type Pose } from '../dog/dogSprite'
 import { ageDays, ageStage } from '../dog/age'
@@ -470,7 +471,7 @@ export class GardenScene extends Phaser.Scene {
       e.dog.setCollar(collarColor(e.record.collar))
       e.dog.setFeeling(m === 'happy' || (m === 'ok' && favoriteOf(this.affection[e.record.id] ?? {}) === this.session.displayName) ? 'happy' : m === 'sad' || m === 'hungry' ? 'sad' : 'ok')
       const w = this.currentWish(e)
-      e.dog.setEmote(m === 'hungry' ? 'hungry' : m === 'sad' ? 'sad' : m === 'tired' ? 'tired' : w ? (`wish-${w}` as const) : null)
+      e.dog.setEmote(emoteFor(m, w))
       e.dog.setResting(this.atmosphere.isNight() && !isRestless(e.record.id, e.record.personality, new Date()))
     }
     this.updateBubbleText()
