@@ -39,6 +39,8 @@ export class LivingDog {
   private loveUntil = 0
   private pulse = 0
   private pos: Vec
+  private slideLeft = 0
+  private slideRate = 0
   private target: Vec
   private behavior: Behavior = 'sit'
   private remainingMs = 0
@@ -86,6 +88,11 @@ export class LivingDog {
     this.applyRest()
     const dt = clampDelta(dtMs)
     this.remainingMs -= dt
+    if (this.slideLeft !== 0) {
+      const step = Math.abs(this.slideLeft) < Math.abs(this.slideRate * dt) ? this.slideLeft : this.slideRate * dt
+      this.pos = { x: Math.min(this.bounds.x + this.bounds.w, Math.max(this.bounds.x, this.pos.x + step)), y: this.pos.y }
+      this.slideLeft -= step
+    }
     if (this.behavior === 'wander') {
       const speed = (0.03 + 0.04 * this.personality.energy) * (this.chase ? 2.2 : 1)
       const dx = this.target.x - this.pos.x
@@ -171,6 +178,12 @@ export class LivingDog {
     this.behavior = 'sit'
     this.remainingMs = ms
     this.sprite.setPose('sit')
+  }
+
+  // Sanft zur Seite ruecken (etwa damit zwei Hunde beim Zerrspiel Abstand haben).
+  slide(dx: number, ms: number): void {
+    this.slideLeft = dx
+    this.slideRate = dx / ms
   }
 
   get busyMeeting(): boolean {

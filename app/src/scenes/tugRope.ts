@@ -16,6 +16,10 @@ export function ropePoints(a: Pt, b: Pt, n: number, phase: number): Pt[] {
 
 // Zwei Hunde zerren kurz an einem Seil, das sich zwischen ihnen spannt. Raeumt sich nach `ms` selbst auf.
 export function tugRope(scene: Phaser.Scene, a: DuelEntry, b: DuelEntry, ms: number): void {
+  // Die Hunde ruecken ein Stueck auseinander, damit das Seil zwischen ihnen zu sehen ist.
+  const dir = a.dog.x <= b.dog.x ? -1 : 1
+  a.dog.slide(dir * 22, 500)
+  b.dog.slide(-dir * 22, 500)
   const g = scene.add.graphics()
   const ev = scene.time.addEvent({
     delay: 40, loop: true,
