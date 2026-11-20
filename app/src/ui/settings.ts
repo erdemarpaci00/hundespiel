@@ -1,7 +1,7 @@
 import { buildShop } from './shop'
 import { isMuted, setMuted, cue } from '../feedback'
 import { loadInviteCode, signOut } from '../session'
-import { disablePush, enablePush, pushState, type PushState } from '../push'
+import { disablePush, enablePush, pushState, pushSupported, type PushState } from '../push'
 
 export interface SettingsOptions {
   householdId: string
@@ -91,7 +91,13 @@ export function openSettings(opts: SettingsOptions): void {
   const out = document.createElement('button')
   out.className = 'danger'
   out.textContent = 'Abmelden'
-  out.addEventListener('click', async () => { try { await signOut() } finally { location.reload() } })
+  out.addEventListener('click', async () => {
+    try {
+      // Erst das Geraet von den Mitteilungen abmelden (braucht noch die Anmeldung), sonst bekaeme es sie nach dem Abmelden weiter.
+      if (pushSupported()) await disablePush().catch(() => undefined)
+      await signOut()
+    } finally { location.reload() }
+  })
   const close = document.createElement('button')
   close.className = 'tab'
   close.textContent = 'Zurück'
