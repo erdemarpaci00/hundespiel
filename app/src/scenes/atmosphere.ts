@@ -16,7 +16,7 @@ export function createAtmosphere(scene: Phaser.Scene, outdoor: boolean, backdrop
   const rain = scene.add.graphics().setDepth(901)
   if (fixed) { shade.setScrollFactor(0); sky.setScrollFactor(0); rain.setScrollFactor(0) }
   const drops = Array.from({ length: 70 }, (_, i) => ({ x: (i * 97) % 640, y: (i * 53) % 360, v: 0.35 + (i % 5) * 0.05 }))
-  const leaves = Array.from({ length: 16 }, (_, i) => ({ x: (i * 131) % 640, y: (i * 71) % 360, v: 0.02 + (i % 4) * 0.008, ph: i * 1.7, c: [0xd9822b, 0xb5502a, 0xe0b040, 0x9c6b30][i % 4] }))
+  const leaves = Array.from({ length: 24 }, (_, i) => ({ x: (i * 131) % 640, y: (i * 71) % 360, v: 0.02 + (i % 4) * 0.008, ph: i * 1.7, c: [0xd9822b, 0xb5502a, 0xe0b040, 0x9c6b30][i % 4] }))
   const SIDE: Record<string, string> = { day: '#6fc45a', dusk: '#4f8a45', dawn: '#5fa850', night: '#1f3a2a' }
   let phase: Phase = 'day'
   let weather: Weather = 'sun'
@@ -107,7 +107,7 @@ export function createAtmosphere(scene: Phaser.Scene, outdoor: boolean, backdrop
           l.y += l.v * dtMs
           l.x += Math.sin(drift / 700 + l.ph) * 0.35
           if (l.y > 360) { l.y = -8; l.x = Math.random() * 640 }
-          rain.fillStyle(l.c, 0.95).fillEllipse(l.x, l.y, 5, 3)
+          rain.fillStyle(l.c, 0.95).fillEllipse(l.x, l.y, 8, 4.5)
         }
       }
     },
