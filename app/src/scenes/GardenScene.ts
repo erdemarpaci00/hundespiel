@@ -319,7 +319,7 @@ export class GardenScene extends Phaser.Scene {
 
   // Kleines Namensschild, das ueber dem Hund aufsteigt und verblasst: zeigt, wer gerade etwas tut.
   private remoteTag(x: number, y: number, text: string): void {
-    const t = this.add.text(x, y, text, { fontFamily: 'system-ui, sans-serif', fontSize: '8px', color: '#ffffff', backgroundColor: '#00000066', padding: { x: 3, y: 1 } }).setOrigin(0.5).setDepth(3003)
+    const t = this.add.text(x, y, text, { fontFamily: 'system-ui, sans-serif', fontSize: '8px', color: '#ffffff', backgroundColor: '#00000066', padding: { x: 3, y: 1 } }).setOrigin(0.5).setDepth(3003).setResolution(4)
     this.tweens.add({ targets: t, y: y - 14, alpha: 0, duration: 2200, onComplete: () => t.destroy() })
   }
 
