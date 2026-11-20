@@ -1,6 +1,7 @@
 import { buildShop } from './shop'
 import { isMuted, setMuted, cue } from '../feedback'
 import { loadInviteCode, signOut } from '../session'
+import { disablePush, enablePush, pushState, type PushState } from '../push'
 
 export interface SettingsOptions {
   householdId: string
@@ -55,6 +56,27 @@ export function openSettings(opts: SettingsOptions): void {
   const btnrow = document.createElement('div')
   btnrow.className = 'btnrow'
   btnrow.appendChild(snd)
+
+  const push = document.createElement('button')
+  push.id = 'push-toggle'
+  const pushLabel = (st: PushState): string => st === 'on' ? 'Mitteilungen: an' : st === 'blocked' ? 'Mitteilungen: im Browser blockiert' : 'Mitteilungen: aus'
+  push.style.display = 'none'
+  void pushState().then((st) => {
+    if (st === 'unsupported') return
+    push.style.display = ''
+    push.textContent = pushLabel(st)
+    push.disabled = st === 'blocked'
+  })
+  push.addEventListener('click', async () => {
+    push.disabled = true
+    try {
+      const now = await pushState()
+      push.textContent = pushLabel(now === 'on' ? await disablePush() : await enablePush())
+      cue('good')
+    } catch { push.textContent = 'Mitteilungen: Fehler, bitte nochmal' }
+    push.disabled = false
+  })
+  btnrow.appendChild(push)
 
   if (document.fullscreenEnabled) {
     const fs = document.createElement('button')
