@@ -8,6 +8,7 @@ import { fadeTo } from './transition'
 import { BallGame } from './ballGame'
 import { airCatch, floatText, timingThrow } from './duelFx'
 import { burst } from './fx'
+import { tugRope } from './tugRope'
 import { describeActivity, favoriteOf, relativeTime, type ActivityEntry } from '../activity'
 import { DogSprite, type Pose } from '../dog/dogSprite'
 import { ageDays, ageStage } from '../dog/age'
@@ -817,6 +818,12 @@ export class GardenScene extends Phaser.Scene {
     }
   }
 
+  private tugs(key: string): boolean {
+    let h = 0
+    for (const ch of key) h = (h * 31 + ch.charCodeAt(0)) >>> 0
+    return h % 2 === 0
+  }
+
   // Begegnen sich zwei wache Hunde, bleiben sie kurz stehen (Freundschaft waechst spaeter daraus).
   private checkMeetings(): void {
     const now = Date.now()
@@ -831,6 +838,8 @@ export class GardenScene extends Phaser.Scene {
         void recordMeeting(a.record.id, b.record.id).catch(() => { /* Freundschaft zaehlt spaeter */ })
         a.dog.meet(b.dog.x, 3500)
         b.dog.meet(a.dog.x, 3500)
+        // Jede zweite Begegnung (je Paar fest) ist ein kurzes Zerrspiel mit einem Seil.
+        if (this.tugs(key)) tugRope(this, a, b, 3200)
       }
     }
   }
