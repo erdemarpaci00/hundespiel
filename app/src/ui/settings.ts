@@ -62,8 +62,14 @@ export function openSettings(opts: SettingsOptions): void {
   const pushLabel = (st: PushState): string => st === 'on' ? 'Mitteilungen: an' : st === 'blocked' ? 'Mitteilungen: im Browser blockiert' : 'Mitteilungen: aus'
   push.style.display = 'none'
   void pushState().then((st) => {
-    if (st === 'unsupported') return
     push.style.display = ''
+    if (st === 'unsupported') {
+      // iPhone/iPad: Mitteilungen gehen erst, wenn das Spiel zum Home-Bildschirm hinzugefuegt ist.
+      if (!/iPhone|iPad|iPod/.test(navigator.userAgent)) { push.style.display = 'none'; return }
+      push.textContent = 'Mitteilungen: erst zum Home-Bildschirm hinzufügen'
+      push.disabled = true
+      return
+    }
     push.textContent = pushLabel(st)
     push.disabled = st === 'blocked'
   })
