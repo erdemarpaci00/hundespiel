@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fleeSpot } from '../src/dog/tag'
+import { fleeSpot, tagChance } from '../src/dog/tag'
 
 const bounds = { x: 20, y: 200, w: 600, h: 140 }
 
@@ -18,5 +18,16 @@ describe('fleeSpot', () => {
   it('flieht zur weiter entfernten Seite', () => {
     expect(fleeSpot(bounds, { x: 50, y: 250 }, () => 0.5).x).toBeGreaterThan(50)
     expect(fleeSpot(bounds, { x: 590, y: 250 }, () => 0.5).x).toBeLessThan(590)
+  })
+})
+
+describe('tagChance', () => {
+  it('Freunde spielen oefter Fangen als Fremde', () => {
+    expect(tagChance(0)).toBe(0.3)
+    expect(tagChance(2)).toBe(0.3)
+    expect(tagChance(3)).toBe(0.5)
+    expect(tagChance(9)).toBe(0.5)
+    expect(tagChance(10)).toBe(0.8)
+    expect(tagChance(50)).toBe(0.8)
   })
 })

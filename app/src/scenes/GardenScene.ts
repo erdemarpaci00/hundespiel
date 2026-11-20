@@ -9,7 +9,7 @@ import { BallGame } from './ballGame'
 import { airCatch, floatText, timingThrow } from './duelFx'
 import { burst } from './fx'
 import { tugRope } from './tugRope'
-import { fleeSpot } from '../dog/tag'
+import { fleeSpot, tagChance } from '../dog/tag'
 import { emoteFor } from '../dog/emoteChoice'
 import { describeActivity, favoriteOf, relativeTime, type ActivityEntry } from '../activity'
 import { DogSprite, type Pose } from '../dog/dogSprite'
@@ -862,7 +862,7 @@ export class GardenScene extends Phaser.Scene {
         // Jede zweite Begegnung (je Paar fest) ist ein kurzes Zerrspiel mit einem Seil.
         // Nur wenn beide wirklich stehen geblieben sind (ein Hund auf Ballsuche bleibt nicht stehen).
         if (a.dog.busyMeeting && b.dog.busyMeeting && this.tugs(key)) tugRope(this, a, b, 3200)
-        else if (a.dog.busyMeeting && b.dog.busyMeeting && Math.random() < 0.5) this.playTag(a, b)
+        else if (a.dog.busyMeeting && b.dog.busyMeeting && Math.random() < tagChance(this.relations.find((r) => (r.a === a.record.id && r.b === b.record.id) || (r.a === b.record.id && r.b === a.record.id))?.meetings ?? 0)) this.playTag(a, b)
       }
     }
   }
