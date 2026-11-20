@@ -50,3 +50,17 @@ export function favoriteLine(dogName: string, fav: string | null): string | null
   if (!fav) return null
   return fav === 'beide' ? `${dogName} mag euch beide gleich gern` : `${dogName} hängt gerade mehr an ${fav}`
 }
+
+// Lebenslauf eines Hundes aus den gezaehlten Momenten: nur was es gab, in fester Reihenfolge.
+export function storyLines(c: Partial<Record<ActivityKind, number>>): string[] {
+  const n = (...k: ActivityKind[]): number => k.reduce((sum, key) => sum + (c[key] ?? 0), 0)
+  const out: string[] = []
+  const add = (count: number, one: string, many: string): void => { if (count > 0) out.push(count === 1 ? `1 ${one}` : `${count} ${many}`) }
+  add(n('feed', 'treat'), 'Mahlzeit bekommen', 'Mahlzeiten bekommen')
+  add(n('pet', 'groom'), 'Mal verwöhnt', 'Mal verwöhnt')
+  add(n('play'), 'Mal Ball gespielt', 'Mal Ball gespielt')
+  add(n('train'), 'Trainingseinheit', 'Trainingseinheiten')
+  add(n('contest_win'), 'Turniersieg', 'Turniersiege')
+  add(n('contest', 'contest_win', 'contest_lose'), 'Turnier', 'Turniere')
+  return out
+}

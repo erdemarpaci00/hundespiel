@@ -1,4 +1,4 @@
-import { favoriteLine } from '../activity'
+import { favoriteLine, storyLines } from '../activity'
 import { bondLabel } from '../dog/bond'
 import { ageDays, ageLabel } from '../dog/age'
 import { parseTimestamp } from '../time'
@@ -7,7 +7,7 @@ import { applyElapsed, type Needs } from '../dog/needs'
 import { playExercise } from './trainingGames'
 import { EXERCISE, STAT_KEYS, STAT_LABEL, statValue, type StatKey } from '../dog/stats'
 import type { DogRecord } from '../dogRepo'
-import { adoptFromKennel, buyCollar, enterContest, trainDog } from '../dogRepo'
+import { adoptFromKennel, buyCollar, enterContest, loadDogCounts, trainDog } from '../dogRepo'
 import { COLLARS, COLLAR_PRICE } from '../dog/collar'
 import { average, contestWaitMinutes, cupsMissing, eligible, formBonus, LEAGUES, trophyShelf, type League } from '../dog/contest'
 import type { Puppy } from '../puppies'
@@ -128,6 +128,15 @@ export function openDogDetail(dog: DogRecord, needs: Needs, bonds: { name: strin
   for (const [k, label] of TRAITS) left.appendChild(row(label, dog.personality[k] * 100))
   right.appendChild(heading('Befinden'))
   right.append(row('Sattheit', needs.hunger), row('Kraft', needs.energy), row('Laune', needs.happiness))
+  // Lebenslauf: laedt nach dem Oeffnen nach und erscheint, sobald die Zahlen da sind.
+  const story = document.createElement('div')
+  right.appendChild(story)
+  void loadDogCounts(dog.id).then((c) => {
+    const lines = storyLines(c)
+    if (lines.length === 0 || !story.isConnected) return
+    story.appendChild(heading('Lebenslauf'))
+    for (const l of lines) { const d = document.createElement('div'); d.textContent = l; d.style.cssText = 'font-size:13px;margin:2px 0'; story.appendChild(d) }
+  }).catch(() => { /* ohne Netz einfach kein Lebenslauf */ })
   const favText = favoriteLine(dog.name, favorite ?? null)
   if (favText) {
     const fl = document.createElement('div')

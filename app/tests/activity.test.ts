@@ -1,5 +1,5 @@
-import { expect, test } from 'vitest'
-import { describeActivity, favoriteOf, favoriteLine, relativeTime, type ActivityEntry } from '../src/activity'
+import { describe, expect, it, test } from 'vitest'
+import { describeActivity, favoriteOf, favoriteLine, relativeTime, type ActivityEntry, storyLines } from '../src/activity'
 
 const entry = (kind: ActivityEntry['kind']): ActivityEntry => ({ id: '1', kind, userName: 'Anna', dogName: 'Bello', at: '2026-11-17T10:00:00Z' })
 
@@ -37,4 +37,14 @@ test('Lieblingsmensch: klar, knapp und leer', () => {
   expect(favoriteLine('Bello', 'Erdem')).toBe('Bello hängt gerade mehr an Erdem')
   expect(favoriteLine('Bello', 'beide')).toContain('beide')
   expect(favoriteLine('Bello', null)).toBeNull()
+})
+
+describe('storyLines', () => {
+  it('zaehlt nur, was es gab, und trennt Einzahl und Mehrzahl', () => {
+    expect(storyLines({ feed: 1, treat: 2, pet: 4, groom: 1, play: 1, train: 3, contest_win: 1, contest: 2, contest_lose: 1 })).toEqual([
+      '3 Mahlzeiten bekommen', '5 Mal verwöhnt', '1 Mal Ball gespielt', '3 Trainingseinheiten', '1 Turniersieg', '4 Turniere',
+    ])
+    expect(storyLines({ feed: 1 })).toEqual(['1 Mahlzeit bekommen'])
+    expect(storyLines({})).toEqual([])
+  })
 })

@@ -229,6 +229,15 @@ export function subscribeToHousehold(session: Session, onChange: () => void): ()
   }
 }
 
+// Wie oft jede Art von Zuwendung bei diesem Hund vorkam (fuer den Lebenslauf im Steckbrief).
+export async function loadDogCounts(dogId: string): Promise<Partial<Record<ActivityKind, number>>> {
+  const { data, error } = await supabase.from('activity').select('kind').eq('dog_id', dogId).limit(5000)
+  fail(error)
+  const counts: Partial<Record<ActivityKind, number>> = {}
+  for (const r of data as { kind: ActivityKind }[]) counts[r.kind] = (counts[r.kind] ?? 0) + 1
+  return counts
+}
+
 export async function loadActivity(session: Session, limit: number): Promise<ActivityEntry[]> {
   const { data, error } = await supabase
     .from('activity')
