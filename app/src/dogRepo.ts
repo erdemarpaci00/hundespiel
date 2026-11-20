@@ -54,7 +54,7 @@ const toRecord = (r: DogRow): DogRecord => ({
   personality: r.personality,
   needs: r.needs,
   needsUpdatedAt: r.needs_updated_at,
-  training: { ...NO_TRAINING, ...(r.training ?? {}) },
+  training: { ...NO_TRAINING, ...r.training },
   trophies: r.trophies ?? {},
   createdAt: r.created_at,
   contestAt: r.contest_at,

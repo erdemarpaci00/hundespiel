@@ -3,19 +3,19 @@ import { parseTimestamp } from '../time'
 import Phaser from 'phaser'
 import { fadeTo } from './transition'
 import { BallGame } from './ballGame'
-import { airCatch, dogRunsTo, floatText, mouthOf, timingThrow } from './duelFx'
+import { airCatch, floatText, timingThrow } from './duelFx'
 import { burst } from './fx'
 import { describeActivity, favoriteOf, relativeTime, type ActivityEntry } from '../activity'
 import { DogSprite, type Pose } from '../dog/dogSprite'
 import { ageDays, ageStage } from '../dog/age'
 import { LivingDog } from '../dog/livingDog'
 import { randomLook } from '../dog/look'
-import { applyElapsed, energyDots, PLAY_MIN_ENERGY, mood, moodPersonality, type Mood, type Needs } from '../dog/needs'
-import { countMembers, loadPartnerSince, loadWishDone, wishReward, enterContest, cleanPoop, dropPoop, findTreasure, loadPoopsFromDb, loadRelations, recordMeeting, type Relation, careForDog, groomDog, treatDog, playWithDog, loadActivity, loadAffection, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
+import { applyElapsed, energyDots, mood, moodPersonality, type Mood, type Needs } from '../dog/needs'
+import { countMembers, loadPartnerSince, loadWishDone, wishReward, cleanPoop, dropPoop, findTreasure, loadPoopsFromDb, loadRelations, recordMeeting, type Relation, careForDog, groomDog, treatDog, loadActivity, loadAffection, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
 import { GARDEN_BOUNDS } from '../garden'
 import type { Session } from '../session'
 import { markVisit, readLastVisit, shouldWelcome } from '../garden/welcome'
-import { contestWaitMinutes, duelScore, MEDAL_COLORS, topLeague, CONTEST_MIN_ENERGY, moodOf, playRound, rivalForm, summarize, type League, type Round } from '../dog/contest'
+import { contestWaitMinutes, duelScore, MEDAL_COLORS, topLeague, CONTEST_MIN_ENERGY, moodOf, type League } from '../dog/contest'
 import { STAT_KEYS, STAT_LABEL, statValue } from '../dog/stats'
 import { wishBlock, wishFor, type Wish } from '../dog/wish'
 import { wantsPoop, type Poop } from '../garden/poop'
@@ -395,6 +395,8 @@ export class GardenScene extends Phaser.Scene {
   // Abgleich mit dem gemeinsamen Stand aus der Datenbank.
   private syncPoops(list: Poop[]): void {
     const ids = new Set(list.map((p) => p.id))
+    // Kopie, weil beim Entfernen aus der Liste veraendert wird.
+    // oxlint-disable-next-line unicorn/no-useless-spread
     for (const entry of [...this.poops]) if (!ids.has(entry.data.id)) this.removePoopObject(entry)
     const have = new Set(this.poops.map((p) => p.data.id))
     for (const p of list) if (!have.has(p.id)) this.addPoop(p)

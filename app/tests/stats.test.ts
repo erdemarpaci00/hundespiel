@@ -6,7 +6,6 @@ import { NO_TRAINING, statValue, trainGain, trainGainWith } from '../src/dog/sta
 describe('statValue', () => {
   it('Corgi ist ab Start schneller als Husky ist ausdauernd gestartet', () => {
     const corgi = BREEDS.find((b) => b.id === 'corgi')!
-    const husky = BREEDS.find((b) => b.id === 'husky')!
     expect(statValue('corgi', NO_TRAINING, 'tempo')).toBe(Math.round(corgi.stats.tempo * 60))
     expect(statValue('husky', NO_TRAINING, 'ausdauer')).toBeGreaterThan(statValue('corgi', NO_TRAINING, 'ausdauer'))
   })
