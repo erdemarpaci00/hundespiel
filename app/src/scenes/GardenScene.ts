@@ -310,11 +310,17 @@ export class GardenScene extends Phaser.Scene {
     const e = [...this.entries.values()].find((x) => x.record.name === a.dogName)
     if (!e) return
     if (a.kind === 'feed' || a.kind === 'treat') { e.dog.wake(60000); e.dog.eat(2500); cue('munch'); return }
-    if (a.kind === 'pet' || a.kind === 'groom') { e.dog.wake(60000); e.dog.cheer(2000); cue('soft'); return }
+    if (a.kind === 'pet' || a.kind === 'groom') { e.dog.wake(60000); e.dog.cheer(2000); cue('soft'); burst(this, e.dog.x, e.dog.y - 20, 'heart', 6); this.remoteTag(e.dog.x, e.dog.y - 34, `${a.userName} ${a.kind === 'pet' ? 'streichelt' : 'bürstet'}`); return }
     if (a.kind === 'play' && Date.now() - this.lastRemoteThrow > 30000) {
       this.entries.forEach((x) => x.dog.wake(60000))
       this.balls.throwAt(GARDEN_BOUNDS.x + 30 + Math.random() * (GARDEN_BOUNDS.w - 60), GARDEN_BOUNDS.y + 20 + Math.random() * (GARDEN_BOUNDS.h - 40), true)
     }
+  }
+
+  // Kleines Namensschild, das ueber dem Hund aufsteigt und verblasst: zeigt, wer gerade etwas tut.
+  private remoteTag(x: number, y: number, text: string): void {
+    const t = this.add.text(x, y, text, { fontFamily: 'system-ui, sans-serif', fontSize: '8px', color: '#ffffff', backgroundColor: '#00000066', padding: { x: 3, y: 1 } }).setOrigin(0.5).setDepth(3003)
+    this.tweens.add({ targets: t, y: y - 14, alpha: 0, duration: 2200, onComplete: () => t.destroy() })
   }
 
   private syncDogs(records: DogRecord[]): void {
