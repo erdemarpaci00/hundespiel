@@ -844,7 +844,8 @@ export class GardenScene extends Phaser.Scene {
         a.dog.meet(b.dog.x, 3500)
         b.dog.meet(a.dog.x, 3500)
         // Jede zweite Begegnung (je Paar fest) ist ein kurzes Zerrspiel mit einem Seil.
-        if (this.tugs(key)) tugRope(this, a, b, 3200)
+        // Nur wenn beide wirklich stehen geblieben sind (ein Hund auf Ballsuche bleibt nicht stehen).
+        if (a.dog.busyMeeting && b.dog.busyMeeting && this.tugs(key)) tugRope(this, a, b, 3200)
       }
     }
   }
