@@ -245,7 +245,12 @@ export class GardenScene extends Phaser.Scene {
     let known: string[] | null = null
     const link = watchPresence(this.session, (names) => {
       badge.show(names)
-      if (known) for (const n of names) if (!known.includes(n)) this.hud.toast(`${n} ist jetzt auch im Garten`)
+      if (known) {
+        const joined = names.filter((n) => !known!.includes(n))
+        for (const n of joined) this.hud.toast(`${n} ist jetzt auch im Garten`)
+        // Die Hunde freuen sich, wenn jemand dazukommt.
+        if (joined.length > 0) for (const e of this.entries.values()) if (!e.dog.sleeping) { e.dog.cheer(1800); burst(this, e.dog.x, e.dog.y - 30, 'heart', 3) }
+      }
       known = names
     }, (name, x, y) => {
       // Wurf des Partners sofort zeigen; die spaetere Datenbank-Meldung wirft nicht noch einmal.
