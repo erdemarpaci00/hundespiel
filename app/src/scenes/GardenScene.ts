@@ -12,14 +12,15 @@ import { ageDays, ageStage } from '../dog/age'
 import { LivingDog } from '../dog/livingDog'
 import { randomLook } from '../dog/look'
 import { applyElapsed, energyDots, mood, moodPersonality, type Mood, type Needs } from '../dog/needs'
-import { countMembers, loadPartnerSince, loadWishDone, wishReward, cleanPoop, dropPoop, findTreasure, loadPoopsFromDb, loadRelations, recordMeeting, type Relation, careForDog, groomDog, treatDog, loadActivity, loadAffection, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
+import { countMembers, loadPartnerSince, loadWishDone, wishReward, dropPoop, findTreasure, loadPoopsFromDb, loadRelations, recordMeeting, type Relation, careForDog, groomDog, treatDog, loadActivity, loadAffection, loadDogs, subscribeToHousehold, type DogRecord } from '../dogRepo'
 import { GARDEN_BOUNDS } from '../garden'
 import type { Session } from '../session'
 import { markVisit, readLastVisit, shouldWelcome } from '../garden/welcome'
 import { contestWaitMinutes, duelScore, MEDAL_COLORS, topLeague, CONTEST_MIN_ENERGY, moodOf, type League } from '../dog/contest'
 import { STAT_KEYS, STAT_LABEL, statValue } from '../dog/stats'
 import { wishBlock, wishFor, type Wish } from '../dog/wish'
-import { wantsPoop, type Poop } from '../garden/poop'
+import { wantsPoop } from '../garden/poop'
+import { PoopField } from './poopField'
 import { dialogJustClosed, openContest, openDogDetail, pickDog } from '../ui/dogPanels'
 import { loadEconomy } from '../economy'
 import { createHud, type Tool } from '../ui/hud'
@@ -76,7 +77,7 @@ export class GardenScene extends Phaser.Scene {
   private lastPetSave = new Map<string, number>()
   private welcomed = false
   private heartAcc = 0
-  private poops: { data: Poop; obj: Phaser.GameObjects.Container }[] = []
+  private poops!: PoopField
   private hand!: Phaser.GameObjects.Graphics
   private brushGfx!: Phaser.GameObjects.Graphics
   private relations: Relation[] = []
@@ -106,7 +107,7 @@ export class GardenScene extends Phaser.Scene {
     this.tapDist = 0
     this.lastPetSave = new Map()
     this.welcomed = false
-    this.poops = []
+    this.poops = new PoopField(this, (t) => this.hud.toast(t), () => this.hud.refresh())
     // Welt ist 640x360, gerendert wird 3-fach scharf auf 1920x1080
     this.cameras.main.setZoom(3).centerOn(320, 180)
     const backdrop = drawScenery(this)
@@ -147,7 +148,7 @@ export class GardenScene extends Phaser.Scene {
       loop: true,
       callback: () => {
         for (const e of this.entries.values()) {
-          if (!e.dog.sleeping && wantsPoop(Math.random, true, this.poops.length)) { void dropPoop(e.dog.x - 14, e.dog.y + 2).catch(() => undefined); break }
+          if (!e.dog.sleeping && wantsPoop(Math.random, true, this.poops.count)) { void dropPoop(e.dog.x - 14, e.dog.y + 2).catch(() => undefined); break }
         }
       },
     })
@@ -258,7 +259,7 @@ export class GardenScene extends Phaser.Scene {
       this.affection = await loadAffection(this.session).catch(() => this.affection)
       for (const k of await loadWishDone(wishBlock(Date.now())).catch(() => [])) this.wishDone.add(k)
       this.relations = relations
-      if (poops) this.syncPoops(poops)
+      if (poops) this.poops.sync(poops)
       if (!this.welcomed) { this.welcomed = true; this.events.emit('welcome') }
       this.announceNew(activity)
       this.activity = activity
@@ -369,39 +370,6 @@ export class GardenScene extends Phaser.Scene {
     burst(this, x, y, 'heart', 4)
   }
 
-  // Haeufchen: braune Wirbel, antippen raeumt auf (fuer alle im Haushalt).
-  private addPoop(data: Poop): void {
-    const c = this.add.container(data.x, data.y).setDepth(data.y).setSize(22, 22)
-    const g = this.add.graphics()
-    g.fillStyle(0x6b4423).fillEllipse(0, 3, 14, 6).fillEllipse(0, -1, 10, 5).fillEllipse(0, -5, 6, 4)
-    g.fillStyle(0xffffff, 0.35).fillEllipse(-2, -6, 2, 1)
-    c.add(g)
-    c.setInteractive(new Phaser.Geom.Circle(11, 11, 14), Phaser.Geom.Circle.Contains)
-    const entry = { data, obj: c }
-    c.on('pointerdown', () => {
-      this.removePoopObject(entry)
-      void cleanPoop(data.id)
-        .then((coins) => { this.hud.toast(coins > 0 ? 'Aufgeräumt, +1 Münze' : 'Aufgeräumt'); if (coins > 0) this.hud.refresh() })
-        .catch(() => this.hud.toast('Aufräumen hat nicht geklappt'))
-    })
-    this.poops.push(entry)
-  }
-
-  private removePoopObject(entry: { data: Poop; obj: Phaser.GameObjects.Container }): void {
-    this.poops = this.poops.filter((p) => p !== entry)
-    this.tweens.add({ targets: entry.obj, scale: 0, alpha: 0, duration: 200, onComplete: () => entry.obj.destroy() })
-  }
-
-  // Abgleich mit dem gemeinsamen Stand aus der Datenbank.
-  private syncPoops(list: Poop[]): void {
-    const ids = new Set(list.map((p) => p.id))
-    // Kopie, weil beim Entfernen aus der Liste veraendert wird.
-    // oxlint-disable-next-line unicorn/no-useless-spread
-    for (const entry of [...this.poops]) if (!ids.has(entry.data.id)) this.removePoopObject(entry)
-    const have = new Set(this.poops.map((p) => p.data.id))
-    for (const p of list) if (!have.has(p.id)) this.addPoop(p)
-  }
-
   private bondsOf(id: string): { name: string; meetings: number }[] {
     const out: { name: string; meetings: number }[] = []
     for (const r of this.relations) {
@@ -445,7 +413,7 @@ export class GardenScene extends Phaser.Scene {
     if (!since || Date.now() - since < 30 * 60_000) return
     try {
       const partner = await loadPartnerSince(this.session, new Date(since).toISOString())
-      const msg = awayMessage(partner?.acts ?? 0, this.poops.length, partner?.name ?? 'Dein Partner')
+      const msg = awayMessage(partner?.acts ?? 0, this.poops.count, partner?.name ?? 'Dein Partner')
       if (msg) this.hud.toast(msg)
     } catch { /* ohne Netz entfaellt der Hinweis */ }
   }
